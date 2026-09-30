@@ -37,3 +37,7 @@ yarn-error.log*
 # scratch and test outputs
 /scratch/
 /output/
+
+# cloudflare / open-next
+/.open-next/
+.wrangler/

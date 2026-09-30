@@ -1,0 +1,36 @@
+/**
+ * Cloudflare Wrangler Configuration for NEX MAXX Book Studio
+ * 
+ * Powered by OpenNext for Cloudflare (@opennextjs/cloudflare)
+ * For more details, see: https://developers.cloudflare.com/workers/frameworks/framework-guides/nextjs/
+ */
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "nex-maxx-book-studio",
+  "main": ".open-next/worker.js",
+  "compatibility_date": "2026-09-01",
+  "compatibility_flags": [
+    "nodejs_compat",
+    "global_fetch_strictly_public"
+  ],
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS"
+  },
+  "observability": {
+    "enabled": true
+  },
+  // Public application environment variables
+  "vars": {
+    "SUPERADMIN_API_URL": "https://superadminapi.nexsyrus.com/api/v1/",
+    "SCHOOLIMS_API_URL": "https://simsapi.nexsyrus.com/api/v1/"
+  }
+  /**
+   * Note on Secrets (Sensitive variables):
+   * Do NOT put private API keys directly in this file.
+   * Configure them using Wrangler CLI or Cloudflare Dashboard:
+   * 
+   *   npx wrangler secret put OPENAI_API_KEY
+   *   npx wrangler secret put OPENAI_CURRICULUM_MODEL
+   */
+}

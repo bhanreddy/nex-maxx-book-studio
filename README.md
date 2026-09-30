@@ -82,6 +82,31 @@ npm test
 npm run build
 ```
 
+## Cloudflare Deployment
+
+This application is configured for deployment to **Cloudflare Workers** using `@opennextjs/cloudflare` and `wrangler`.
+
+### 1. Authenticate with Cloudflare
+```bash
+npx wrangler login
+```
+
+### 2. Configure Secrets (Optional)
+If utilizing OpenAI curriculum assistant:
+```bash
+npx wrangler secret put OPENAI_API_KEY
+npx wrangler secret put OPENAI_CURRICULUM_MODEL
+```
+
+### 3. Build & Deploy
+```bash
+# Preview locally in Cloudflare workerd runtime
+npm run preview:worker
+
+# Deploy to Cloudflare Workers
+npm run deploy
+```
+
 ## Documentation
 
 For full architectural details, canonical document models, and rendering pipelines, see [docs/curriculum-engine.md](docs/curriculum-engine.md).
