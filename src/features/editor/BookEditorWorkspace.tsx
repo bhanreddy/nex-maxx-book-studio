@@ -68,8 +68,14 @@ export const BookEditorWorkspace: React.FC<BookEditorWorkspaceProps> = ({
 
   // Listen to native browser fullscreen state changes (e.g. Esc key or browser button)
   useEffect(() => {
+    interface VendorDocument extends Document {
+      webkitFullscreenElement?: Element | null;
+      mozFullScreenElement?: Element | null;
+      msFullscreenElement?: Element | null;
+    }
+
     const handleFullscreenChange = () => {
-      const doc = document as any;
+      const doc = document as VendorDocument;
       const isFull = Boolean(
         doc.fullscreenElement ||
         doc.webkitFullscreenElement ||
@@ -301,6 +307,7 @@ export const BookEditorWorkspace: React.FC<BookEditorWorkspaceProps> = ({
     updateElementTransform,
     setActiveTool,
     setActiveStudio,
+    toggleFullscreen,
   ]);
 
   const book = getActiveBook();

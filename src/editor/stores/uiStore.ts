@@ -507,8 +507,22 @@ export const useUiStore = create<UiState>((set, get) => ({
   setIsFullscreen: (val) => set({ isFullscreen: val }),
   toggleFullscreen: () => {
     if (typeof document === "undefined") return;
-    const doc = document as any;
-    const docEl = document.documentElement as any;
+    interface VendorDocument extends Document {
+      webkitFullscreenElement?: Element | null;
+      mozFullScreenElement?: Element | null;
+      msFullscreenElement?: Element | null;
+      webkitExitFullscreen?: () => Promise<void> | void;
+      mozCancelFullScreen?: () => Promise<void> | void;
+      msExitFullscreen?: () => Promise<void> | void;
+    }
+    interface VendorElement extends HTMLElement {
+      webkitRequestFullscreen?: () => Promise<void> | void;
+      mozRequestFullScreen?: () => Promise<void> | void;
+      msRequestFullscreen?: () => Promise<void> | void;
+    }
+
+    const doc = document as VendorDocument;
+    const docEl = document.documentElement as VendorElement;
     const isFull = Boolean(
       doc.fullscreenElement ||
       doc.mozFullScreenElement ||
