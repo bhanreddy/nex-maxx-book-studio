@@ -1,0 +1,174 @@
+{
+  "source": "google/fonts",
+  "commit": "9710da1eacb3be272583c3224dcb70f9da6eadbb",
+  "files": [
+    {
+      "family": "notosans",
+      "filename": "notosans.ttf",
+      "sha256": "bfb7bb691513f12e734dc346c03a03f784912432d7e3fa8e56efcf906fe86b3d",
+      "sourcePath": "ofl/notosans/NotoSans[wdth,wght].ttf"
+    },
+    {
+      "family": "notosans",
+      "filename": "notosans-OFL.txt",
+      "sha256": "cee9892f9f0cc8fe882c9e9537ee6a89621d86ee7ceaf70b02e2b2b1c25c061a",
+      "sourcePath": "ofl/notosans/OFL.txt"
+    },
+    {
+      "family": "notosanstelugu",
+      "filename": "notosanstelugu.ttf",
+      "sha256": "e618af7bf999df192ed4f388eba2e563f2b5015034e9cbb317b5bd793bd7334d",
+      "sourcePath": "ofl/notosanstelugu/NotoSansTelugu[wdth,wght].ttf"
+    },
+    {
+      "family": "notosanstelugu",
+      "filename": "notosanstelugu-OFL.txt",
+      "sha256": "481c72a8f1b4f645a7e6b10326be41b2da2c15cb470ff48a07fab773eed00102",
+      "sourcePath": "ofl/notosanstelugu/OFL.txt"
+    },
+    {
+      "family": "notosansdevanagari",
+      "filename": "notosansdevanagari.ttf",
+      "sha256": "14ec4af41f27482216d1c2229f417ff9b1425e1babb014e57d1d40d03229853e",
+      "sourcePath": "ofl/notosansdevanagari/NotoSansDevanagari[wdth,wght].ttf"
+    },
+    {
+      "family": "notosansdevanagari",
+      "filename": "notosansdevanagari-OFL.txt",
+      "sha256": "a216f6f8d85c7228093e0ee5e258d9d377e6671f68acb4db1930b29583d0f331",
+      "sourcePath": "ofl/notosansdevanagari/OFL.txt"
+    },
+    {
+      "family": "inter",
+      "filename": "inter.ttf",
+      "sha256": "29160a80ff49ddcab2c97711247e08b1fab27a484a329ce8b813d820dc559031",
+      "sourcePath": "ofl/inter/Inter[opsz,wght].ttf"
+    },
+    {
+      "family": "inter",
+      "filename": "inter-OFL.txt",
+      "sha256": "5b9321a4298cfeb6b34354164a1c3afc3db114569984c502b9b35d988fd58c57",
+      "sourcePath": "ofl/inter/OFL.txt"
+    },
+    {
+      "family": "outfit",
+      "filename": "outfit-OFL.txt",
+      "sha256": "c676351bf8576b9aba743cd5eaa8c0e7ee0d51f805d720447b4df4ddb6a2e416",
+      "sourcePath": "ofl/outfit/OFL.txt"
+    },
+    {
+      "family": "outfit",
+      "filename": "outfit.ttf",
+      "sha256": "fc7287273e66929776e2ba54f144fe699080bec29f61bf649d70d871468aeade",
+      "sourcePath": "ofl/outfit/Outfit[wght].ttf"
+    },
+    {
+      "family": "ebgaramond",
+      "filename": "ebgaramond.ttf",
+      "sha256": "ef9512f92f6d579e5dc75af59a5a4b1b8b47d2eda89e00b954d44520e5369027",
+      "sourcePath": "ofl/ebgaramond/EBGaramond[wght].ttf"
+    },
+    {
+      "family": "ebgaramond",
+      "filename": "ebgaramond-OFL.txt",
+      "sha256": "0985066662eb755ed3683ae5482a81a9195b49ce3f7e165cc2388b3dbece7dd7",
+      "sourcePath": "ofl/ebgaramond/OFL.txt"
+    },
+    {
+      "family": "fraunces",
+      "filename": "fraunces.ttf",
+      "sha256": "177ff6c0f14e5550a3c624247cd1189611d4eb65d000b14944c63d967958abbb",
+      "sourcePath": "ofl/fraunces/Fraunces[SOFT,WONK,opsz,wght].ttf"
+    },
+    {
+      "family": "fraunces",
+      "filename": "fraunces-OFL.txt",
+      "sha256": "bdf4c22802eaf804f998195871c6b8938aac2ac14b2d78a8bd66a6f1eced833b",
+      "sourcePath": "ofl/fraunces/OFL.txt"
+    },
+    {
+      "family": "ibmplexsans",
+      "filename": "ibmplexsans.ttf",
+      "sha256": "3b031aa4216174205bd8471f88a49b91f093169e9e87bd5262242bc5967fe2e3",
+      "sourcePath": "ofl/ibmplexsans/IBMPlexSans[wdth,wght].ttf"
+    },
+    {
+      "family": "ibmplexsans",
+      "filename": "ibmplexsans-OFL.txt",
+      "sha256": "7e6b2818edbd8f6a01ae80641cc8f16a51080d08fb4e532be3a0b6f74adb07da",
+      "sourcePath": "ofl/ibmplexsans/OFL.txt"
+    },
+    {
+      "family": "librebaskerville",
+      "filename": "librebaskerville.ttf",
+      "sha256": "05a95421961341c5b2556285e8415df9db27dab4f4abe22b446b3c6a8b916c5d",
+      "sourcePath": "ofl/librebaskerville/LibreBaskerville[wght].ttf"
+    },
+    {
+      "family": "librebaskerville",
+      "filename": "librebaskerville-OFL.txt",
+      "sha256": "3624eddd4c8f8a908130a417ae7cd089c9da69899c4e0ca1a5217d0a6fae16fd",
+      "sourcePath": "ofl/librebaskerville/OFL.txt"
+    },
+    {
+      "family": "librefranklin",
+      "filename": "librefranklin.ttf",
+      "sha256": "2329f394b10ed1c71107df20fddc11e2bb1b68c1ecbb385f975b36fd64a971f8",
+      "sourcePath": "ofl/librefranklin/LibreFranklin[wght].ttf"
+    },
+    {
+      "family": "librefranklin",
+      "filename": "librefranklin-OFL.txt",
+      "sha256": "2710268527181a27b8e938617551bae29e714e6525247be6679bf897a9942a60",
+      "sourcePath": "ofl/librefranklin/OFL.txt"
+    },
+    {
+      "family": "nunito",
+      "filename": "nunito.ttf",
+      "sha256": "bb55a5ca5c2042335b3991af27c4d0705d0ef41cac6164ac737fd8f2a1e85207",
+      "sourcePath": "ofl/nunito/Nunito[wght].ttf"
+    },
+    {
+      "family": "nunito",
+      "filename": "nunito-OFL.txt",
+      "sha256": "580df76c95a1ec5ab878ceb25bb3d85c6a076804e9c970c8c6972aea775fdf65",
+      "sourcePath": "ofl/nunito/OFL.txt"
+    },
+    {
+      "family": "sourcesans3",
+      "filename": "sourcesans3-OFL.txt",
+      "sha256": "09746787287a289323b0ec3cff4d1a4a801331b82b7207c1e186f5d26619a392",
+      "sourcePath": "ofl/sourcesans3/OFL.txt"
+    },
+    {
+      "family": "sourcesans3",
+      "filename": "sourcesans3.ttf",
+      "sha256": "042fe2cc0b933e328410d7acbd0aa6a1873dca5aef81875f4bc214b08825c7b9",
+      "sourcePath": "ofl/sourcesans3/SourceSans3[wght].ttf"
+    },
+    {
+      "family": "notoserif",
+      "filename": "notoserif.ttf",
+      "sha256": "4d8e6761424656867019081a1a01336f3cb086982682698714054fc33f782713",
+      "sourcePath": "ofl/notoserif/NotoSerif[wdth,wght].ttf"
+    },
+    {
+      "family": "notoserif",
+      "filename": "notoserif-OFL.txt",
+      "sha256": "cee9892f9f0cc8fe882c9e9537ee6a89621d86ee7ceaf70b02e2b2b1c25c061a",
+      "sourcePath": "ofl/notoserif/OFL.txt"
+    },
+    {
+      "family": "merriweather",
+      "filename": "merriweather.ttf",
+      "sha256": "d0ed0e359e396af7ad05e73dffd11a3a4c326ea0d0283c56bd9361cb2cc86a96",
+      "sourcePath": "ofl/merriweather/Merriweather[opsz,wdth,wght].ttf"
+    },
+    {
+      "family": "merriweather",
+      "filename": "merriweather-OFL.txt",
+      "sha256": "715bd349bfa6116f99e351e1548321dcfa25b91df65502d22ca8d624557697d2",
+      "sourcePath": "ofl/merriweather/OFL.txt"
+    }
+  ]
+}

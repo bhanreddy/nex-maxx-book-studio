@@ -1,0 +1,38 @@
+@font-face{font-family:'Noto Sans';src:url('/fonts/notosans.ttf') format('truetype');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Noto Sans';src:url('/fonts/notosanstelugu.ttf') format('truetype');font-weight:100 900;font-style:normal;font-display:swap;unicode-range:U+0C00-0C7F}
+@font-face{font-family:'Noto Sans';src:url('/fonts/notosansdevanagari.ttf') format('truetype');font-weight:100 900;font-style:normal;font-display:swap;unicode-range:U+0900-097F}
+@font-face{font-family:'Noto Serif';src:url('/fonts/notoserif.ttf') format('truetype');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Noto Serif';src:url('/fonts/notosanstelugu.ttf') format('truetype');font-weight:100 900;font-style:normal;font-display:swap;unicode-range:U+0C00-0C7F}
+@font-face{font-family:'Noto Serif';src:url('/fonts/notosansdevanagari.ttf') format('truetype');font-weight:100 900;font-style:normal;font-display:swap;unicode-range:U+0900-097F}
+@font-face{font-family:'Noto Sans Telugu';src:url('/fonts/notosanstelugu.ttf') format('truetype');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Noto Sans Devanagari';src:url('/fonts/notosansdevanagari.ttf') format('truetype');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Inter';src:url('/fonts/inter.ttf') format('truetype');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Inter';src:url('/fonts/notosanstelugu.ttf') format('truetype');font-weight:100 900;font-style:normal;font-display:swap;unicode-range:U+0C00-0C7F}
+@font-face{font-family:'Inter';src:url('/fonts/notosansdevanagari.ttf') format('truetype');font-weight:100 900;font-style:normal;font-display:swap;unicode-range:U+0900-097F}
+@font-face{font-family:'Outfit';src:url('/fonts/outfit.ttf') format('truetype');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Outfit';src:url('/fonts/notosanstelugu.ttf') format('truetype');font-weight:100 900;font-style:normal;font-display:swap;unicode-range:U+0C00-0C7F}
+@font-face{font-family:'Outfit';src:url('/fonts/notosansdevanagari.ttf') format('truetype');font-weight:100 900;font-style:normal;font-display:swap;unicode-range:U+0900-097F}
+@font-face{font-family:'EB Garamond';src:url('/fonts/ebgaramond.ttf') format('truetype');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'EB Garamond';src:url('/fonts/notosanstelugu.ttf') format('truetype');font-weight:100 900;font-style:normal;font-display:swap;unicode-range:U+0C00-0C7F}
+@font-face{font-family:'EB Garamond';src:url('/fonts/notosansdevanagari.ttf') format('truetype');font-weight:100 900;font-style:normal;font-display:swap;unicode-range:U+0900-097F}
+@font-face{font-family:'Fraunces';src:url('/fonts/fraunces.ttf') format('truetype');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Fraunces';src:url('/fonts/notosanstelugu.ttf') format('truetype');font-weight:100 900;font-style:normal;font-display:swap;unicode-range:U+0C00-0C7F}
+@font-face{font-family:'Fraunces';src:url('/fonts/notosansdevanagari.ttf') format('truetype');font-weight:100 900;font-style:normal;font-display:swap;unicode-range:U+0900-097F}
+@font-face{font-family:'IBM Plex Sans';src:url('/fonts/ibmplexsans.ttf') format('truetype');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'IBM Plex Sans';src:url('/fonts/notosanstelugu.ttf') format('truetype');font-weight:100 900;font-style:normal;font-display:swap;unicode-range:U+0C00-0C7F}
+@font-face{font-family:'IBM Plex Sans';src:url('/fonts/notosansdevanagari.ttf') format('truetype');font-weight:100 900;font-style:normal;font-display:swap;unicode-range:U+0900-097F}
+@font-face{font-family:'Libre Baskerville';src:url('/fonts/librebaskerville.ttf') format('truetype');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Libre Baskerville';src:url('/fonts/notosanstelugu.ttf') format('truetype');font-weight:100 900;font-style:normal;font-display:swap;unicode-range:U+0C00-0C7F}
+@font-face{font-family:'Libre Baskerville';src:url('/fonts/notosansdevanagari.ttf') format('truetype');font-weight:100 900;font-style:normal;font-display:swap;unicode-range:U+0900-097F}
+@font-face{font-family:'Libre Franklin';src:url('/fonts/librefranklin.ttf') format('truetype');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Libre Franklin';src:url('/fonts/notosanstelugu.ttf') format('truetype');font-weight:100 900;font-style:normal;font-display:swap;unicode-range:U+0C00-0C7F}
+@font-face{font-family:'Libre Franklin';src:url('/fonts/notosansdevanagari.ttf') format('truetype');font-weight:100 900;font-style:normal;font-display:swap;unicode-range:U+0900-097F}
+@font-face{font-family:'Nunito';src:url('/fonts/nunito.ttf') format('truetype');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Nunito';src:url('/fonts/notosanstelugu.ttf') format('truetype');font-weight:100 900;font-style:normal;font-display:swap;unicode-range:U+0C00-0C7F}
+@font-face{font-family:'Nunito';src:url('/fonts/notosansdevanagari.ttf') format('truetype');font-weight:100 900;font-style:normal;font-display:swap;unicode-range:U+0900-097F}
+@font-face{font-family:'Source Sans 3';src:url('/fonts/sourcesans3.ttf') format('truetype');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Source Sans 3';src:url('/fonts/notosanstelugu.ttf') format('truetype');font-weight:100 900;font-style:normal;font-display:swap;unicode-range:U+0C00-0C7F}
+@font-face{font-family:'Source Sans 3';src:url('/fonts/notosansdevanagari.ttf') format('truetype');font-weight:100 900;font-style:normal;font-display:swap;unicode-range:U+0900-097F}
+@font-face{font-family:'Merriweather';src:url('/fonts/merriweather.ttf') format('truetype');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Merriweather';src:url('/fonts/notosanstelugu.ttf') format('truetype');font-weight:100 900;font-style:normal;font-display:swap;unicode-range:U+0C00-0C7F}
+@font-face{font-family:'Merriweather';src:url('/fonts/notosansdevanagari.ttf') format('truetype');font-weight:100 900;font-style:normal;font-display:swap;unicode-range:U+0900-097F}
