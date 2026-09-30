@@ -19,6 +19,7 @@ import {
   Heading,
   HelpCircle,
   Beaker,
+  Maximize2,
 } from "lucide-react";
 
 export const CommandPalette: React.FC = () => {
@@ -35,6 +36,7 @@ export const CommandPalette: React.FC = () => {
     setActiveLayoutGalleryOpen,
     setFocusMode,
     focusMode,
+    toggleFullscreen,
   } = useUiStore();
 
   const {
@@ -250,10 +252,19 @@ export const CommandPalette: React.FC = () => {
 
     // View & Workspace Commands
     {
+      id: "cmd-fullscreen",
+      title: "Toggle Full Screen Editing",
+      subtitle: "Expand studio to cover browser tabs and whole screen (like YouTube fullscreen)",
+      keywords: ["fullscreen", "full screen", "browser fullscreen", "f11", "youtube", "expand"],
+      category: "View",
+      icon: Maximize2,
+      action: () => toggleFullscreen(),
+    },
+    {
       id: "cmd-focus-mode",
       title: "Toggle Focus Mode",
       subtitle: "Hide sidebars and inspectors to immerse completely in page composition",
-      keywords: ["focus mode", "distraction free", "zen", "hide panels", "fullscreen"],
+      keywords: ["focus mode", "distraction free", "zen", "hide panels"],
       category: "View",
       icon: Eye,
       action: () => setFocusMode(!focusMode),

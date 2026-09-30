@@ -130,6 +130,9 @@ interface UiState {
   presetCategoryFilter: string;
 
   // Workspace Layout
+  themeMode: "light" | "dark";
+  setThemeMode: (mode: "light" | "dark") => void;
+  toggleThemeMode: () => void;
   leftPanelOpen: boolean;
   leftPanelTab: LeftPanelTab;
   rightInspectorOpen: boolean;
@@ -194,6 +197,9 @@ interface UiState {
 
   // Notification Toasts
   toasts: ToastMessage[];
+
+  // Native Browser Fullscreen Editing Mode (Covers tabs & browser chrome)
+  isFullscreen: boolean;
 
   // Actions
   setActiveStudio: (studio: StudioType) => void;
@@ -263,9 +269,11 @@ interface UiState {
 
   showToast: (toast: Omit<ToastMessage, "id">) => void;
   dismissToast: (id: string) => void;
+  setIsFullscreen: (val: boolean) => void;
+  toggleFullscreen: () => void;
 }
 
-export const useUiStore = create<UiState>((set) => ({
+export const useUiStore = create<UiState>((set, get) => ({
   activeStudio: "LAYOUT",
   activeTool: "move",
   activeShapeType: "rectangle",
@@ -287,6 +295,7 @@ export const useUiStore = create<UiState>((set) => ({
   layoutHealthIssues: [],
   presetCategoryFilter: "all",
 
+  themeMode: (typeof window !== "undefined" && (localStorage.getItem("nex-theme-mode") as "light" | "dark")) || "light",
   leftPanelOpen: true,
   leftPanelTab: "curriculum",
   rightInspectorOpen: true,
@@ -477,4 +486,49 @@ export const useUiStore = create<UiState>((set) => ({
   setActiveFontPairing: (pairingId) => set({ activeFontPairing: pairingId }),
   setLayoutHealthIssues: (issues) => set({ layoutHealthIssues: issues }),
   setPresetCategoryFilter: (category) => set({ presetCategoryFilter: category }),
+  setThemeMode: (mode) => {
+    if (typeof document !== "undefined") {
+      document.documentElement.classList.remove("light", "dark");
+      document.documentElement.classList.add(mode);
+      document.documentElement.setAttribute("data-theme", mode);
+      try {
+        localStorage.setItem("nex-theme-mode", mode);
+      } catch {}
+    }
+    set({ themeMode: mode });
+  },
+  toggleThemeMode: () => {
+    const current = get().themeMode;
+    const next = current === "light" ? "dark" : "light";
+    get().setThemeMode(next);
+  },
+
+  isFullscreen: false,
+  setIsFullscreen: (val) => set({ isFullscreen: val }),
+  toggleFullscreen: () => {
+    if (typeof document === "undefined") return;
+    const doc = document as any;
+    const docEl = document.documentElement as any;
+    const isFull = Boolean(
+      doc.fullscreenElement ||
+      doc.mozFullScreenElement ||
+      doc.webkitFullscreenElement ||
+      doc.msFullscreenElement
+    );
+    if (!isFull) {
+      const p =
+        docEl.requestFullscreen?.() ||
+        docEl.webkitRequestFullscreen?.() ||
+        docEl.mozRequestFullScreen?.() ||
+        docEl.msRequestFullscreen?.();
+      if (p && typeof p.catch === "function") p.catch(() => {});
+    } else {
+      const p =
+        doc.exitFullscreen?.() ||
+        doc.webkitExitFullscreen?.() ||
+        doc.mozCancelFullScreen?.() ||
+        doc.msExitFullscreen?.();
+      if (p && typeof p.catch === "function") p.catch(() => {});
+    }
+  },
 }));

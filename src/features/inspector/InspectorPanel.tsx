@@ -164,7 +164,7 @@ export const InspectorPanel: React.FC = () => {
   return (
     <aside
       style={{ width: `${panelWidth}px` }}
-      className="relative h-full bg-[#0d121e] border-l border-white/[0.08] flex flex-col text-slate-200 z-20 overflow-y-auto select-none custom-scrollbar flex-shrink-0"
+      className="relative h-full bg-white dark:bg-[#0d121e] border-l border-slate-200/90 dark:border-white/[0.08] flex flex-col text-slate-800 dark:text-slate-200 z-20 overflow-y-auto select-none custom-scrollbar flex-shrink-0"
     >
       {/* Resizer Handle */}
       <div
@@ -174,21 +174,21 @@ export const InspectorPanel: React.FC = () => {
         title="Drag to resize inspector (Double-click to reset)"
       />
       {/* Panel Header with Inspector / Layout Partner Mode Switcher */}
-      <div className="flex items-center justify-between px-3 py-2 border-b border-white/[0.08] bg-[#0c101b]">
-        <div className="flex items-center gap-2 min-h-9 text-[13px] font-medium text-slate-100">
-          <Sliders className="w-4 h-4 text-indigo-300" />
+      <div className="flex items-center justify-between px-3 py-2 border-b border-slate-200/90 dark:border-white/[0.08] bg-slate-50 dark:bg-[#0c101b]">
+        <div className="flex items-center gap-2 min-h-9 text-[13px] font-semibold text-slate-800 dark:text-slate-100">
+          <Sliders className="w-4 h-4 text-indigo-600 dark:text-indigo-300" />
           <span>Inspector</span>
         </div>
         <button
           onClick={() => setRightInspectorOpen(false)}
-          className="text-slate-400 hover:text-white w-9 h-9 inline-flex items-center justify-center rounded-lg hover:bg-white/10 transition-colors"
+          className="text-slate-400 hover:text-slate-700 dark:hover:text-white w-9 h-9 inline-flex items-center justify-center rounded-lg hover:bg-slate-100 dark:hover:bg-white/10 transition-colors"
           title="Collapse Inspector"
         >
           <ChevronRight className="w-4 h-4" />
         </button>
       </div>
 
-      <div className="px-3 py-2 bg-[#090d16] border-b border-white/[0.06]">
+      <div className="px-3 py-2 bg-slate-100/70 dark:bg-[#090d16] border-b border-slate-200/90 dark:border-white/[0.06]">
         <div className="flex items-center gap-1 text-[13px]">
           {(
             [
@@ -202,8 +202,8 @@ export const InspectorPanel: React.FC = () => {
               onClick={() => setComplexityMode(mode.id)}
               className={`flex-1 min-h-9 rounded-lg font-medium transition-colors ${
                 complexityMode === mode.id
-                  ? "bg-white/10 text-white"
-                  : "text-slate-500 hover:text-slate-200"
+                  ? "bg-white dark:bg-white/10 text-slate-900 dark:text-white shadow-xs font-semibold"
+                  : "text-slate-500 hover:text-slate-800 dark:hover:text-slate-200"
               }`}
               title={mode.title}
             >

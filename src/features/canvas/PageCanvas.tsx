@@ -310,7 +310,7 @@ export const PageCanvas: React.FC<PageCanvasProps> = ({ book, activePage }) => {
   return (
     <div
       ref={containerRef}
-      className={`relative flex-1 h-full w-full overflow-hidden bg-[#0c1017] canvas-grid-bg select-none ${cursorClass}`}
+      className={`relative flex-1 h-full w-full overflow-hidden bg-[#f1f4f8] dark:bg-[#0c1017] canvas-grid-bg select-none ${cursorClass}`}
       onWheel={handleWheel}
       onMouseDown={handleMouseDown}
       onMouseMove={handleMouseMove}
@@ -320,7 +320,7 @@ export const PageCanvas: React.FC<PageCanvasProps> = ({ book, activePage }) => {
       {showRulers && (
         <div
           onClick={handleTopRulerClick}
-          className="absolute top-0 left-8 right-0 h-6 bg-[#0f141f] border-b border-white/10 z-30 flex items-center text-[8pt] text-slate-400 font-mono overflow-hidden cursor-pointer"
+          className="absolute top-0 left-8 right-0 h-6 bg-white/95 dark:bg-[#0f141f] border-b border-slate-200 dark:border-white/10 z-30 flex items-center text-[8pt] text-slate-500 dark:text-slate-400 font-mono overflow-hidden cursor-pointer"
           title="Click on ruler to add horizontal guide"
         >
           <div
@@ -335,7 +335,7 @@ export const PageCanvas: React.FC<PageCanvasProps> = ({ book, activePage }) => {
               return (
                 <div
                   key={i}
-                  className="flex-shrink-0 border-l border-slate-600 h-3 flex items-start pl-1 text-[7pt]"
+                  className="flex-shrink-0 border-l border-slate-300 dark:border-slate-600 h-3 flex items-start pl-1 text-[7pt]"
                   style={{ width: `${72 * zoom}px` }}
                 >
                   {ptVal} pt
@@ -350,7 +350,7 @@ export const PageCanvas: React.FC<PageCanvasProps> = ({ book, activePage }) => {
       {showRulers && (
         <div
           onClick={handleLeftRulerClick}
-          className="absolute top-6 left-0 bottom-0 w-8 bg-[#0f141f] border-r border-white/10 z-30 flex flex-col items-center text-[7pt] text-slate-400 font-mono overflow-hidden cursor-pointer"
+          className="absolute top-6 left-0 bottom-0 w-8 bg-white/95 dark:bg-[#0f141f] border-r border-slate-200 dark:border-white/10 z-30 flex flex-col items-center text-[7pt] text-slate-500 dark:text-slate-400 font-mono overflow-hidden cursor-pointer"
           title="Click on ruler to add vertical guide"
         >
           <div
@@ -365,7 +365,7 @@ export const PageCanvas: React.FC<PageCanvasProps> = ({ book, activePage }) => {
               return (
                 <div
                   key={i}
-                  className="flex-shrink-0 border-t border-slate-600 w-3 flex items-center pt-0.5 text-[6pt]"
+                  className="flex-shrink-0 border-t border-slate-300 dark:border-slate-600 w-3 flex items-center pt-0.5 text-[6pt]"
                   style={{ height: `${72 * zoom}px` }}
                 >
                   {ptVal}
@@ -378,7 +378,7 @@ export const PageCanvas: React.FC<PageCanvasProps> = ({ book, activePage }) => {
 
       {/* Origin Corner */}
       {showRulers && (
-        <div className="absolute top-0 left-0 w-8 h-6 bg-[#0c1017] border-r border-b border-white/10 z-30 flex items-center justify-center text-[7pt] font-mono text-slate-500">
+        <div className="absolute top-0 left-0 w-8 h-6 bg-slate-100 dark:bg-[#0c1017] border-r border-b border-slate-200 dark:border-white/10 z-30 flex items-center justify-center text-[7pt] font-mono text-slate-500">
           pt
         </div>
       )}
@@ -835,10 +835,10 @@ export const PageCanvas: React.FC<PageCanvasProps> = ({ book, activePage }) => {
         </div>
       )}
 
-      <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-40 flex items-center gap-1 rounded-xl border border-white/10 bg-slate-950 px-2 py-1 shadow-lg" onMouseDown={e=>e.stopPropagation()} onWheel={e=>e.stopPropagation()}>
-        <button className="studio-icon-button px-3" aria-label="Zoom out" onClick={zoomOut}>−</button>
-        <span className="text-xs text-slate-300 w-12 text-center" aria-live="polite">{Math.round(zoom*100)}%</span>
-        <button className="studio-icon-button px-3" aria-label="Zoom in" onClick={zoomIn}>+</button>
+      <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-40 flex items-center gap-1 rounded-xl border border-slate-200/90 dark:border-white/10 bg-white/95 dark:bg-slate-950 px-2 py-1 shadow-lg text-slate-700 dark:text-slate-300" onMouseDown={e=>e.stopPropagation()} onWheel={e=>e.stopPropagation()}>
+        <button className="studio-icon-button px-3 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white" aria-label="Zoom out" onClick={zoomOut}>−</button>
+        <span className="text-xs text-slate-700 dark:text-slate-300 w-12 text-center font-medium" aria-live="polite">{Math.round(zoom*100)}%</span>
+        <button className="studio-icon-button px-3 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white" aria-label="Zoom in" onClick={zoomIn}>+</button>
         <button className="publication-button !min-h-9 !text-xs" onClick={fitPage}>Fit page</button>
         <button className="publication-button !min-h-9 !text-xs" onClick={()=>{setZoom(1);setPanOffset({x:0,y:0});}}>100%</button>
       </div>

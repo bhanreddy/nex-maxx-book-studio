@@ -23,9 +23,9 @@ export const BottomPageStrip: React.FC = () => {
       <div className="absolute bottom-2 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2">
         <button
           onClick={() => setBottomStripOpen(true)}
-          className="bg-[#0e1422] text-slate-200 min-h-9 px-3 rounded-full border border-white/10 hover:bg-[#12192b] shadow-xl text-[13px] flex items-center gap-1.5 active:scale-[0.97] transition-transform"
+          className="bg-white/95 dark:bg-[#0e1422] text-slate-700 dark:text-slate-200 min-h-9 px-3 rounded-full border border-slate-200 dark:border-white/10 hover:bg-slate-100 dark:hover:bg-[#12192b] shadow-xl text-[13px] flex items-center gap-1.5 active:scale-[0.97] transition-transform"
         >
-          <ChevronUp className="w-3.5 h-3.5 text-indigo-400" />
+          <ChevronUp className="w-3.5 h-3.5 text-indigo-500 dark:text-indigo-400" />
           <span>Pages ({activePageIndex + 1} / {book.pages.length})</span>
         </button>
       </div>
@@ -33,9 +33,9 @@ export const BottomPageStrip: React.FC = () => {
   }
 
   return (
-    <footer className="h-20 w-full bg-[#080c14] border-t border-white/[0.08] px-4 flex items-center justify-between z-20 select-none font-sans">
-      <div className="hidden sm:flex items-center pr-3 border-r border-white/10">
-        <span className="text-[13px] text-slate-300 font-medium">
+    <footer className="h-20 w-full bg-white dark:bg-[#080c14] border-t border-slate-200/90 dark:border-white/[0.08] px-4 flex items-center justify-between z-20 select-none font-sans">
+      <div className="hidden sm:flex items-center pr-3 border-r border-slate-200 dark:border-white/10">
+        <span className="text-[13px] text-slate-700 dark:text-slate-300 font-medium">
           Page {book.pages[activePageIndex]?.displayNumber ?? activePageIndex + 1} of {book.pages.length}
         </span>
       </div>
@@ -93,21 +93,21 @@ export const BottomPageStrip: React.FC = () => {
         {/* Quick Add Page Button */}
         <button
           onClick={() => addPage(activePageIndex)}
-          className="flex-shrink-0 w-14 h-16 rounded-lg border border-dashed border-white/20 hover:border-indigo-400/80 bg-white/[0.02] hover:bg-indigo-500/10 flex flex-col items-center justify-center text-slate-400 hover:text-indigo-300 active:scale-[0.97] transition-transform"
+          className="flex-shrink-0 w-14 h-16 rounded-lg border border-dashed border-slate-300 dark:border-white/20 hover:border-indigo-500 bg-slate-50 dark:bg-white/[0.02] hover:bg-indigo-50 dark:hover:bg-indigo-500/10 flex flex-col items-center justify-center text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-300 active:scale-[0.97] transition-transform"
           title="Add page"
         >
-          <Plus className="w-4 h-4 text-indigo-300" />
+          <Plus className="w-4 h-4 text-indigo-500 dark:text-indigo-300" />
           <span className="text-[11px] font-medium mt-0.5">Add</span>
         </button>
       </div>
 
       {/* Right side: System Health & Hide Strip */}
-      <div className="flex items-center gap-2 pl-3 border-l border-white/10">
+      <div className="flex items-center gap-2 pl-3 border-l border-slate-200 dark:border-white/10">
         <StatusHealthIndicator />
 
         <button
           onClick={() => setBottomStripOpen(false)}
-          className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-white/10 transition-colors"
+          className="p-1.5 text-slate-400 hover:text-slate-700 dark:hover:text-white rounded-lg hover:bg-slate-100 dark:hover:bg-white/10 transition-colors"
           title="Hide Strip"
         >
           <ChevronDown className="w-3.5 h-3.5" />

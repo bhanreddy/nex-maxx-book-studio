@@ -271,7 +271,7 @@ export const ToolRail: React.FC = () => {
   };
 
   return (
-    <div className="w-14 h-full bg-[#080b11] border-r border-white/[0.08] flex flex-col items-center py-2.5 text-slate-300 z-20 select-none relative font-sans">
+    <div className="w-14 h-full bg-white dark:bg-[#080b11] border-r border-slate-200/90 dark:border-white/[0.08] flex flex-col items-center py-2.5 text-slate-700 dark:text-slate-300 z-20 select-none relative font-sans">
       <div className="flex flex-col gap-1.5 w-full px-1.5 overflow-y-auto overflow-x-hidden no-scrollbar">
         {primaryTools.map((t) => {
           const Icon = t.icon;
@@ -283,20 +283,20 @@ export const ToolRail: React.FC = () => {
                 onClick={() => handleToolClick(t)}
                 className={`relative w-10 h-10 rounded-xl flex items-center justify-center transition-transform duration-100 active:scale-[0.97] ${
                   isActive
-                    ? "bg-[#1c1814] text-[#f3e6c8] shadow-[inset_0_1px_0_rgba(255,255,255,0.12),0_1px_2px_rgba(0,0,0,0.4)] border border-[#d7c49c]/45"
-                    : "text-slate-400 hover:text-slate-100 hover:bg-white/[0.06]"
+                    ? "bg-indigo-50 dark:bg-[#1c1814] text-indigo-700 dark:text-[#f3e6c8] shadow-sm border border-indigo-200/80 dark:border-[#d7c49c]/45"
+                    : "text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-white/[0.06]"
                 }`}
                 title={`${t.label} (${t.shortcut})`}
               >
                 {/* Active Indicator Bar on Left */}
                 {isActive && (
-                  <span className="absolute left-0 top-2 bottom-2 w-0.5 rounded-r bg-[#d7c49c]" />
+                  <span className="absolute left-0 top-2 bottom-2 w-0.5 rounded-r bg-indigo-600 dark:bg-[#d7c49c]" />
                 )}
                 <Icon className="w-4 h-4 stroke-[1.8]" />
               </button>
 
               {/* Rich beginner tooltip on hover */}
-              <div className="absolute left-16 top-1/2 -translate-y-1/2 bg-[#0d1322] text-white px-3.5 py-2.5 rounded-xl shadow-[0_12px_32px_rgba(0,0,0,0.5)] border border-white/15 whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-150 z-50 flex flex-col gap-1.5 min-w-[200px]">
+              <div className="absolute left-16 top-1/2 -translate-y-1/2 bg-slate-900/95 dark:bg-[#0d1322] text-white px-3.5 py-2.5 rounded-xl shadow-[0_12px_32px_rgba(0,0,0,0.5)] border border-slate-800 dark:border-white/15 whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-150 z-50 flex flex-col gap-1.5 min-w-[200px]">
                 <div className="flex items-center justify-between gap-3 border-b border-white/10 pb-1.5">
                   <span className="text-xs font-semibold text-indigo-300 tracking-wide">{t.label}</span>
                   <span className="font-mono text-[9px] text-slate-300 bg-white/10 px-1.5 py-0.5 rounded border border-white/10 font-bold">
@@ -320,8 +320,8 @@ export const ToolRail: React.FC = () => {
               onClick={() => setMoreToolsOpen((open) => !open)}
               className={`w-10 h-10 rounded-xl flex items-center justify-center transition-transform duration-100 active:scale-[0.97] ${
                 moreToolsOpen || overflowTools.some((tool) => tool.id === activeTool)
-                  ? "bg-[#1c1814] text-[#f3e6c8] border border-[#d7c49c]/45"
-                  : "text-slate-400 hover:text-slate-100 hover:bg-white/[0.06]"
+                  ? "bg-indigo-50 dark:bg-[#1c1814] text-indigo-700 dark:text-[#f3e6c8] border border-indigo-200/80 dark:border-[#d7c49c]/45"
+                  : "text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-white/[0.06]"
               }`}
               title="More tools"
               aria-expanded={moreToolsOpen}
@@ -329,7 +329,7 @@ export const ToolRail: React.FC = () => {
               <MoreHorizontal className="w-4 h-4" />
             </button>
             {moreToolsOpen && (
-              <div className="absolute left-16 top-0 bg-[#0f172a] border border-white/15 rounded-2xl p-1.5 shadow-[0_20px_45px_rgba(0,0,0,0.6)] z-50 flex flex-col gap-0.5 w-44">
+              <div className="absolute left-16 top-0 bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-white/15 rounded-2xl p-1.5 shadow-[0_20px_45px_rgba(0,0,0,0.15)] dark:shadow-[0_20px_45px_rgba(0,0,0,0.6)] z-50 flex flex-col gap-0.5 w-44">
                 {overflowTools.map((tool) => {
                   const Icon = tool.icon;
                   return (
@@ -341,11 +341,11 @@ export const ToolRail: React.FC = () => {
                       }}
                       className={`flex items-center gap-2 min-h-9 px-2.5 rounded-lg text-[13px] text-left ${
                         activeTool === tool.id
-                          ? "bg-white/10 text-white"
-                          : "text-slate-300 hover:bg-white/10"
+                          ? "bg-indigo-50 dark:bg-white/10 text-indigo-700 dark:text-white font-medium"
+                          : "text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/10"
                       }`}
                     >
-                      <Icon className="w-4 h-4 text-indigo-300" />
+                      <Icon className="w-4 h-4 text-indigo-500 dark:text-indigo-300" />
                       <span>{tool.label}</span>
                     </button>
                   );
@@ -358,9 +358,9 @@ export const ToolRail: React.FC = () => {
 
       {/* Floating Shape Submenu when shape tool clicked */}
       {shapeMenuOpen && (
-        <div className="absolute left-16 top-24 bg-[#0f172a] border border-white/15 rounded-2xl p-2 shadow-[0_20px_45px_rgba(0,0,0,0.6)] z-50 flex flex-col gap-0.5 w-48">
-          <div className="px-2 py-1.5 mb-1 border-b border-white/10">
-            <span className="text-[13px] font-medium text-slate-200">Shapes</span>
+        <div className="absolute left-16 top-24 bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-white/15 rounded-2xl p-2 shadow-[0_20px_45px_rgba(0,0,0,0.15)] dark:shadow-[0_20px_45px_rgba(0,0,0,0.6)] z-50 flex flex-col gap-0.5 w-48">
+          <div className="px-2 py-1.5 mb-1 border-b border-slate-100 dark:border-white/10">
+            <span className="text-[13px] font-semibold text-slate-800 dark:text-slate-200">Shapes</span>
           </div>
           {[
             { id: "rectangle", label: "Rectangle", icon: Square },
@@ -379,11 +379,11 @@ export const ToolRail: React.FC = () => {
                   addVectorShape(s.id as typeof activeShapeType);
                   setShapeMenuOpen(false);
                 }}
-                className={`flex items-center gap-2.5 min-h-9 px-2.5 rounded-lg text-[13px] hover:bg-white/10 text-left active:scale-[0.97] ${
-                  activeShapeType === s.id ? "bg-indigo-600/30 text-indigo-200 border border-indigo-500/40" : "text-slate-300"
+                className={`flex items-center gap-2.5 min-h-9 px-2.5 rounded-lg text-[13px] hover:bg-slate-100 dark:hover:bg-white/10 text-left active:scale-[0.97] ${
+                  activeShapeType === s.id ? "bg-indigo-50 dark:bg-indigo-600/30 text-indigo-700 dark:text-indigo-200 border border-indigo-200 dark:border-indigo-500/40" : "text-slate-700 dark:text-slate-300"
                 }`}
               >
-                <SIcon className="w-4 h-4 text-indigo-400" />
+                <SIcon className="w-4 h-4 text-indigo-500 dark:text-indigo-400" />
                 <span className="font-medium">{s.label}</span>
               </button>
             );

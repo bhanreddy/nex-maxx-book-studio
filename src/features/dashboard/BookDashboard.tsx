@@ -35,21 +35,21 @@ export const BookDashboard: React.FC<BookDashboardProps> = ({ onOpenBook }) => {
   });
 
   return (
-    <div className="min-h-screen bg-[#090d14] text-slate-100 flex flex-col select-none">
+    <div className="min-h-screen bg-[#f8fafc] dark:bg-[#090d14] text-slate-900 dark:text-slate-100 flex flex-col select-none transition-colors">
       {/* Dashboard Glass Header */}
-      <header className="h-16 border-b border-white/10 bg-[#0f141f]/80 backdrop-blur-xl px-8 flex items-center justify-between sticky top-0 z-30">
+      <header className="h-16 border-b border-slate-200 dark:border-white/10 bg-white/80 dark:bg-[#0f141f]/80 backdrop-blur-xl px-8 flex items-center justify-between sticky top-0 z-30">
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-indigo-600 via-indigo-500 to-emerald-400 flex items-center justify-center shadow-lg shadow-indigo-500/20">
             <BookOpen className="w-5 h-5 text-white" />
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <span className="font-extrabold text-sm tracking-wider text-white">NEX MAXX</span>
-              <span className="text-[10px] px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 font-mono font-semibold">
+              <span className="font-extrabold text-sm tracking-wider text-slate-900 dark:text-white">NEX MAXX</span>
+              <span className="text-[10px] px-2 py-0.5 rounded-full bg-indigo-500/10 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-300 font-mono font-semibold">
                 BOOK STUDIO
               </span>
             </div>
-            <span className="text-[11px] text-slate-400 block -mt-0.5">
+            <span className="text-[11px] text-slate-500 dark:text-slate-400 block -mt-0.5">
               Production-Grade Curriculum Authoring & Publishing Platform
             </span>
           </div>
@@ -58,7 +58,7 @@ export const BookDashboard: React.FC<BookDashboardProps> = ({ onOpenBook }) => {
         <div className="flex items-center gap-3">
           <button
             onClick={resetToDemo}
-            className="px-3.5 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-slate-300 text-xs font-medium border border-white/5 transition-colors"
+            className="px-3.5 py-2 rounded-xl bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 text-xs font-medium border border-slate-200 dark:border-white/5 transition-colors"
           >
             Reset Flagship Demo
           </button>
@@ -113,7 +113,7 @@ export const BookDashboard: React.FC<BookDashboardProps> = ({ onOpenBook }) => {
               placeholder="Search books by title, subject, or grade level..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full bg-[#111827] border border-white/10 rounded-xl pl-10 pr-4 py-2.5 text-xs text-slate-100 outline-none focus:border-indigo-500 shadow-sm"
+              className="w-full bg-white dark:bg-[#111827] border border-slate-200 dark:border-white/10 rounded-xl pl-10 pr-4 py-2.5 text-xs text-slate-800 dark:text-slate-100 outline-none focus:border-indigo-500 shadow-sm transition-colors"
             />
           </div>
 
@@ -122,7 +122,7 @@ export const BookDashboard: React.FC<BookDashboardProps> = ({ onOpenBook }) => {
             <select
               value={selectedSubject}
               onChange={(e) => setSelectedSubject(e.target.value)}
-              className="bg-[#111827] border border-white/10 rounded-xl px-3 py-2 text-xs text-slate-300 outline-none"
+              className="bg-white dark:bg-[#111827] border border-slate-200 dark:border-white/10 rounded-xl px-3 py-2 text-xs text-slate-700 dark:text-slate-300 outline-none shadow-xs"
             >
               <option value="all">All Subjects</option>
               <option value="Science">Science</option>
@@ -135,7 +135,7 @@ export const BookDashboard: React.FC<BookDashboardProps> = ({ onOpenBook }) => {
             <select
               value={selectedStatus}
               onChange={(e) => setSelectedStatus(e.target.value)}
-              className="bg-[#111827] border border-white/10 rounded-xl px-3 py-2 text-xs text-slate-300 outline-none"
+              className="bg-white dark:bg-[#111827] border border-slate-200 dark:border-white/10 rounded-xl px-3 py-2 text-xs text-slate-700 dark:text-slate-300 outline-none shadow-xs"
             >
               <option value="all">All Statuses</option>
               <option value="Draft">Draft</option>
@@ -156,7 +156,7 @@ export const BookDashboard: React.FC<BookDashboardProps> = ({ onOpenBook }) => {
                 selectBook(b.id);
                 onOpenBook(b.id);
               }}
-              className="group bg-[#111827]/90 rounded-2xl border border-white/10 hover:border-indigo-500/60 overflow-hidden shadow-xl transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl hover:shadow-indigo-950/40 cursor-pointer flex flex-col"
+              className="group bg-white dark:bg-[#111827]/90 rounded-2xl border border-slate-200 dark:border-white/10 hover:border-indigo-500/60 overflow-hidden shadow-md dark:shadow-xl transition-all duration-300 hover:-translate-y-1 hover:shadow-xl dark:hover:shadow-indigo-950/40 cursor-pointer flex flex-col"
             >
               {/* Card Cover Art Banner */}
               <div className="relative h-44 w-full bg-slate-900 overflow-hidden">
@@ -172,7 +172,7 @@ export const BookDashboard: React.FC<BookDashboardProps> = ({ onOpenBook }) => {
                     <BookOpen className="w-12 h-12 text-slate-700" />
                   </div>
                 )}
-                <div className="absolute inset-0 bg-gradient-to-t from-[#111827] via-black/20 to-transparent" />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
 
                 {/* Status Badge */}
                 <div className="absolute top-3 left-3">
@@ -192,21 +192,21 @@ export const BookDashboard: React.FC<BookDashboardProps> = ({ onOpenBook }) => {
               {/* Card Body */}
               <div className="p-5 flex-1 flex flex-col justify-between space-y-4">
                 <div>
-                  <h3 className="font-bold text-sm text-slate-100 group-hover:text-indigo-400 transition-colors line-clamp-1">
+                  <h3 className="font-bold text-sm text-slate-800 dark:text-slate-100 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors line-clamp-1">
                     {b.title}
                   </h3>
                   {b.subtitle && (
-                    <p className="text-xs text-slate-400 mt-1 line-clamp-1">{b.subtitle}</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 line-clamp-1">{b.subtitle}</p>
                   )}
                 </div>
 
-                <div className="pt-3 border-t border-white/5 flex items-center justify-between text-xs text-slate-400">
+                <div className="pt-3 border-t border-slate-100 dark:border-white/5 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
                   <div className="flex items-center gap-1.5 font-mono text-[10px]">
-                    <Clock className="w-3.5 h-3.5 text-slate-500" />
+                    <Clock className="w-3.5 h-3.5 text-slate-400" />
                     <span>{b.academicYear}</span>
                   </div>
 
-                  <div className="flex items-center gap-1 text-indigo-400 font-medium group-hover:translate-x-1 transition-transform">
+                  <div className="flex items-center gap-1 text-indigo-600 dark:text-indigo-400 font-medium group-hover:translate-x-1 transition-transform">
                     <span>Open Editor</span>
                     <ArrowRight className="w-3.5 h-3.5" />
                   </div>

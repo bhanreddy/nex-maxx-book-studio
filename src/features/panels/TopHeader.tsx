@@ -19,6 +19,8 @@ import {
   Minimize2,
   Download,
   ChevronDown,
+  Sun,
+  Moon,
 } from "lucide-react";
 
 interface TopHeaderProps {
@@ -40,7 +42,7 @@ const moreStudios: { id: StudioType; label: string }[] = [
 ];
 
 const menuItemClass =
-  "min-h-9 px-3 py-2 rounded-lg hover:bg-white/10 text-left text-[13px] text-slate-200";
+  "min-h-9 px-3 py-2 rounded-lg hover:bg-slate-100 dark:hover:bg-white/10 text-left text-[13px] text-slate-700 dark:text-slate-200 transition-colors";
 
 export const TopHeader: React.FC<TopHeaderProps> = ({ onOpenDashboard }) => {
   const { updateActiveBook, addPage, duplicatePage, deletePage, activePageIndex } = useEditorStore();
@@ -63,6 +65,10 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ onOpenDashboard }) => {
     setManuscriptImportOpen,
     setDataMergeModalOpen,
     saveStatus,
+    themeMode,
+    toggleThemeMode,
+    isFullscreen,
+    toggleFullscreen,
   } = useUiStore();
 
   const [activeMenu, setActiveMenu] = useState<string | null>(null);
@@ -76,34 +82,34 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ onOpenDashboard }) => {
   const closeMenu = () => setActiveMenu(null);
 
   return (
-    <header className="h-[52px] w-full bg-[#080b11]/92 supports-[backdrop-filter]:bg-[#080b11]/80 supports-[backdrop-filter]:backdrop-blur-xl border-b border-white/[0.08] px-3 flex items-center justify-between text-slate-200 z-30 select-none font-sans text-[13px]">
+    <header className="h-[52px] w-full bg-white/95 dark:bg-[#080b11]/92 supports-[backdrop-filter]:bg-white/80 dark:supports-[backdrop-filter]:bg-[#080b11]/80 supports-[backdrop-filter]:backdrop-blur-xl border-b border-slate-200/90 dark:border-white/[0.08] px-3 flex items-center justify-between text-slate-700 dark:text-slate-200 z-30 select-none font-sans text-[13px] transition-colors">
       <div className="flex items-center gap-2 min-w-0">
         <button
           onClick={onOpenDashboard}
           className="flex items-center gap-2 min-h-9 pr-1 rounded-lg active:scale-[0.97] transition-transform"
           title="Back to Book Dashboard"
         >
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-indigo-600 to-violet-500 flex items-center justify-center shadow-[inset_0_1px_0_rgba(255,255,255,0.28),0_8px_16px_rgba(79,70,229,0.28)]">
+          <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-indigo-600 to-violet-500 flex items-center justify-center shadow-[inset_0_1px_0_rgba(255,255,255,0.28),0_4px_12px_rgba(79,70,229,0.22)]">
             <BookOpen className="w-4 h-4 text-white" />
           </div>
-          <span className="font-semibold tracking-wide text-slate-100 hidden sm:inline">
-            NEX<span className="text-indigo-300">MAXX</span>
+          <span className="font-semibold tracking-wide text-slate-900 dark:text-slate-100 hidden sm:inline">
+            NEX<span className="text-indigo-600 dark:text-indigo-300">MAXX</span>
           </span>
         </button>
 
-        <div className="hidden lg:flex items-center gap-0.5 text-slate-400 relative">
+        <div className="hidden lg:flex items-center gap-0.5 text-slate-500 dark:text-slate-400 relative">
           <div className="relative">
             <button
               onClick={() => setActiveMenu(activeMenu === "file" ? null : "file")}
-              className={`min-h-9 px-2.5 rounded-lg hover:bg-white/5 hover:text-slate-100 transition-colors ${
-                activeMenu === "file" ? "bg-white/10 text-white" : ""
+              className={`min-h-9 px-2.5 rounded-lg hover:bg-slate-100 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-slate-100 transition-colors ${
+                activeMenu === "file" ? "bg-slate-100 dark:bg-white/10 text-slate-900 dark:text-white" : ""
               }`}
             >
               File
             </button>
             {activeMenu === "file" && (
               <div
-                className="absolute left-0 top-11 w-56 bg-[#0f1422] border border-white/10 rounded-xl shadow-2xl p-1.5 z-50 flex flex-col"
+                className="absolute left-0 top-11 w-56 bg-white dark:bg-[#0f1422] border border-slate-200 dark:border-white/10 rounded-xl shadow-xl dark:shadow-2xl p-1.5 z-50 flex flex-col"
                 onMouseLeave={closeMenu}
               >
                 <button
@@ -124,7 +130,7 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ onOpenDashboard }) => {
                   className={`${menuItemClass} flex items-center justify-between`}
                 >
                   <span>Import Manuscript...</span>
-                  <FileUp className="w-4 h-4 text-indigo-300" />
+                  <FileUp className="w-4 h-4 text-indigo-500 dark:text-indigo-300" />
                 </button>
                 <button
                   onClick={() => {
@@ -134,15 +140,15 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ onOpenDashboard }) => {
                   className={`${menuItemClass} flex items-center justify-between`}
                 >
                   <span>Data Merge...</span>
-                  <FileSpreadsheet className="w-4 h-4 text-emerald-400" />
+                  <FileSpreadsheet className="w-4 h-4 text-emerald-500 dark:text-emerald-400" />
                 </button>
-                <div className="h-px bg-white/10 my-1" />
+                <div className="h-px bg-slate-200 dark:bg-white/10 my-1" />
                 <button
                   onClick={() => {
                     setExportModalOpen(true);
                     closeMenu();
                   }}
-                  className={`${menuItemClass} font-medium text-emerald-300 hover:bg-emerald-500/20`}
+                  className={`${menuItemClass} font-medium text-emerald-600 dark:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-500/20`}
                 >
                   Export PDF...
                 </button>
@@ -153,15 +159,15 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ onOpenDashboard }) => {
           <div className="relative">
             <button
               onClick={() => setActiveMenu(activeMenu === "edit" ? null : "edit")}
-              className={`min-h-9 px-2.5 rounded-lg hover:bg-white/5 hover:text-slate-100 transition-colors ${
-                activeMenu === "edit" ? "bg-white/10 text-white" : ""
+              className={`min-h-9 px-2.5 rounded-lg hover:bg-slate-100 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-slate-100 transition-colors ${
+                activeMenu === "edit" ? "bg-slate-100 dark:bg-white/10 text-slate-900 dark:text-white" : ""
               }`}
             >
               Edit
             </button>
             {activeMenu === "edit" && (
               <div
-                className="absolute left-0 top-11 w-56 bg-[#0f1422] border border-white/10 rounded-xl shadow-2xl p-1.5 z-50 flex flex-col"
+                className="absolute left-0 top-11 w-56 bg-white dark:bg-[#0f1422] border border-slate-200 dark:border-white/10 rounded-xl shadow-xl dark:shadow-2xl p-1.5 z-50 flex flex-col"
                 onMouseLeave={closeMenu}
               >
                 <button
@@ -173,7 +179,7 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ onOpenDashboard }) => {
                   className={`${menuItemClass} flex justify-between disabled:opacity-40`}
                 >
                   <span>Undo</span>
-                  <span className="text-slate-500 font-mono text-xs">⌘Z</span>
+                  <span className="text-slate-400 dark:text-slate-500 font-mono text-xs">⌘Z</span>
                 </button>
                 <button
                   onClick={() => {
@@ -184,9 +190,9 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ onOpenDashboard }) => {
                   className={`${menuItemClass} flex justify-between disabled:opacity-40`}
                 >
                   <span>Redo</span>
-                  <span className="text-slate-500 font-mono text-xs">⇧⌘Z</span>
+                  <span className="text-slate-400 dark:text-slate-500 font-mono text-xs">⇧⌘Z</span>
                 </button>
-                <div className="h-px bg-white/10 my-1" />
+                <div className="h-px bg-slate-200 dark:bg-white/10 my-1" />
                 <button
                   onClick={() => {
                     duplicatePage(activePageIndex);
@@ -201,11 +207,11 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ onOpenDashboard }) => {
                     deletePage(activePageIndex);
                     closeMenu();
                   }}
-                  className={`${menuItemClass} text-rose-300 hover:bg-rose-500/20`}
+                  className={`${menuItemClass} text-rose-500 dark:text-rose-300 hover:bg-rose-50 dark:hover:bg-rose-500/20`}
                 >
                   Delete Page
                 </button>
-                <div className="h-px bg-white/10 my-1" />
+                <div className="h-px bg-slate-200 dark:bg-white/10 my-1" />
                 <button
                   onClick={() => {
                     setCommandPaletteOpen(true);
@@ -214,7 +220,7 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ onOpenDashboard }) => {
                   className={`${menuItemClass} flex justify-between`}
                 >
                   <span>Command Palette...</span>
-                  <span className="text-slate-500 font-mono text-xs">⌘K</span>
+                  <span className="text-slate-400 dark:text-slate-500 font-mono text-xs">⌘K</span>
                 </button>
               </div>
             )}
@@ -223,15 +229,15 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ onOpenDashboard }) => {
           <div className="relative">
             <button
               onClick={() => setActiveMenu(activeMenu === "view" ? null : "view")}
-              className={`min-h-9 px-2.5 rounded-lg hover:bg-white/5 hover:text-slate-100 transition-colors ${
-                activeMenu === "view" ? "bg-white/10 text-white" : ""
+              className={`min-h-9 px-2.5 rounded-lg hover:bg-slate-100 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-slate-100 transition-colors ${
+                activeMenu === "view" ? "bg-slate-100 dark:bg-white/10 text-slate-900 dark:text-white" : ""
               }`}
             >
               View
             </button>
             {activeMenu === "view" && (
               <div
-                className="absolute left-0 top-11 w-56 bg-[#0f1422] border border-white/10 rounded-xl shadow-2xl p-1.5 z-50 flex flex-col"
+                className="absolute left-0 top-11 w-56 bg-white dark:bg-[#0f1422] border border-slate-200 dark:border-white/10 rounded-xl shadow-xl dark:shadow-2xl p-1.5 z-50 flex flex-col"
                 onMouseLeave={closeMenu}
               >
                 <button
@@ -275,18 +281,18 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ onOpenDashboard }) => {
           </div>
         </div>
 
-        <div className="h-5 w-px bg-white/10 mx-1 hidden sm:block" />
+        <div className="h-5 w-px bg-slate-200 dark:bg-white/10 mx-1 hidden sm:block" />
 
         <div className="flex items-center gap-2 min-w-0">
           <input
             type="text"
             value={book.title}
             onChange={(e) => updateActiveBook({ title: e.target.value })}
-            className="bg-transparent hover:bg-white/5 focus:bg-black/40 px-2 min-h-9 rounded-lg text-[13px] font-semibold text-slate-100 outline-none transition-colors border border-transparent focus:border-indigo-500/50 max-w-[180px] truncate"
+            className="bg-transparent hover:bg-slate-100 dark:hover:bg-white/5 focus:bg-white dark:focus:bg-black/40 px-2 min-h-9 rounded-lg text-[13px] font-semibold text-slate-800 dark:text-slate-100 outline-none transition-colors border border-transparent focus:border-indigo-500/50 max-w-[180px] truncate"
             title="Click to rename book"
           />
-          <div className="hidden sm:flex items-center gap-1.5 px-2 min-h-7 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-xs text-emerald-300">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+          <div className="hidden sm:flex items-center gap-1.5 px-2 min-h-7 rounded-full bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 text-xs text-emerald-700 dark:text-emerald-300">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
             <span>{centralStatus ? `Content: ${centralStatus}` : saveStatus || "Local backup only"}</span>
           </div>
         </div>
@@ -294,7 +300,7 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ onOpenDashboard }) => {
 
       <nav
         aria-label="Workspace Modes"
-        className="flex items-center bg-[#10151f] rounded-xl p-1 border border-white/[0.08] gap-0.5"
+        className="flex items-center bg-slate-100 dark:bg-[#10151f] rounded-xl p-0.5 border border-slate-200/90 dark:border-white/[0.08] gap-0.5"
       >
         {primaryModes.map((st) => {
           const isCurrent = activeStudio === st.id;
@@ -302,10 +308,10 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ onOpenDashboard }) => {
             <button
               key={st.id}
               onClick={() => setActiveStudio(st.id)}
-              className={`min-h-9 px-3 rounded-lg text-[13px] font-medium transition-colors active:scale-[0.97] ${
+              className={`min-h-8 px-3 rounded-lg text-[12.5px] font-medium transition-all active:scale-[0.97] ${
                 isCurrent
-                  ? "bg-[#1c2433] text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]"
-                  : "text-slate-400 hover:text-slate-100 hover:bg-white/5"
+                  ? "bg-white dark:bg-[#1c2433] text-slate-900 dark:text-white shadow-xs font-semibold"
+                  : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-white/60 dark:hover:bg-white/5"
               }`}
             >
               {st.label}
@@ -320,10 +326,10 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ onOpenDashboard }) => {
         >
           <button
             onClick={() => setActiveMenu(activeMenu === "more" ? null : "more")}
-            className={`min-h-9 px-2.5 rounded-lg text-[13px] font-medium inline-flex items-center gap-1 transition-colors active:scale-[0.97] ${
+            className={`min-h-8 px-2.5 rounded-lg text-[12.5px] font-medium inline-flex items-center gap-1 transition-all active:scale-[0.97] ${
               moreStudioActive || activeMenu === "more"
-                ? "bg-[#1c2433] text-white"
-                : "text-slate-400 hover:text-slate-100 hover:bg-white/5"
+                ? "bg-white dark:bg-[#1c2433] text-slate-900 dark:text-white shadow-xs font-semibold"
+                : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-white/60 dark:hover:bg-white/5"
             }`}
             aria-expanded={activeMenu === "more"}
             aria-haspopup="menu"
@@ -332,8 +338,8 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ onOpenDashboard }) => {
             <ChevronDown className="w-3.5 h-3.5" />
           </button>
           {activeMenu === "more" && (
-            <div className="absolute right-0 top-11 w-56 bg-[#0f1422] border border-white/10 rounded-xl shadow-2xl p-1.5 z-50 flex flex-col">
-              <span className="px-3 pt-1.5 pb-1 text-xs text-slate-500">Studios</span>
+            <div className="absolute right-0 top-10 w-56 bg-white dark:bg-[#0f1422] border border-slate-200 dark:border-white/10 rounded-xl shadow-xl dark:shadow-2xl p-1.5 z-50 flex flex-col">
+              <span className="px-3 pt-1.5 pb-1 text-xs text-slate-400 dark:text-slate-500 font-semibold uppercase tracking-wider text-[10px]">Studios</span>
               {moreStudios.map((st) => (
                 <button
                   key={st.id}
@@ -342,13 +348,26 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ onOpenDashboard }) => {
                     closeMenu();
                   }}
                   className={`${menuItemClass} ${
-                    activeStudio === st.id ? "bg-white/10 text-white" : ""
+                    activeStudio === st.id ? "bg-slate-100 dark:bg-white/10 text-slate-900 dark:text-white font-semibold" : ""
                   }`}
                 >
                   {st.label}
                 </button>
               ))}
-              <div className="h-px bg-white/10 my-1" />
+              <div className="h-px bg-slate-200 dark:bg-white/10 my-1" />
+              <button
+                onClick={() => {
+                  toggleFullscreen();
+                  closeMenu();
+                }}
+                className={`${menuItemClass} flex items-center justify-between gap-2`}
+              >
+                <div className="flex items-center gap-2">
+                  {isFullscreen ? <Minimize2 className="w-4 h-4 text-indigo-500" /> : <Maximize2 className="w-4 h-4 text-slate-400" />}
+                  <span>{isFullscreen ? "Exit Fullscreen" : "Full Screen Editing"}</span>
+                </div>
+                <span className="text-[10px] font-mono text-slate-400">F11 / F</span>
+              </button>
               <button
                 onClick={() => {
                   setDistractionFree(!focusMode);
@@ -376,7 +395,7 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ onOpenDashboard }) => {
                 }}
                 className={`${menuItemClass} flex items-center gap-2`}
               >
-                <Sparkles className="w-4 h-4 text-indigo-300" />
+                <Sparkles className="w-4 h-4 text-indigo-500 dark:text-indigo-300" />
                 <span>{partnerOpen ? "Hide Layout Partner" : "Layout Partner"}</span>
               </button>
             </div>
@@ -385,35 +404,71 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ onOpenDashboard }) => {
       </nav>
 
       <div className="flex items-center gap-2">
-        <div className="hidden sm:flex items-center bg-[#10151f] rounded-xl p-0.5 border border-white/[0.08]">
+        {/* Full Screen Editing Mode Toggle */}
+        <button
+          onClick={toggleFullscreen}
+          className={`w-8 h-8 rounded-lg inline-flex items-center justify-center transition-all active:scale-[0.97] border shadow-xs ${
+            isFullscreen
+              ? "bg-indigo-600 text-white border-indigo-600 shadow-indigo-500/25"
+              : "bg-slate-100 dark:bg-[#10151f] border-slate-200/90 dark:border-white/[0.08] hover:bg-white dark:hover:bg-white/10 text-slate-700 dark:text-slate-300"
+          }`}
+          title={
+            isFullscreen
+              ? "Exit Fullscreen (Esc or F11)"
+              : "Full Screen Editing (Covers browser tabs like YouTube • Shortcut: F or F11)"
+          }
+          aria-label={isFullscreen ? "Exit Fullscreen" : "Enter Fullscreen"}
+        >
+          {isFullscreen ? (
+            <Minimize2 className="w-4 h-4 text-white" />
+          ) : (
+            <Maximize2 className="w-4 h-4 text-slate-600 dark:text-slate-300" />
+          )}
+        </button>
+
+        {/* Light / Dark Mode Toggle */}
+        <button
+          onClick={toggleThemeMode}
+          className="w-8 h-8 rounded-lg inline-flex items-center justify-center transition-all active:scale-[0.97] bg-slate-100 dark:bg-[#10151f] border border-slate-200/90 dark:border-white/[0.08] hover:bg-white dark:hover:bg-white/10 text-slate-700 dark:text-amber-300 shadow-xs"
+          title={themeMode === "light" ? "Switch to Dark Mode" : "Switch to Light Mode"}
+          aria-label="Toggle theme mode"
+        >
+          {themeMode === "light" ? (
+            <Moon className="w-4 h-4 text-slate-600" />
+          ) : (
+            <Sun className="w-4 h-4 text-amber-300" />
+          )}
+        </button>
+
+        <div className="hidden sm:flex items-center bg-slate-100 dark:bg-[#10151f] rounded-lg p-0.5 border border-slate-200/90 dark:border-white/[0.08]">
           <button
             onClick={undo}
             disabled={!canUndo}
-            className={`w-9 h-9 rounded-lg inline-flex items-center justify-center transition-colors active:scale-[0.97] ${
-              canUndo ? "text-slate-200 hover:text-white hover:bg-white/10" : "text-slate-600 cursor-not-allowed"
+            className={`w-7 h-7 rounded inline-flex items-center justify-center transition-colors active:scale-[0.97] ${
+              canUndo ? "text-slate-700 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white hover:bg-white dark:hover:bg-white/10 shadow-xs" : "text-slate-400 dark:text-slate-600 cursor-not-allowed"
             }`}
             title="Undo (Ctrl/Cmd + Z)"
           >
-            <Undo2 className="w-4 h-4" />
+            <Undo2 className="w-3.5 h-3.5" />
           </button>
           <button
             onClick={redo}
             disabled={!canRedo}
-            className={`w-9 h-9 rounded-lg inline-flex items-center justify-center transition-colors active:scale-[0.97] ${
-              canRedo ? "text-slate-200 hover:text-white hover:bg-white/10" : "text-slate-600 cursor-not-allowed"
+            className={`w-7 h-7 rounded inline-flex items-center justify-center transition-colors active:scale-[0.97] ${
+              canRedo ? "text-slate-700 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white hover:bg-white dark:hover:bg-white/10 shadow-xs" : "text-slate-400 dark:text-slate-600 cursor-not-allowed"
             }`}
             title="Redo (Ctrl/Cmd + Shift + Z)"
           >
-            <Redo2 className="w-4 h-4" />
+            <Redo2 className="w-3.5 h-3.5" />
           </button>
         </div>
 
         <button
           onClick={() => setExportModalOpen(true)}
-          className="flex items-center gap-1.5 min-h-9 px-3.5 rounded-xl bg-emerald-600 text-white text-[13px] font-semibold border border-emerald-300/30 shadow-[inset_0_1px_0_rgba(255,255,255,0.28),0_8px_16px_rgba(6,78,59,0.35)] active:scale-[0.97] transition-transform"
+          className="flex items-center gap-1.5 min-h-8 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-[12.5px] font-semibold border border-emerald-500 shadow-sm active:scale-[0.97] transition-all"
           title="Export Publication PDF"
         >
-          <Download className="w-4 h-4" />
+          <Download className="w-3.5 h-3.5" />
           <span>Export</span>
         </button>
       </div>

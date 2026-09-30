@@ -334,11 +334,16 @@ export function CurriculumBlocksPanel({ floating = false }: { floating?: boolean
           )}
         </label>
 
-        {/* Section Pills Row — compact, always visible */}
+        {/* Section Pills Row — single compact horizontal strip with smooth wheel scroll */}
         <div
           className="curriculum-mini-sections"
           role="radiogroup"
           aria-label="Chapter sections"
+          onWheel={event => {
+            if (event.deltaY) {
+              event.currentTarget.scrollLeft += event.deltaY;
+            }
+          }}
           onKeyDown={event => {
             if (event.key === "ArrowRight" || event.key === "ArrowLeft") {
               event.preventDefault();
@@ -355,11 +360,14 @@ export function CurriculumBlocksPanel({ floating = false }: { floating?: boolean
                 role="radio"
                 aria-checked={isSelected}
                 key={s.id}
-                onClick={() => setSection(s.id)}
+                onClick={e => {
+                  setSection(s.id);
+                  e.currentTarget.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
+                }}
                 title={"hint" in s ? s.hint : "All 6 chapter sections"}
                 className={`curriculum-mini-pill ${isSelected ? "is-active" : ""}`}
               >
-                <s.icon size={12} aria-hidden="true" />
+                <s.icon size={11} aria-hidden="true" />
                 <span>{s.id === "all" ? "All" : s.name}</span>
                 <span className="curriculum-mini-count">{count}</span>
               </button>
@@ -391,13 +399,16 @@ export function CurriculumBlocksPanel({ floating = false }: { floating?: boolean
           </select>
           <button
             type="button"
-            className={`curriculum-more-toggle ${filters ? "is-open" : ""}`}
+            className={`curriculum-more-toggle relative ${filters ? "is-open" : ""}`}
             onClick={() => setFilters(open => !open)}
             aria-expanded={filters}
             aria-label="Show more filters"
             title="Subject collections, layout and density filters"
           >
             <SlidersHorizontal size={13} />
+            {(family !== "all" || layout !== "" || purpose !== "all" || complexity !== "all") && (
+              <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-amber-500 ring-2 ring-white dark:ring-slate-900" />
+            )}
           </button>
           {hasActiveFilters && (
             <button
@@ -415,11 +426,16 @@ export function CurriculumBlocksPanel({ floating = false }: { floating?: boolean
         {/* Expandable extra filters */}
         {filters && (
           <div className="curriculum-expanded-filters animate-fadeIn">
-            {/* Subject/Collection family chips */}
+            {/* Subject/Collection family chips — horizontal scroll strip */}
             <div
               className="curriculum-mini-families"
               role="toolbar"
               aria-label="Subject collections"
+              onWheel={event => {
+                if (event.deltaY) {
+                  event.currentTarget.scrollLeft += event.deltaY;
+                }
+              }}
               onKeyDown={event => {
                 if (event.key === "ArrowRight" || event.key === "ArrowLeft") {
                   event.preventDefault();
@@ -438,7 +454,10 @@ export function CurriculumBlocksPanel({ floating = false }: { floating?: boolean
                     aria-pressed={isSelected}
                     aria-label={item.label}
                     key={item.id}
-                    onClick={() => setFamily(item.id)}
+                    onClick={e => {
+                      setFamily(item.id);
+                      e.currentTarget.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
+                    }}
                   >
                     <span>{item.name}</span>
                     {item.badge ? (

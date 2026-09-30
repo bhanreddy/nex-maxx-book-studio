@@ -51,8 +51,8 @@ export const ContextToolbar: React.FC = () => {
   const currentTransform = singleElement?.transform;
 
   return (
-    <div className="h-12 shrink-0 w-full bg-[#0e131f] border-b border-white/[0.08] px-3.5 flex items-center text-[13px] text-slate-300 z-20 select-none overflow-x-auto scrollbar-none font-sans">
-      {selectedElements.length === 0 && <span className="text-slate-500 text-xs">Select an object to edit its appearance. Double-click text to write.</span>}
+    <div className="h-12 shrink-0 w-full bg-white dark:bg-[#0e131f] border-b border-slate-200/90 dark:border-white/[0.08] px-3.5 flex items-center text-[13px] text-slate-700 dark:text-slate-300 z-20 select-none overflow-x-auto scrollbar-none font-sans">
+      {selectedElements.length === 0 && <span className="text-slate-500 dark:text-slate-400 text-xs">Select an object to edit its appearance. Double-click text to write.</span>}
       <div className="flex items-center gap-2.5 flex-shrink-0">
         {/* 0A. MULTIPLE ELEMENTS: SMART STACK (Directive 12) */}
         {selectedElements.length > 1 && (

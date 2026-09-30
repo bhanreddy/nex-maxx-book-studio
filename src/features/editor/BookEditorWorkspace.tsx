@@ -60,7 +60,46 @@ export const BookEditorWorkspace: React.FC<BookEditorWorkspaceProps> = ({
     setActiveStudio,
     focusMode,
     setFocusMode,
+    themeMode,
+    isFullscreen,
+    toggleFullscreen,
+    setIsFullscreen,
   } = useUiStore();
+
+  // Listen to native browser fullscreen state changes (e.g. Esc key or browser button)
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      const doc = document as any;
+      const isFull = Boolean(
+        doc.fullscreenElement ||
+        doc.webkitFullscreenElement ||
+        doc.mozFullScreenElement ||
+        doc.msFullscreenElement
+      );
+      setIsFullscreen(isFull);
+    };
+
+    document.addEventListener("fullscreenchange", handleFullscreenChange);
+    document.addEventListener("webkitfullscreenchange", handleFullscreenChange);
+    document.addEventListener("mozfullscreenchange", handleFullscreenChange);
+    document.addEventListener("MSFullscreenChange", handleFullscreenChange);
+
+    return () => {
+      document.removeEventListener("fullscreenchange", handleFullscreenChange);
+      document.removeEventListener("webkitfullscreenchange", handleFullscreenChange);
+      document.removeEventListener("mozfullscreenchange", handleFullscreenChange);
+      document.removeEventListener("MSFullscreenChange", handleFullscreenChange);
+    };
+  }, [setIsFullscreen]);
+
+  // Sync theme mode to documentElement
+  useEffect(() => {
+    if (typeof document !== "undefined") {
+      document.documentElement.classList.remove("light", "dark");
+      document.documentElement.classList.add(themeMode);
+      document.documentElement.setAttribute("data-theme", themeMode);
+    }
+  }, [themeMode]);
 
   // Load from local storage on mount
   useEffect(() => {
@@ -107,6 +146,16 @@ export const BookEditorWorkspace: React.FC<BookEditorWorkspaceProps> = ({
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
         e.preventDefault();
         setCommandPaletteOpen(true);
+        return;
+      }
+
+      // Native Fullscreen Editing: F11 or 'f' (like YouTube)
+      if (
+        e.key === "F11" ||
+        (e.key.toLowerCase() === "f" && !e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey)
+      ) {
+        e.preventDefault();
+        toggleFullscreen();
         return;
       }
 
@@ -259,14 +308,14 @@ export const BookEditorWorkspace: React.FC<BookEditorWorkspaceProps> = ({
 
   if (!book || !activePage) {
     return (
-      <div className="h-screen w-screen bg-[#0b0f17] flex items-center justify-center text-slate-300">
+      <div className="h-screen w-screen bg-[#f4f6fa] dark:bg-[#0b0f17] flex items-center justify-center text-slate-700 dark:text-slate-300">
         Loading Book Publishing Workspace...
       </div>
     );
   }
 
   return (
-    <div className="h-screen w-screen flex flex-col bg-[#0b0f17] overflow-hidden select-none">
+    <div className="h-screen w-screen flex flex-col bg-[#f4f6fa] dark:bg-[#0b0f17] overflow-hidden select-none">
       {/* Top Application Bar with 8 Studios */}
       <TopHeader onOpenDashboard={() => {
         flushPendingPersistence();
@@ -306,6 +355,21 @@ export const BookEditorWorkspace: React.FC<BookEditorWorkspaceProps> = ({
             className="px-2.5 py-1 rounded-full bg-white/10 hover:bg-white/20 text-[10px] font-mono font-semibold transition-colors btn-spring cursor-pointer"
           >
             Exit (Shift + F)
+          </button>
+        </div>
+      )}
+
+      {/* Native Browser Fullscreen Floating Indicator */}
+      {isFullscreen && (
+        <div className="fixed top-3 left-1/2 -translate-x-1/2 z-50 bg-slate-900/90 dark:bg-[#0e1424]/90 border border-slate-700/60 dark:border-white/15 px-3.5 py-1.5 rounded-full shadow-2xl text-[12px] flex items-center gap-2.5 text-white backdrop-blur-md animate-in fade-in slide-in-from-top-2 duration-200 pointer-events-auto">
+          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+          <span className="font-medium font-sans">Full Screen Editing</span>
+          <button
+            onClick={toggleFullscreen}
+            className="px-2.5 py-0.5 rounded-full bg-white/15 hover:bg-white/25 text-[10px] font-mono font-semibold transition-colors cursor-pointer"
+            title="Exit Fullscreen (Esc or F11)"
+          >
+            Exit (Esc / F)
           </button>
         </div>
       )}

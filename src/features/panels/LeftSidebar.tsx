@@ -95,7 +95,7 @@ export const LeftSidebar: React.FC = () => {
     return (
       <button
         onClick={() => setLeftPanelOpen(true)}
-        className="absolute top-16 left-0 bg-[#111827]/90 text-slate-300 p-2 rounded-r-lg border-r border-t border-b border-white/10 hover:bg-slate-800 transition-colors z-20 shadow-lg"
+        className="absolute top-16 left-0 bg-white/95 dark:bg-[#111827]/90 text-slate-700 dark:text-slate-300 p-2 rounded-r-lg border-r border-t border-b border-slate-200 dark:border-white/10 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors z-20 shadow-lg"
         title="Open Tool Library"
       >
         <ChevronRight className="w-4 h-4" />
@@ -106,7 +106,7 @@ export const LeftSidebar: React.FC = () => {
   return (
     <aside
       style={{ width: `${panelWidth}px` }}
-      className="studio-sidebar relative h-full bg-[#0d121e] border-r border-white/[0.08] flex flex-col text-slate-200 z-20 select-none flex-shrink-0 min-w-0"
+      className="studio-sidebar relative h-full bg-white dark:bg-[#0d121e] border-r border-slate-200/90 dark:border-white/[0.08] flex flex-col text-slate-800 dark:text-slate-200 z-20 select-none flex-shrink-0 min-w-0"
     >
       {/* Resizer Handle */}
       <div
