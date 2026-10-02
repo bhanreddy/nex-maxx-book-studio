@@ -136,6 +136,9 @@ export function textWrapObstacles(frame: PageElement, elements: PageElement[]): 
     const wrap = effectiveTextWrap(element);
     if (element.id === frame.id || element.pageId !== frame.pageId || element.hidden ||
       frameParents.has(element.id) || !wrap || !wrapsText(element)) return [];
+    // A text box placed above artwork must remain readable on that artwork.
+    // Only an explicitly chosen wrap can exclude text from a lower layer.
+    if (!element.textWrap && !element.style.textWrap && element.transform.zIndex < f.zIndex) return [];
     // A group is one obstacle for outside text. Inside it, siblings remain independent.
     // Hidden groups and explicit No wrap apply to their children as well.
     if (parents(element).some(parent => parent.hidden || (!frameParents.has(parent.id) &&
@@ -180,21 +183,6 @@ export function textWrapObstacles(frame: PageElement, elements: PageElement[]): 
       return toFrame(t.x + t.width / 2 + dx * Math.cos(a) - dy * Math.sin(a),
         t.y + t.height / 2 + dx * Math.sin(a) + dy * Math.cos(a));
     });
-    // Backdrops must not erase paragraphs placed on them. Explicit wrapping overrides this.
-    if (!element.textWrap && !element.style.textWrap && element.transform.zIndex < f.zIndex &&
-      element.category === "decorative" && !IMAGE_TYPES.has(element.type) &&
-      [{ x: 0, y: 0 }, { x: f.width, y: 0 }, { x: f.width, y: f.height }, { x: 0, y: f.height }].every(corner => {
-        let inside = false;
-        let onEdge = false;
-        points.forEach((p, i) => {
-          const q = points[(i + 1) % points.length];
-          const cross = (corner.x - p.x) * (q.y - p.y) - (corner.y - p.y) * (q.x - p.x);
-          if (Math.abs(cross) < .0001 && corner.x >= Math.min(p.x, q.x) - .0001 && corner.x <= Math.max(p.x, q.x) + .0001 &&
-            corner.y >= Math.min(p.y, q.y) - .0001 && corner.y <= Math.max(p.y, q.y) + .0001) onEdge = true;
-          if ((p.y > corner.y) !== (q.y > corner.y) && corner.x < (q.x - p.x) * (corner.y - p.y) / (q.y - p.y) + p.x) inside = !inside;
-        });
-        return inside || onEdge;
-      })) return [];
     if (Math.max(...points.map(p => p.x)) + offsets.right <= 0 ||
       Math.min(...points.map(p => p.x)) - offsets.left >= f.width ||
       Math.max(...points.map(p => p.y)) + offsets.bottom <= 0 ||

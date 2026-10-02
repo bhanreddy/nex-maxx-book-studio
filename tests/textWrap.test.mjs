@@ -66,6 +66,30 @@ test('backdrops and ordinary paragraphs do not erase text; explicit wrapping sti
   }
 });
 
+test('a new text box above a partly overlapping object keeps all edited letters visible', () => {
+  const text = frame({ transform: { x: 20, y: 20, width: 360, height: 30, rotation: 0, zIndex: 5 },
+    style: { fontSize: 10.5, lineHeight: 1.5, padding: { top: 4, right: 4, bottom: 4, left: 4 } },
+    content: { text: '<strong>Every</strong> letter should stay visible.' } });
+  for (const type of ['shape', 'image', 'smart-block', 'group']) {
+    const behind = picture({ id: `behind-${type}`, type, category: 'educational',
+      transform: { x: 44, y: 20, width: 360, height: 120, rotation: 0, zIndex: 4 } });
+    assert.equal(textWrapObstacles(text, [behind]).length, 0, type);
+    const layout = flow(text, [behind]);
+    assert.equal(layout.oversetChars, 0, type);
+    assert.equal(compact(layout), 'Everylettershouldstayvisible.', type);
+    // Intentional wrapping still applies, whether stored on the object or its style.
+    for (const explicit of [{ ...behind, textWrap: { mode: 'square', offsetPt: 8 } },
+      { ...behind, style: { textWrap: { mode: 'square', offsetPt: 8 } } }]) {
+      assert.equal(textWrapObstacles(text, [explicit]).length, 1, type);
+      assert.ok(flow(text, [explicit]).oversetChars > 0, type);
+    }
+    assert.ok(flow(text, [{ ...behind, transform: { ...behind.transform, zIndex: 6 } }]).oversetChars > 0, type);
+    const scene = textFlowScene(text, [text, behind]);
+    assert.equal(scene.nodes.filter(n => n.kind === 'text').map(n => n.text).join('').replace(/\s/g, ''), 'Everylettershouldstayvisible.', type);
+    assert.deepEqual(scene.warnings, []);
+  }
+});
+
 test('tight shapes and vector contours follow their geometry rather than a rectangular frame', () => {
   const text = frame();
   for (const shapeType of ['circle', 'ellipse', 'polygon', 'star']) {
