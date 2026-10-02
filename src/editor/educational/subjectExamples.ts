@@ -13,6 +13,7 @@ const examples: Record<SubjectDomain, { topic: string; question: string; items: 
 
 /** Only used when inserting a new starter; never replaces an author's existing text. */
 export function withSubjectExample(block: SmartBlockInstance, subject: SubjectDomain): SmartBlockInstance {
+  if (block.presetId.startsWith("edu-")) return { ...block, subject };
   const ex=examples[subject], c=block.semanticContent;
   return {...block,subject,styleOverrides:{...block.styleOverrides,paletteId:ex.palette},semanticContent:{
     title:ex.topic,unitBadge:"NOTICE • CONNECT • CREATE",subtitle:ex.question,

@@ -6,6 +6,14 @@ export type BlockResizeMode = "auto" | "scale" | "trim-height";
 export function withBlockTransform(element: PageElement, transform: ElementTransform, mode: BlockResizeMode = "auto"): PageElement {
   const block = element.smartBlockData;
   if (!block) return { ...element, transform };
+  if(block.presetId.startsWith('edu-')&&!block.styleOverrides.contentLayout?.enabled){
+    const styleOverrides={...block.styleOverrides,resizeFrame:undefined,compactScale:undefined};
+    const next={...block,styleOverrides,transform:{...transform,width:Math.max(180,transform.width),height:0}};
+    const height=buildPublicationScene(next).height;
+    // Publishing blocks rewrap at the requested width; type and illustration proportions stay intact.
+    const measured={...transform,width:next.transform.width,height};
+    return {...element,transform:measured,smartBlockData:{...next,transform:measured}};
+  }
   const widthChanged = transform.width !== element.transform.width;
   const heightChanged = transform.height !== element.transform.height;
   let resizeFrame = block.styleOverrides.resizeFrame || (widthChanged || heightChanged ? { width: element.transform.width, height: element.transform.height } : undefined);

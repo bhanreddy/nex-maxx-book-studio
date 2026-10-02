@@ -14,7 +14,7 @@ function shape(n: SceneNode, i: number, uid: string) {
   if (n.kind === "image") {
     const frame = imagePlacement(n);
     const mask = imageMaskPath(n, n.w, n.h);
-    return <g key={i} opacity={n.opacity}><defs><clipPath id={`${uid}-img-${i}`}>{mask ? <path d={mask} transform={`translate(${n.x} ${n.y})`}/> : <rect x={n.x} y={n.y} width={n.w} height={n.h} rx={n.mask === "rounded" ? n.radius || 16 : n.radius || 0}/>}</clipPath></defs><g clipPath={`url(#${uid}-img-${i})`}><g transform={`translate(${n.x+n.w/2} ${n.y+n.h/2}) scale(${n.flipX?-1:1} ${n.flipY?-1:1}) translate(${-n.x-n.w/2} ${-n.y-n.h/2})`}><image href={n.src} x={frame.x} y={frame.y} width={frame.w} height={frame.h} preserveAspectRatio="none" style={{filter:imageFilter(n)}} /></g></g></g>;
+    return <g key={i} opacity={n.opacity}><defs><clipPath id={`${uid}-img-${i}`}>{mask ? <path d={mask} transform={`translate(${n.x} ${n.y})`}/> : <rect x={n.x} y={n.y} width={n.w} height={n.h} rx={n.mask === "rounded" ? n.radius || 16 : n.radius || 0}/>}</clipPath></defs><g clipPath={`url(#${uid}-img-${i})`}><g transform={`translate(${n.x+n.w/2} ${n.y+n.h/2}) rotate(${n.rotation||0}) scale(${n.flipX?-1:1} ${n.flipY?-1:1}) translate(${-n.x-n.w/2} ${-n.y-n.h/2})`}><image href={n.src} x={frame.x} y={frame.y} width={frame.w} height={frame.h} preserveAspectRatio="none" style={{filter:imageFilter(n)}} /></g></g></g>;
   }
   return null;
 }

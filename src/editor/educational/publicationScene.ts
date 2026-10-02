@@ -1,14 +1,16 @@
+import { renderEducationalLibrary } from './library/render';
 import type { ImageTreatment } from "./imageTreatment";
 import type { SmartBlockInstance } from "../../domain/educational/blockSchema";
-import { COLLECTIONS, PUBLICATION_PALETTES, GRADE_SCALES } from "../../domain/educational/designTokens";
+import { COLLECTIONS, PUBLICATION_PALETTES, GRADE_SCALES, SUBJECT_PALETTES } from "../../domain/educational/designTokens";
 import { EDUCATIONAL_BLOCK_REGISTRY } from "./blockRegistry";
 import { toGrayHex } from "../design/contrast";
 import { renderAtelier } from "./atelier/render";
 import { renderReferenceElement } from "../curriculum/renderReferenceElement";
 import { renderCurriculum } from "../curriculum/render";
 import { sliceScene } from "../curriculum/pagination";
+import { transformSceneNode } from "./sceneGeometry";
 
-type SceneMark = { opacity?: number; motifId?: string; clipId?: string; contentId?: string };
+type SceneMark = { appearanceTarget?: "accent"; fieldPath?: string; imageSlot?: number; opacity?: number; motifId?: string; clipId?: string; contentId?: string };
 export type SceneNode =
   | ({ kind: "rect"; x: number; y: number; w: number; h: number; fill: string; stroke?: string; radius?: number; strokeWidth?: number; gradientId?: string } & SceneMark)
   | ({ kind: "ellipse"; x: number; y: number; rx: number; ry: number; fill: string; stroke?: string; strokeWidth?: number } & SceneMark)
@@ -45,7 +47,9 @@ export function resolvePublicationPalette(block: SmartBlockInstance): Publicatio
   const o = block.styleOverrides;
   const selected = o.paletteId || COLLECTIONS[block.family]?.paletteId || "indigo";
   const p = PUBLICATION_PALETTES[selected as keyof typeof PUBLICATION_PALETTES] || PUBLICATION_PALETTES.indigo;
-  const result: PublicationPalette = { ...p, ...Object.fromEntries(Object.entries(o.customPalette || {}).filter(([,v]) => !!v)) };
+  const subject = SUBJECT_PALETTES[block.subject] || SUBJECT_PALETTES.general;
+  const base = block.presetId.startsWith("edu-") && !o.paletteId ? { name: block.subject, primary: subject.primary, secondary: subject.secondary, accent: subject.accent, surface: subject.surface, text: subject.textPrimary, border: subject.border } : p;
+  const result: PublicationPalette = { ...base, ...Object.fromEntries(Object.entries(o.customPalette || {}).filter(([,v]) => !!v)) };
   if (o.printMode === "reduced-ink") result.surface = "#FFFFFF";
   if (o.printMode === "grayscale") for (const key of ["primary", "secondary", "accent", "surface", "text", "border"] as const) result[key] = toGrayHex(result[key]);
   return result;
@@ -55,7 +59,7 @@ const widths = new Map<string, number>();
 export function textWidth(text: string, size: number, bold = false, serif = false, fontFamily?: string, letterSpacing = 0): number {
   const key = `${size}/${bold}/${serif}/${fontFamily || ""}/${letterSpacing}/${text}`;
   const cached = widths.get(key); if (cached !== undefined) return cached;
-  if (context === undefined && typeof document !== "undefined") context = document.createElement("canvas").getContext("2d");
+  if (context === undefined && typeof document !== "undefined") {context = document.createElement("canvas").getContext("2d");document.fonts?.addEventListener("loadingdone",()=>widths.clear());}
   let result: number;
   if (context) { context.font = `${bold ? "bold " : ""}${size}px ${fontFamily || (serif ? "Times New Roman" : "Arial")}`; result = context.measureText(text).width; }
   else result = Array.from(text).reduce((sum, c) => sum + (" ilI.,:;!'".includes(c) ? .27 : "MW@%".includes(c) ? .85 : .55), 0) * size * (bold ? 1.04 : 1);
@@ -165,7 +169,11 @@ export function backgroundPatternNodes(pattern:string,w:number,h:number,p:Public
 export function buildPublicationScene(block: SmartBlockInstance, options: { teacher?: boolean } = {}): PublicationScene {
   const resizeFrame = block.styleOverrides.resizeFrame;
   if (resizeFrame) block = { ...block, transform: { ...block.transform, width: resizeFrame.width, height: resizeFrame.height } };
-  const scene = buildScene(block, options);
+  const compact = Number.isFinite(block.styleOverrides.compactScale) ? Math.max(.75, Math.min(1, block.styleOverrides.compactScale!)) : 1;
+  const natural = buildScene(compact === 1 ? block : { ...block, transform: { ...block.transform, width: block.transform.width / compact, height: block.transform.height / compact } }, options);
+  const scene = compact === 1 ? natural : { ...natural, width: natural.width * compact, height: natural.height * compact,
+    nodes: natural.nodes.map(node => transformSceneNode(node, compact, compact)),
+    motifs: natural.motifs?.map(motif => ({ ...motif, x: motif.x * compact, y: motif.y * compact, w: motif.w * compact, h: motif.h * compact })) };
   const family = block.styleOverrides.fontFamily;
   const counts = { text: 0, image: 0 };
   const layout = block.styleOverrides.contentLayout;
@@ -174,7 +182,7 @@ export function buildPublicationScene(block: SmartBlockInstance, options: { teac
     const contentId = `${node.kind}-${counts[node.kind]++}`;
     const base = node.kind === 'text' ? node.text : node.src;
     const edit = layout?.enabled ? layout.items[contentId] : undefined;
-    const next = { ...node, contentId, ...(node.kind === 'text' && family ? { fontFamily: family } : {}) };
+    const next = { ...node, contentId, ...(node.kind === 'text' && family && !block.presetId.startsWith('edu-') ? { fontFamily: family } : {}) };
     // Stale overrides must never replace new curriculum content after a layout/content change.
     if (!edit || edit.base !== base) return next;
     next.x += Number.isFinite(edit.dx) ? edit.dx : 0;
@@ -207,6 +215,8 @@ function buildScene(block: SmartBlockInstance, options: { teacher?: boolean } = 
     });
     return scene;
   }
+  const educational = renderEducationalLibrary(block, { wrapText, textWidth, resolvePublicationPalette }, options);
+  if (educational) return educational;
   const def = EDUCATIONAL_BLOCK_REGISTRY[block.presetId];
   if (def?.skinId) {
     const skinned = renderAtelier(block, { wrapText, textWidth, artworkNodes, resolvePublicationPalette }, options);
@@ -363,7 +373,8 @@ function buildScene(block: SmartBlockInstance, options: { teacher?: boolean } = 
 
 export function imagePlacement(n: Extract<SceneNode,{kind:"image"}>):{x:number;y:number;w:number;h:number} {
   const sw=n.sourceWidth||n.w,sh=n.sourceHeight||n.h;
-  const scale=(n.fit === "contain" ? Math.min(n.w/sw,n.h/sh) : Math.max(n.w/sw,n.h/sh))*Math.max(1,n.scale);
+  const quarterTurn=Math.abs((n.rotation||0)%180)===90,rw=quarterTurn?sh:sw,rh=quarterTurn?sw:sh;
+  const scale=(n.fit === "contain" ? Math.min(n.w/rw,n.h/rh) : Math.max(n.w/rw,n.h/rh))*Math.max(1,n.scale);
   const w=sw*scale,h=sh*scale;
   return {x:n.x-(w-n.w)*n.focalX,y:n.y-(h-n.h)*n.focalY,w,h};
 }

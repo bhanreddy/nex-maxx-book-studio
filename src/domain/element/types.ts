@@ -15,6 +15,7 @@ import { SmartBlockInstance } from "../educational/blockSchema";
 export type ElementCategory =
   | "text"
   | "educational"
+  | "math"
   | "assessment"
   | "workbook"
   | "media"
@@ -60,6 +61,7 @@ export type ElementType =
   | "fact"
   | "fun-fact"
   | "formula"
+  | "math-component"
 
   // Assessment & Worksheets
   | "question"
@@ -137,16 +139,309 @@ export interface CommentItem {
 }
 
 export type VectorShapeType =
+  // Basic Shapes
   | "rectangle"
+  | "rounded-rectangle"
+  | "square"
   | "circle"
+  | "oval"
   | "ellipse"
-  | "pill"
-  | "star"
+  | "semi-circle"
+  | "quarter-circle"
+  | "triangle"
+  | "right-triangle"
+  | "isosceles-triangle"
+  | "equilateral-triangle"
+  | "diamond"
+  | "rhombus"
+  | "parallelogram"
+  | "trapezoid"
+  | "pentagon"
+  | "hexagon"
+  | "heptagon"
+  | "octagon"
+  | "nonagon"
+  | "decagon"
   | "polygon"
-  | "line"
+  | "star"
+  | "multi-star"
+  | "cross"
+  | "plus"
+  | "minus"
+  | "capsule"
+  | "pill"
+  | "ring"
+  | "arc"
+  // Arrows
   | "arrow"
-  | "path"
-  | "banner";
+  | "arrow-right"
+  | "arrow-left"
+  | "arrow-up"
+  | "arrow-down"
+  | "arrow-double"
+  | "arrow-bidirectional"
+  | "arrow-chevron"
+  | "arrow-bent"
+  | "arrow-curved"
+  | "arrow-circular"
+  | "arrow-uturn"
+  | "arrow-loop"
+  | "arrow-block"
+  | "arrow-thin"
+  | "arrow-line"
+  | "arrow-handdrawn"
+  | "arrow-flow"
+  // Callouts
+  | "callout-speech"
+  | "callout-thought"
+  | "callout-rounded-speech"
+  | "callout-rectangle"
+  | "callout-cloud"
+  | "callout-annotation"
+  | "callout-pointer"
+  | "callout-caption"
+  | "callout-quote"
+  | "callout-comic"
+  | "callout-label"
+  // Badges & Labels
+  | "banner"
+  | "badge-ribbon"
+  | "badge-folded-ribbon"
+  | "badge-award"
+  | "badge-shield"
+  | "badge-seal"
+  | "badge-burst"
+  | "badge-starburst"
+  | "badge-ticket"
+  | "badge-tag"
+  | "badge-bookmark"
+  | "badge-flag"
+  | "badge-pennant"
+  | "badge-tab"
+  | "badge-corner"
+  | "badge-folded-corner"
+  | "badge-number"
+  | "badge-chapter"
+  | "badge-topic"
+  // Organic Shapes
+  | "organic-blob-1"
+  | "organic-blob-2"
+  | "organic-blob"
+  | "organic-wave"
+  | "organic-cloud"
+  | "organic-pebble"
+  | "organic-leaf"
+  | "organic-drop"
+  | "organic-splash"
+  | "organic-abstract"
+  | "organic-brush"
+  | "organic-brush-stroke"
+  | "organic-torn-paper"
+  | "organic-curved-panel"
+  | "organic-fluid-bg"
+  | "organic-wavy-container"
+  // Educational Shapes
+  | "edu-number-tile"
+  | "edu-fraction-tile"
+  | "edu-counting-block"
+  | "edu-flash-card"
+  | "edu-formula-box"
+  | "edu-definition-card"
+  | "edu-question-card"
+  | "edu-answer-card"
+  | "edu-observation-card"
+  | "edu-diagram-label"
+  | "edu-timeline-marker"
+  | "edu-process-node"
+  | "edu-step-marker"
+  | "edu-comparison-cell"
+  | "edu-venn-circle"
+  | "edu-sequence-box"
+  | "edu-mind-map-node"
+  // Flowchart Shapes
+  | "flow-process"
+  | "flow-decision"
+  | "flow-start-end"
+  | "flow-input-output"
+  | "flow-document"
+  | "flow-database"
+  | "flow-connector"
+  | "flow-manual-operation"
+  | "flow-delay"
+  | "flow-preparation"
+  | "flow-stored-data"
+  // Mathematics Shapes
+  | "math-number-line"
+  | "math-coordinate-plane"
+  | "math-axis"
+  | "math-grid"
+  | "math-fraction-circle"
+  | "math-fraction-bar"
+  | "math-angle"
+  | "math-protractor-arc"
+  | "math-triangle-diagram"
+  | "math-quadrilateral"
+  | "math-polygon"
+  | "math-geometry-node"
+  | "math-measurement-arrow"
+  | "math-dimension-line"
+  | "math-bracket"
+  | "math-brace"
+  // Lines
+  | "line"
+  | "line-straight"
+  | "line-dashed"
+  | "line-dotted"
+  | "line-double"
+  | "line-curved"
+  | "line-bezier"
+  | "line-free-curve"
+  | "line-connector"
+  | "line-elbow"
+  | "line-orthogonal"
+  | "line-handdrawn"
+  // Paths
+  | "path";
+
+// Unified Vector Shape Engine Types
+export type ShapeCornerStyle = "rounded" | "chamfer" | "concave" | "cut" | "soft";
+
+export interface ShapeCornersConfig {
+  linked?: boolean;
+  topLeft?: number;
+  topRight?: number;
+  bottomLeft?: number;
+  bottomRight?: number;
+  radius?: number;
+  style?: ShapeCornerStyle;
+}
+
+export type GradientStop = {
+  offset: number; // 0 to 1
+  color: string;
+  opacity?: number;
+};
+
+export interface ShapeFillConfig {
+  type: "solid" | "linear-gradient" | "radial-gradient" | "pattern" | "image" | "none";
+  color?: string;
+  angle?: number; // 0 to 360
+  stops?: GradientStop[];
+  cx?: number; // 0 to 1
+  cy?: number; // 0 to 1
+  radius?: number; // 0 to 1
+  pattern?: "dots" | "grid" | "lines" | "diagonal-lines" | "waves" | "geometry";
+  patternScale?: number;
+  patternColor?: string;
+  imageUrl?: string;
+  imageFit?: "cover" | "contain";
+  imageZoom?: number;
+  imageCrop?: { x: number; y: number; width: number; height: number };
+  imageFocalX?: number;
+  imageFocalY?: number;
+}
+
+export interface ShapeStrokeConfig {
+  color?: string;
+  width?: number;
+  opacity?: number;
+  alignment?: "center" | "inside" | "outside";
+  dasharray?: string;
+  linecap?: "butt" | "round" | "square";
+  linejoin?: "miter" | "round" | "bevel";
+  gradient?: {
+    stops: GradientStop[];
+    angle?: number;
+  };
+}
+
+export interface ShapeShadowEffect {
+  type: "dropShadow" | "innerShadow" | "ambientShadow" | "ambient" | "contactShadow" | "longShadow";
+  x: number;
+  y: number;
+  blur: number;
+  spread?: number;
+  color: string;
+  opacity: number;
+  inset?: boolean;
+}
+
+export interface ShapeGlowEffect {
+  type: "glow";
+  color: string;
+  blur: number;
+  spread?: number;
+  intensity: number;
+  inner?: boolean;
+}
+
+export interface ShapeElevationEffect {
+  type: "elevation" | "elevation-1" | "elevation-2" | "elevation-3" | "elevation-4" | "elevation-5";
+  level?: 1 | 2 | 3 | 4 | 5;
+}
+
+export interface ShapeDepth3DEffect {
+  type: "depth3d";
+  mode: "extrude" | "bevel" | "raised-edge" | "pressed" | "soft-plastic" | "paper-lift";
+  depth: number;
+  lightAngle?: number;
+  highlightColor?: string;
+  shadowColor?: string;
+}
+
+export interface ShapeGlassEffect {
+  type: "glass";
+  variant: "glass" | "frosted" | "translucent" | "tinted";
+  blur: number;
+  tintColor?: string;
+  borderBrightness?: number;
+}
+
+export interface ShapePaperEffect {
+  type: "paper";
+  variant: "soft" | "layered" | "cut" | "raised" | "folded";
+  intensity?: number;
+}
+
+export type ShapeEffectItem =
+  | ShapeShadowEffect
+  | ShapeGlowEffect
+  | ShapeElevationEffect
+  | ShapeDepth3DEffect
+  | ShapeGlassEffect
+  | ShapePaperEffect;
+
+export interface ShapeTextConfig {
+  text: string;
+  fontSize?: number;
+  fontFamily?: string;
+  fontWeight?: number | string;
+  fontStyle?: "normal" | "italic";
+  color?: string;
+  textAlign?: "left" | "center" | "right";
+  verticalAlign?: "top" | "middle" | "bottom";
+  padding?: number;
+  lineHeight?: number;
+  autoFit?: "grow-shape" | "shrink-text" | "fixed-size" | "auto-fit";
+}
+
+export interface ShapeParametricConfig {
+  polygonSides?: number;
+  starPoints?: number;
+  innerRadiusRatio?: number;
+  headSize?: number;
+  tailWidth?: number;
+  curveAmount?: number;
+  arrowStart?: boolean;
+  arrowEnd?: boolean;
+  pointerX?: number;
+  pointerY?: number;
+  pointerWidth?: number;
+  value?: number;
+  label?: string;
+  divisions?: number;
+  fillRatio?: number;
+}
 
 export interface ElementStyle {
   // Typography
@@ -191,9 +486,19 @@ export interface ElementStyle {
   arrowStart?: boolean;
   arrowEnd?: boolean;
   pathData?: string;
+  fillRule?: "nonzero" | "evenodd";
   polygonSides?: number;
   starPoints?: number;
   innerRadiusRatio?: number;
+
+  // Unified Shape Engine Subsystems
+  shapeFill?: ShapeFillConfig;
+  shapeStroke?: ShapeStrokeConfig;
+  shapeCorners?: ShapeCornersConfig;
+  shapeEffects?: ShapeEffectItem[];
+  shapeParams?: ShapeParametricConfig;
+  shapeText?: ShapeTextConfig;
+  isBackgroundElement?: boolean;
 
   // Non-Destructive Pixel Adjustments
   brightness?: number;      // 0 - 200, default 100

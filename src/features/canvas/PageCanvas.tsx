@@ -23,6 +23,10 @@ import { useLayoutPartnerStore } from "../../editor/layoutPartner/layoutPartnerS
 import { CanvasContextMenu, ContextMenuState } from "../ui/CanvasContextMenu";
 import { handleUniversalPaste, handleFileDropOnCanvas } from "../../editor/clipboard/universalClipboard";
 import { effectiveTextWrap } from "../../editor/layoutPartner/textWrapLayout";
+import { insertMathComponent } from "../../editor/math/mathActions";
+import { trackPointerGesture } from "../../editor/core/pointerGesture";
+import { findElementsIntersectingMarquee } from "../../editor/core/geometry";
+import { selectionRoot } from "../../editor/core/elementGroups";
 
 interface PageCanvasProps {
   book: Book;
@@ -34,6 +38,7 @@ export const PageCanvas: React.FC<PageCanvasProps> = ({ book, activePage }) => {
     elements,
     selectedElementIds,
     selectElement,
+    setSelectedElementIds,
     clearSelection,
     getActivePageElements,
     addElement,
@@ -78,6 +83,27 @@ export const PageCanvas: React.FC<PageCanvasProps> = ({ book, activePage }) => {
   const [isSpacePanning, setIsSpacePanning] = useState(false);
   const [isPanning, setIsPanning] = useState(false);
   const panStartRef = useRef({ x: 0, y: 0, startPanX: 0, startPanY: 0 });
+
+  // Marquee multi-select box overlay state
+  const [marqueeBox, setMarqueeBox] = useState<{
+    screenX: number;
+    screenY: number;
+    screenWidth: number;
+    screenHeight: number;
+    hitCount: number;
+  } | null>(null);
+
+  const marqueeCleanupRef = useRef<(() => void) | null>(null);
+  const autoScrollTickerRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    return () => {
+      marqueeCleanupRef.current?.();
+      if (autoScrollTickerRef.current) {
+        cancelAnimationFrame(autoScrollTickerRef.current);
+      }
+    };
+  }, []);
 
   const fitPage = () => {
     const viewport=containerRef.current?.getBoundingClientRect();if(!viewport)return;
@@ -174,9 +200,17 @@ export const PageCanvas: React.FC<PageCanvasProps> = ({ book, activePage }) => {
     };
   };
 
-  // Canvas Mouse Down Handlers
-  const handleMouseDown = (e: React.MouseEvent) => {
+  // Canvas Pointer Down Handler (Supports Marquee Selection, Panning, and Creation Tools)
+  const handleCanvasPointerDown = (e: React.PointerEvent<HTMLDivElement> | React.MouseEvent<HTMLDivElement>) => {
+    // 0. Ignore if right click or not primary button
+    if (e.button !== 0 && e.button !== 1) return;
+
+    // Ignore if clicked on canvas controls (transform handles, quick action bar, etc.)
     if ((e.target as Element).closest?.("[data-canvas-controls]")) return;
+
+    // Ignore if clicked on ruler or origin corner
+    if ((e.target as Element).closest?.("[data-ruler]")) return;
+
     // 1. Pan mode (Spacebar, Middle mouse, or Hand tool)
     if (isSpacePanning || e.button === 1 || activeTool === "hand") {
       e.preventDefault();
@@ -235,10 +269,185 @@ export const PageCanvas: React.FC<PageCanvasProps> = ({ book, activePage }) => {
       return;
     }
 
-    // Clicked empty page area -> clear selection
-    if (e.target === e.currentTarget || (e.target as HTMLElement).id === "page-artboard") {
-      clearSelection();
+    // Creative overlays handle their own pointer events
+    if (["pen", "pencil", "brush", "eraser", "cloneStamp", "healing"].includes(activeTool)) {
+      return;
     }
+
+    // Requirement 6: Check if clicked on an existing element!
+    // Do NOT start marquee selection when dragging an existing element!
+    if ((e.target as Element).closest?.("[data-element-id]")) {
+      return;
+    }
+
+    // Only left click initiates marquee selection
+    if (e.button !== 0) return;
+
+    // Start Marquee Selection!
+    marqueeCleanupRef.current?.();
+    if (autoScrollTickerRef.current) {
+      cancelAnimationFrame(autoScrollTickerRef.current);
+      autoScrollTickerRef.current = null;
+    }
+
+    const startClientX = e.clientX;
+    const startClientY = e.clientY;
+    const isShift = e.shiftKey || e.metaKey;
+    const initialSelectedIds = [...useEditorStore.getState().selectedElementIds];
+    let hasMoved = false;
+
+    const updateMarqueeSelection = (curClientX: number, curClientY: number) => {
+      const container = containerRef.current;
+      if (!container) return;
+      const cRect = container.getBoundingClientRect?.() || { left: 0, top: 0, right: 1000, bottom: 800, width: 1000, height: 800 };
+
+      // Screen coordinates relative to container
+      const startScreenX = startClientX - cRect.left;
+      const startScreenY = startClientY - cRect.top;
+      const curScreenX = curClientX - cRect.left;
+      const curScreenY = curClientY - cRect.top;
+
+      const minScreenX = Math.min(startScreenX, curScreenX);
+      const minScreenY = Math.min(startScreenY, curScreenY);
+      const screenWidth = Math.abs(curScreenX - startScreenX);
+      const screenHeight = Math.abs(curScreenY - startScreenY);
+
+      // Active Artboard in pt
+      const artboard = typeof document !== "undefined" ? document.getElementById("page-artboard") : null;
+      if (!artboard) return;
+      const aRect = artboard.getBoundingClientRect?.() || { left: 0, top: 0, width: book.dimensions.widthPt / 0.75 * zoom, height: book.dimensions.heightPt / 0.75 * zoom };
+      const currentZoom = useUiStore.getState().zoom;
+
+      const startPtX = ((startClientX - aRect.left) * 0.75) / currentZoom;
+      const startPtY = ((startClientY - aRect.top) * 0.75) / currentZoom;
+      const curPtX = ((curClientX - aRect.left) * 0.75) / currentZoom;
+      const curPtY = ((curClientY - aRect.top) * 0.75) / currentZoom;
+
+      const minPtX = Math.min(startPtX, curPtX);
+      const minPtY = Math.min(startPtY, curPtY);
+      const ptWidth = Math.abs(curPtX - startPtX);
+      const ptHeight = Math.abs(curPtY - startPtY);
+
+      const marqueeRectPt = { x: minPtX, y: minPtY, width: ptWidth, height: ptHeight };
+
+      // Hit-testing elements on active page
+      const storeState = useEditorStore.getState();
+      const currentPage = storeState.getActivePage();
+      if (!currentPage) return;
+
+      const hitRootIds = findElementsIntersectingMarquee(storeState.elements, currentPage.id, marqueeRectPt);
+
+      let nextSelected: string[];
+      if (isShift) {
+        const set = new Set(initialSelectedIds);
+        for (const id of hitRootIds) {
+          if (set.has(id)) {
+            set.delete(id);
+          } else {
+            set.add(id);
+          }
+        }
+        nextSelected = Array.from(set);
+      } else {
+        nextSelected = hitRootIds;
+      }
+
+      // Only update Zustand store if the selection set changed (60 FPS optimization)
+      const currSelected = storeState.selectedElementIds;
+      const changed = currSelected.length !== nextSelected.length ||
+        !nextSelected.every((id) => currSelected.includes(id));
+
+      if (changed) {
+        storeState.setSelectedElementIds(nextSelected);
+      }
+
+      setMarqueeBox({
+        screenX: minScreenX,
+        screenY: minScreenY,
+        screenWidth,
+        screenHeight,
+        hitCount: nextSelected.length,
+      });
+    };
+
+    // Auto-scroll loop
+    let latestClientX = startClientX;
+    let latestClientY = startClientY;
+
+    const checkAutoScroll = () => {
+      const container = containerRef.current;
+      if (!container) return;
+      const cRect = container.getBoundingClientRect?.() || { left: 0, top: 0, right: 1000, bottom: 800, width: 1000, height: 800 };
+      const EDGE_MARGIN = 40;
+      const MAX_SPEED = 14;
+
+      let speedX = 0;
+      let speedY = 0;
+
+      if (latestClientX < cRect.left + EDGE_MARGIN) {
+        const factor = Math.min(1, (cRect.left + EDGE_MARGIN - latestClientX) / EDGE_MARGIN);
+        speedX = factor * MAX_SPEED;
+      } else if (latestClientX > cRect.right - EDGE_MARGIN) {
+        const factor = Math.min(1, (latestClientX - (cRect.right - EDGE_MARGIN)) / EDGE_MARGIN);
+        speedX = -factor * MAX_SPEED;
+      }
+
+      if (latestClientY < cRect.top + EDGE_MARGIN) {
+        const factor = Math.min(1, (cRect.top + EDGE_MARGIN - latestClientY) / EDGE_MARGIN);
+        speedY = factor * MAX_SPEED;
+      } else if (latestClientY > cRect.bottom - EDGE_MARGIN) {
+        const factor = Math.min(1, (latestClientY - (cRect.bottom - EDGE_MARGIN)) / EDGE_MARGIN);
+        speedY = -factor * MAX_SPEED;
+      }
+
+      if (speedX !== 0 || speedY !== 0) {
+        const uiState = useUiStore.getState();
+        uiState.setPanOffset({
+          x: uiState.panOffset.x + speedX,
+          y: uiState.panOffset.y + speedY,
+        });
+        updateMarqueeSelection(latestClientX, latestClientY);
+        autoScrollTickerRef.current = requestAnimationFrame(checkAutoScroll);
+      } else {
+        autoScrollTickerRef.current = null;
+      }
+    };
+
+    const nativeEv = ("pointerId" in e.nativeEvent ? e.nativeEvent : { pointerId: 1, clientX: e.clientX, clientY: e.clientY }) as PointerEvent;
+    const cleanup = trackPointerGesture(
+      nativeEv,
+      (moveEvent) => {
+        hasMoved = true;
+        latestClientX = moveEvent.clientX;
+        latestClientY = moveEvent.clientY;
+        updateMarqueeSelection(moveEvent.clientX, moveEvent.clientY);
+
+        if (!autoScrollTickerRef.current) {
+          autoScrollTickerRef.current = requestAnimationFrame(checkAutoScroll);
+        }
+      },
+      () => {
+        if (autoScrollTickerRef.current) {
+          cancelAnimationFrame(autoScrollTickerRef.current);
+          autoScrollTickerRef.current = null;
+        }
+        setMarqueeBox(null);
+        marqueeCleanupRef.current = null;
+
+        // If pointer was clicked without moving (< 3px jitter) on empty area:
+        if (!hasMoved) {
+          if (!isShift) {
+            useEditorStore.getState().clearSelection();
+          }
+        }
+      }
+    );
+
+    marqueeCleanupRef.current = cleanup;
+  };
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    handleCanvasPointerDown(e as unknown as React.PointerEvent<HTMLDivElement>);
   };
 
   const handleMouseMove = (e: React.MouseEvent) => {
@@ -277,7 +486,6 @@ export const PageCanvas: React.FC<PageCanvasProps> = ({ book, activePage }) => {
   const handleMouseUp = () => {
     setIsPanning(false);
     if (activeTool === "measure") {
-      // keep activeMeasure until clicked again
       setMeasureStart(null);
     }
   };
@@ -338,13 +546,15 @@ export const PageCanvas: React.FC<PageCanvasProps> = ({ book, activePage }) => {
 
   // Determine cursor based on activeTool
   let cursorClass = "cursor-default";
-  if (isSpacePanning || isPanning) {
+  if (marqueeBox) {
+    cursorClass = "cursor-crosshair";
+  } else if (isSpacePanning || isPanning) {
     cursorClass = isPanning ? "cursor-grabbing" : "cursor-grab";
   } else if (activeTool === "hand") {
     cursorClass = isPanning ? "cursor-grabbing" : "cursor-grab";
   } else if (activeTool === "zoom") {
     cursorClass = "cursor-zoom-in";
-  } else if (["shape", "pen", "pencil", "frameText", "measure", "table", "brush", "eraser", "cloneStamp", "healing"].includes(activeTool)) {
+  } else if (["shape", "pen", "pencil", "frameText", "measure", "table", "brush", "eraser", "cloneStamp", "healing", "marqueeSelect"].includes(activeTool)) {
     cursorClass = "cursor-crosshair";
   } else if (activeTool === "node" || activeTool === "corner") {
     cursorClass = "cursor-pointer";
@@ -355,6 +565,7 @@ export const PageCanvas: React.FC<PageCanvasProps> = ({ book, activePage }) => {
       ref={containerRef}
       className={`relative flex-1 h-full w-full overflow-hidden bg-[#f1f4f8] dark:bg-[#0c1017] canvas-grid-bg select-none ${cursorClass}`}
       onWheel={handleWheel}
+      onPointerDown={handleCanvasPointerDown}
       onMouseDown={handleMouseDown}
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}
@@ -376,6 +587,7 @@ export const PageCanvas: React.FC<PageCanvasProps> = ({ book, activePage }) => {
       {/* Top Rulers (Points & Millimeters) */}
       {showRulers && (
         <div
+          data-ruler=""
           onClick={handleTopRulerClick}
           className="absolute top-0 left-8 right-0 h-6 bg-white/95 dark:bg-[#0f141f] border-b border-slate-200 dark:border-white/10 z-30 flex items-center text-[8pt] text-slate-500 dark:text-slate-400 font-mono overflow-hidden cursor-pointer"
           title="Click on ruler to add horizontal guide"
@@ -406,6 +618,7 @@ export const PageCanvas: React.FC<PageCanvasProps> = ({ book, activePage }) => {
       {/* Left Vertical Ruler */}
       {showRulers && (
         <div
+          data-ruler=""
           onClick={handleLeftRulerClick}
           className="absolute top-6 left-0 bottom-0 w-8 bg-white/95 dark:bg-[#0f141f] border-r border-slate-200 dark:border-white/10 z-30 flex flex-col items-center text-[7pt] text-slate-500 dark:text-slate-400 font-mono overflow-hidden cursor-pointer"
           title="Click on ruler to add vertical guide"
@@ -435,7 +648,7 @@ export const PageCanvas: React.FC<PageCanvasProps> = ({ book, activePage }) => {
 
       {/* Origin Corner */}
       {showRulers && (
-        <div className="absolute top-0 left-0 w-8 h-6 bg-slate-100 dark:bg-[#0c1017] border-r border-b border-slate-200 dark:border-white/10 z-30 flex items-center justify-center text-[7pt] font-mono text-slate-500">
+        <div data-ruler="" className="absolute top-0 left-0 w-8 h-6 bg-slate-100 dark:bg-[#0c1017] border-r border-b border-slate-200 dark:border-white/10 z-30 flex items-center justify-center text-[7pt] font-mono text-slate-500">
           pt
         </div>
       )}
@@ -495,6 +708,18 @@ export const PageCanvas: React.FC<PageCanvasProps> = ({ book, activePage }) => {
             onDrop={(e) => {
               e.preventDefault();
               const coords = getPageCoordinates(e);
+              const shapePayload = e.dataTransfer.getData("application/x-nexmaxx-shape") || e.dataTransfer.getData("application/json");
+              if (shapePayload) {
+                try {
+                  const data = JSON.parse(shapePayload);
+                  if (data.type === "shape" && data.shapeType) {
+                    const w = data.width || 140;
+                    const h = data.height || 100;
+                    addVectorShape(data.shapeType, coords.x - w / 2, coords.y - h / 2, w, h);
+                    return;
+                  }
+                } catch {}
+              }
               const curriculumPayload = e.dataTransfer.getData("application/x-nexmaxx-curriculum");
               if (curriculumPayload) {
                 try { const data = JSON.parse(curriculumPayload); insertCurriculumBlock(data.type, data.layout || undefined as CurriculumLayout | undefined, data.grade as CurriculumGrade, data.subject); }
@@ -539,12 +764,26 @@ export const PageCanvas: React.FC<PageCanvasProps> = ({ book, activePage }) => {
                 addEducationalBlock(id, coords.x, coords.y, { subject, grade });
                 return;
               }
+              const mathTemplateId = e.dataTransfer.getData("application/x-nexmaxx-math-template");
+              if (mathTemplateId) {
+                const mathDataStr = e.dataTransfer.getData("application/x-nexmaxx-math-data");
+                let customData: Record<string, unknown> | undefined;
+                if (mathDataStr) {
+                  try {
+                    customData = JSON.parse(mathDataStr);
+                  } catch {}
+                }
+                const coords = getPageCoordinates(e);
+                insertMathComponent(mathTemplateId, coords.x, coords.y, customData);
+                return;
+              }
               const presetId = e.dataTransfer.getData("application/x-nexmaxx-preset");
               if (presetId) {
                 applyPagePreset(presetId);
               }
             }}
             onClick={(e) => {
+              if (e.shiftKey || e.metaKey) return;
               if (
                 (e.target === e.currentTarget || (e.target as HTMLElement).id === "page-artboard") &&
                 (activeTool === "move" || !["hand", "zoom", "measure", "pen", "pencil", "shape", "table", "brush", "eraser"].includes(activeTool))
@@ -742,11 +981,31 @@ export const PageCanvas: React.FC<PageCanvasProps> = ({ book, activePage }) => {
               return (
                 <div
                   key={el.id}
+                  data-element-id={el.id}
+                  onPointerDown={(e) => {
+                    if (e.button === 0 && (activeTool === "move" || !["hand", "zoom", "measure", "pen", "pencil", "shape", "table", "brush", "eraser"].includes(activeTool))) {
+                      e.stopPropagation();
+                      if (activePage.id !== el.pageId) useEditorStore.getState().setActivePageIndex(book.pages.findIndex(page => page.id === el.pageId));
+                      const rootId = selectionRoot(el.id, elements);
+                      if (!selectedElementIds.includes(rootId)) {
+                        selectElement(el.id, e.shiftKey || e.metaKey);
+                      } else if (e.shiftKey || e.metaKey) {
+                        selectElement(el.id, true);
+                      }
+                    }
+                  }}
                   onClick={(e) => {
                     if (activeTool === "move" || !["hand", "zoom", "measure", "pen", "pencil", "shape", "table", "brush", "eraser"].includes(activeTool)) {
                       e.stopPropagation();
                       if (activePage.id !== el.pageId) useEditorStore.getState().setActivePageIndex(book.pages.findIndex(page => page.id === el.pageId));
                       selectElement(el.id, e.shiftKey || e.metaKey);
+                    }
+                  }}
+                  onDoubleClick={(e) => {
+                    if (el.type === "math-component") {
+                      e.stopPropagation();
+                      selectElement(el.id, false);
+                      useUiStore.getState().setRightInspectorOpen(true);
                     }
                   }}
                 >
@@ -904,11 +1163,31 @@ export const PageCanvas: React.FC<PageCanvasProps> = ({ book, activePage }) => {
                 return (
                   <div
                     key={el.id}
+                    data-element-id={el.id}
+                    onPointerDown={(e) => {
+                      if (e.button === 0 && (activeTool === "move" || !["hand", "zoom", "measure", "pen", "pencil", "shape", "table", "brush", "eraser"].includes(activeTool))) {
+                        e.stopPropagation();
+                        if (activePage.id !== el.pageId) useEditorStore.getState().setActivePageIndex(book.pages.findIndex(page => page.id === el.pageId));
+                        const rootId = selectionRoot(el.id, elements);
+                        if (!selectedElementIds.includes(rootId)) {
+                          selectElement(el.id, e.shiftKey || e.metaKey);
+                        } else if (e.shiftKey || e.metaKey) {
+                          selectElement(el.id, true);
+                        }
+                      }
+                    }}
                     onClick={(e) => {
                       if (activeTool === "move" || !["hand", "zoom", "measure", "pen", "pencil", "shape", "table", "brush", "eraser"].includes(activeTool)) {
                         e.stopPropagation();
                         if (activePage.id !== el.pageId) useEditorStore.getState().setActivePageIndex(book.pages.findIndex(page => page.id === el.pageId));
                         selectElement(el.id, e.shiftKey || e.metaKey);
+                      }
+                    }}
+                    onDoubleClick={(e) => {
+                      if (el.type === "math-component") {
+                        e.stopPropagation();
+                        selectElement(el.id, false);
+                        useUiStore.getState().setRightInspectorOpen(true);
                       }
                     }}
                   >
@@ -976,6 +1255,28 @@ export const PageCanvas: React.FC<PageCanvasProps> = ({ book, activePage }) => {
         <button className="publication-button !min-h-9 !text-xs" onClick={fitPage}>Fit page</button>
         <button className="publication-button !min-h-9 !text-xs" onClick={()=>{setZoom(1);setPanOffset({x:0,y:0});}}>100%</button>
       </div>
+
+      {/* Marquee Selection Overlay */}
+      {marqueeBox && (
+        <div
+          id="canvas-marquee-box"
+          data-testid="canvas-marquee-box"
+          className="absolute pointer-events-none z-50 border border-indigo-500 bg-indigo-500/15 rounded-[1px] shadow-[0_0_12px_rgba(99,102,241,0.25)] transition-none"
+          style={{
+            left: `${marqueeBox.screenX}px`,
+            top: `${marqueeBox.screenY}px`,
+            width: `${marqueeBox.screenWidth}px`,
+            height: `${marqueeBox.screenHeight}px`,
+          }}
+        >
+          {marqueeBox.hitCount > 0 && (
+            <div className="absolute -top-6 left-0 bg-indigo-600 text-white font-mono text-[9px] px-1.5 py-0.5 rounded shadow-sm flex items-center gap-1 font-medium whitespace-nowrap">
+              <span>{marqueeBox.hitCount} {marqueeBox.hitCount === 1 ? "item" : "items"}</span>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Canvas Right-Click Context Menu */}
       <CanvasContextMenu
         menuState={contextMenuState}

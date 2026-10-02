@@ -1,7 +1,9 @@
 import type { Book, Chapter, PageDefinition, Margins } from '../../domain/book/types';
 import type { PublicationScene, SceneNode } from '../educational/publicationScene';
 import type { PageFrame } from './types';
+import { isImportedPageFrame, isImportedBorderArtwork } from './types';
 import { PUBLISHER_FOOTER_MARGIN_PT } from '../../domain/brand';
+import { imageMaskPath } from '../educational/imageTreatment';
 
 export const FRAME_PALETTES = {
   Burgundy: { primary: '#79253E', secondary: '#B9586C', accent: '#F5C79A', leaf: '#547B67', paper: '#FFFEFC', line: '#D5A29F' },
@@ -32,6 +34,12 @@ export function pageFrameFor(book: Book, page: PageDefinition): PageFrame | unde
 export function frameMargins(book: Book, frame?: PageFrame): Margins {
   const bottomPt = Math.max(book.margins.bottomPt, PUBLISHER_FOOTER_MARGIN_PT);
   if (!frame) return { ...book.margins, bottomPt };
+  if (isImportedPageFrame(frame) && frame.safeInsets) return {
+    topPt: Math.max(book.margins.topPt, book.dimensions.heightPt * frame.safeInsets.top),
+    bottomPt: Math.max(bottomPt, book.dimensions.heightPt * frame.safeInsets.bottom),
+    insidePt: Math.max(book.margins.insidePt, book.dimensions.widthPt * frame.safeInsets.left),
+    outsidePt: Math.max(book.margins.outsidePt, book.dimensions.widthPt * frame.safeInsets.right),
+  };
   return { topPt: Math.max(book.margins.topPt, book.dimensions.heightPt * .125), bottomPt: Math.max(bottomPt, book.dimensions.heightPt * .15), insidePt: Math.max(book.margins.insidePt, book.dimensions.widthPt * .11), outsidePt: Math.max(book.margins.outsidePt, book.dimensions.widthPt * .11) };
 }
 /** One margin resolver for canvas, arrangement, pagination and print checks. */
@@ -42,9 +50,18 @@ export function pageMarginsFor(book: Book, page: PageDefinition): Margins {
 export function chapterFrame(book: Book, chapter: Chapter): PageFrame | undefined {
   return (book.pageFramePolicy === 'book' ? book.pageFrame : chapter.pageFrame !== undefined ? chapter.pageFrame : book.pageFrame) || undefined;
 }
+/** Unmasked imported artwork belongs behind content; masked borders sit above backdrops. */
+export function isFrameBackgroundNode(node: SceneNode): boolean {
+  return 'motifId' in node && (node.motifId === 'Paper' || (node.kind === 'image' && isImportedBorderArtwork(node) && node.mask !== 'custom'));
+}
 
 /** Native vector scene shared by canvas, thumbnails, HTML print and PDF. */
 export function editableFrameNodes(frame: PageFrame, number: string): SceneNode[] {
+  if (isImportedPageFrame(frame)) return applyFrameEdits(frame, [
+    { kind: 'rect', motifId: 'Paper', x: 0, y: 0, w: 600, h: 900, fill: frame.colors.paper }, ...frame.additions,
+    ...(number !== 'Cover' && frame.showTopNumber ? [{ kind: 'text' as const, motifId: 'Top page number', x: 300, y: 32, text: number, size: 12, fill: frame.colors.primary, align: 'middle' as const }] : []),
+    ...(number !== 'Cover' && frame.showBottomNumber ? [{ kind: 'text' as const, motifId: 'Bottom page number', x: 300, y: 878, text: number, size: 12, fill: frame.colors.primary, align: 'middle' as const }] : []),
+  ], number);
   const p = frame.colors, nodes: SceneNode[] = [];
   const path = (id: string, d: string, fill: string, stroke?: string, opacity = 1, strokeWidth = .8) => nodes.push({ kind: 'path', motifId: id, d, fill, stroke, strokeWidth, opacity });
   nodes.push({ kind: 'rect', motifId: 'Paper', x: 0, y: 0, w: 600, h: 900, fill: p.paper });
@@ -77,7 +94,10 @@ export function editableFrameNodes(frame: PageFrame, number: string): SceneNode[
     nodes.push({ kind: 'ellipse', motifId: 'Bottom number badge', x: 38, y: 853, rx: 22, ry: 22, fill: p.paper });
     nodes.push({ kind: 'text', motifId: 'Bottom page number', x: 38, y: 862, text: number, size: Math.min(25, 37 / Math.max(1, number.length) * 1.45), bold: true, fill: p.primary, align: 'middle' });
   }
-  return [...nodes, ...frame.additions].filter(n => !frame.edits['motifId' in n ? n.motifId || '' : '']?.hidden).map(n => {
+  return applyFrameEdits(frame, [...nodes, ...frame.additions], number);
+}
+function applyFrameEdits(frame: PageFrame, nodes: SceneNode[], number: string): SceneNode[] {
+  return nodes.filter(n => !frame.edits['motifId' in n ? n.motifId || '' : '']?.hidden).map(n => {
     const { hidden, offsetX = 0, offsetY = 0, ...edit } = frame.edits['motifId' in n ? n.motifId || '' : ''] || {};
     const edited = { ...n, ...edit } as SceneNode;
     if (edited.kind === 'text' && (edited.motifId === 'Top page number' || edited.motifId === 'Bottom page number')) edited.text = number;
@@ -100,7 +120,7 @@ export function buildPageFrameScene(frame: PageFrame, number: string, width: num
     if (n.kind === 'path') { let i = 0; n.d = n.d.replace(/-?\d*\.?\d+(?:e[-+]?\d+)?/gi, v => String(Number(v) * (i++ % 2 ? sy : sx))); }
     return n;
   });
-  return { width, height, variant: 'scholar-wave-frame', nodes, warnings: [] };
+  return { width, height, variant: `${frame.style}-frame`, nodes, warnings: [] };
 }
 
 /** Standalone SVG keeps curves, fills and live page-number text editable in vector editors. */
@@ -117,6 +137,10 @@ export function pageFrameSvg(frame: PageFrame, number = '3', width = 600, height
     if (n.kind === 'ellipse') return `<ellipse ${common} cx="${n.x}" cy="${n.y}" rx="${n.rx}" ry="${n.ry}" ${fill} ${stroke}/>`;
     if (n.kind === 'text') return `<text ${common} x="${n.x}" y="${n.y}" font-family="Arial, sans-serif" font-size="${n.size}" font-weight="${n.bold ? 700 : 400}" text-anchor="${n.align || 'start'}" ${fill}>${esc(n.text)}</text>`;
     if (n.kind === 'line') return `<line ${common} x1="${n.x}" y1="${n.y}" x2="${n.x2}" y2="${n.y2}" ${stroke}/>`;
+    if (n.kind === 'image') {
+      const mask = imageMaskPath(n, n.w, n.h), clip = `border-image-${scene.nodes.indexOf(n)}`;
+      return `${mask ? `<defs><clipPath id="${clip}"><path d="${esc(mask)}" transform="translate(${n.x} ${n.y})"/></clipPath></defs>` : ''}<image ${common} x="${n.x}" y="${n.y}" width="${n.w}" height="${n.h}" href="${esc(n.src)}" preserveAspectRatio="none"${mask ? ` clip-path="url(#${clip})"` : ''}/>`;
+    }
     if (n.kind === 'polygon') return `<polygon ${common} points="${n.points.map(p => p.join(',')).join(' ')}" ${fill} ${stroke}/>`;
     throw new Error(`Unsupported frame graphic: ${n.kind}`);
   });

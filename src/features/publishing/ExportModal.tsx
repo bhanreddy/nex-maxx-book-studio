@@ -1,5 +1,5 @@
 "use client";
-import { buildPageFrameScene, pageFrameFor } from "../../editor/pageFrame/pageFrame";
+import { buildPageFrameScene, pageFrameFor, isFrameBackgroundNode } from "../../editor/pageFrame/pageFrame";
 import { buildPublisherFooterScene } from "../../editor/branding/publisherFooter";
 
 import {hydrateSmartQrs} from "../../editor/media/smartQr";
@@ -156,7 +156,7 @@ export const ExportModal: React.FC = () => {
         const frame = pageFrameFor(complete.book, page);
         if (frame) {
           const scene = buildPageFrameScene(frame, page.displayNumber, dimensions.widthPt, dimensions.heightPt);
-          await renderPublicationPdf(doc, { ...scene, nodes: scene.nodes.filter(node => 'motifId' in node && node.motifId === 'Paper') }, { id: `frame-${page.id}`, pageId: page.id, type: "shape", category: "decorative", version: 1, displayName: "Page paper", locked: false, hidden: false, transform: { x: 0, y: 0, width: scene.width, height: scene.height, rotation: 0, zIndex: -1 }, style: {}, content: {} }, originX, originY, grayscaleProof);
+          await renderPublicationPdf(doc, { ...scene, nodes: scene.nodes.filter(isFrameBackgroundNode) }, { id: `frame-${page.id}`, pageId: page.id, type: "shape", category: "decorative", version: 1, displayName: "Page paper", locked: false, hidden: false, transform: { x: 0, y: 0, width: scene.width, height: scene.height, rotation: 0, zIndex: -1 }, style: {}, content: {} }, originX, originY, grayscaleProof);
         }
         // Render page elements deterministically
         const wrapElements = page.elementIds.map(id => elements[id]).filter(el => Boolean(el) && !el.content.teacherOnly);
@@ -296,7 +296,7 @@ export const ExportModal: React.FC = () => {
 
         if (frame) {
           const scene = buildPageFrameScene(frame, page.displayNumber, dimensions.widthPt, dimensions.heightPt);
-          await renderPublicationPdf(doc, { ...scene, nodes: scene.nodes.filter(node => !('motifId' in node) || node.motifId !== 'Paper') }, { id: `border-${page.id}`, pageId: page.id, type: 'shape', category: 'decorative', version: 1, displayName: 'Page border', locked: true, hidden: false, transform: { x: 0, y: 0, width: scene.width, height: scene.height, rotation: 0, zIndex: 1 }, style: {}, content: {} }, originX, originY, grayscaleProof);
+          await renderPublicationPdf(doc, { ...scene, nodes: scene.nodes.filter(node => !isFrameBackgroundNode(node)) }, { id: `border-${page.id}`, pageId: page.id, type: 'shape', category: 'decorative', version: 1, displayName: 'Page border', locked: true, hidden: false, transform: { x: 0, y: 0, width: scene.width, height: scene.height, rotation: 0, zIndex: 1 }, style: {}, content: {} }, originX, originY, grayscaleProof);
         }
         const footer = buildPublisherFooterScene(complete.book, page, exportElements);
         if (footer.warnings.length) throw new Error(footer.warnings.join(' '));

@@ -38,6 +38,7 @@ yarn-error.log*
 /scratch/
 /output/
 /tmp/
+/public/pdfjs/
 
 # cloudflare / open-next
 /.open-next/

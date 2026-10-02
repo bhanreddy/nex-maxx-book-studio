@@ -1,5 +1,7 @@
 /** Non-destructive image settings shared by the canvas, template previews and PDF. */
 export interface ImageTreatment {
+  /** Rotate the source within its clipping frame; same treatment in SVG and PDF. */
+  rotation?: number;
   mask?: "rectangle" | "rounded" | "circle" | "arch" | "blob" | "wave" | "organic" | "custom";
   /** SVG path in a 100 × 100 coordinate system. */
   customMaskPath?: string;

@@ -1,4 +1,6 @@
 import { CurveNode, CurveNodeType } from "../../domain/creative/types";
+import { shapeToVectorCurveNodes } from "./shapeGeometry";
+import { VectorShapeType, ElementStyle } from "../../domain/element/types";
 
 /**
  * Serializes an array of CurveNodes into a standard SVG path definition string `d`.
@@ -52,110 +54,17 @@ export function shapeToCurveNodes(
   height: number,
   options?: { borderRadius?: number; starPoints?: number; polygonSides?: number }
 ): { nodes: CurveNode[]; closed: boolean } {
-  const w = Math.max(10, width);
-  const h = Math.max(10, height);
-
-  if (shapeType === "rectangle") {
-    const r = Math.min(options?.borderRadius || 0, w / 2, h / 2);
-    if (r <= 0) {
-      return {
-        nodes: [
-          { id: "n-0", x: 0, y: 0, type: "sharp" },
-          { id: "n-1", x: w, y: 0, type: "sharp" },
-          { id: "n-2", x: w, y: h, type: "sharp" },
-          { id: "n-3", x: 0, y: h, type: "sharp" },
-        ],
-        closed: true,
-      };
-    } else {
-      // Rounded rectangle with smooth corner bezier handles
-      const k = 0.5522847498 * r;
-      return {
-        nodes: [
-          { id: "n-0", x: r, y: 0, type: "smooth", handleIn: { x: -k, y: 0 } },
-          { id: "n-1", x: w - r, y: 0, type: "smooth", handleOut: { x: k, y: 0 } },
-          { id: "n-2", x: w, y: r, type: "smooth", handleIn: { x: 0, y: -k } },
-          { id: "n-3", x: w, y: h - r, type: "smooth", handleOut: { x: 0, y: k } },
-          { id: "n-4", x: w - r, y: h, type: "smooth", handleIn: { x: k, y: 0 } },
-          { id: "n-5", x: r, y: h, type: "smooth", handleOut: { x: -k, y: 0 } },
-          { id: "n-6", x: 0, y: h - r, type: "smooth", handleIn: { x: 0, y: k } },
-          { id: "n-7", x: 0, y: r, type: "smooth", handleOut: { x: 0, y: -k } },
-        ],
-        closed: true,
-      };
-    }
-  }
-
-  if (shapeType === "circle" || shapeType === "ellipse") {
-    const rx = w / 2;
-    const ry = h / 2;
-    const cx = rx;
-    const cy = ry;
-    const kx = 0.5522847498 * rx;
-    const ky = 0.5522847498 * ry;
-
-    return {
-      nodes: [
-        { id: "n-top", x: cx, y: 0, type: "smooth", handleIn: { x: -kx, y: 0 }, handleOut: { x: kx, y: 0 } },
-        { id: "n-right", x: w, y: cy, type: "smooth", handleIn: { x: 0, y: -ky }, handleOut: { x: 0, y: ky } },
-        { id: "n-bottom", x: cx, y: h, type: "smooth", handleIn: { x: kx, y: 0 }, handleOut: { x: -kx, y: 0 } },
-        { id: "n-left", x: 0, y: cy, type: "smooth", handleIn: { x: 0, y: ky }, handleOut: { x: 0, y: -ky } },
-      ],
-      closed: true,
-    };
-  }
-
-  if (shapeType === "star") {
-    const points = options?.starPoints || 5;
-    const cx = w / 2;
-    const cy = h / 2;
-    const outerR = Math.min(w, h) / 2;
-    const innerR = outerR * 0.45;
-    const nodes: CurveNode[] = [];
-
-    for (let i = 0; i < points * 2; i++) {
-      const isOuter = i % 2 === 0;
-      const r = isOuter ? outerR : innerR;
-      const angle = (i * Math.PI) / points - Math.PI / 2;
-      nodes.push({
-        id: `star-n-${i}`,
-        x: cx + r * Math.cos(angle),
-        y: cy + r * Math.sin(angle),
-        type: "sharp",
-      });
-    }
-
-    return { nodes, closed: true };
-  }
-
-  if (shapeType === "polygon") {
-    const sides = options?.polygonSides || 6;
-    const cx = w / 2;
-    const cy = h / 2;
-    const r = Math.min(w, h) / 2;
-    const nodes: CurveNode[] = [];
-
-    for (let i = 0; i < sides; i++) {
-      const angle = (i * 2 * Math.PI) / sides - Math.PI / 2;
-      nodes.push({
-        id: `poly-n-${i}`,
-        x: cx + r * Math.cos(angle),
-        y: cy + r * Math.sin(angle),
-        type: "sharp",
-      });
-    }
-
-    return { nodes, closed: true };
-  }
-
-  // Default Line / Arrow
-  return {
-    nodes: [
-      { id: "line-start", x: 0, y: h / 2, type: "sharp" },
-      { id: "line-end", x: w, y: h / 2, type: "sharp" },
-    ],
-    closed: false,
-  };
+  return shapeToVectorCurveNodes(
+    shapeType as VectorShapeType,
+    width,
+    height,
+    {
+      starPoints: options?.starPoints,
+      polygonSides: options?.polygonSides,
+    },
+    options?.borderRadius ? { radius: options.borderRadius, linked: true, style: "rounded" } : undefined,
+    options?.borderRadius
+  );
 }
 
 /**
@@ -269,4 +178,114 @@ export function applyCornerFillet(
       handleIn: { x: (corner.x - p2x) * k, y: (corner.y - p2y) * k },
     },
   ];
+}
+
+/**
+ * Combines multiple vector shapes using Boolean operations (union, subtract, intersect, exclude)
+ * into a single unified compound vector path and editable Bézier nodes.
+ */
+export function combineShapesBoolean(
+  primary: {
+    shapeType: string;
+    width: number;
+    height: number;
+    x: number;
+    y: number;
+    style?: ElementStyle;
+    nodes?: CurveNode[];
+  },
+  secondaries: {
+    shapeType: string;
+    width: number;
+    height: number;
+    x: number;
+    y: number;
+    style?: ElementStyle;
+    nodes?: CurveNode[];
+  }[],
+  op: "union" | "subtract" | "intersect" | "exclude" = "union"
+): {
+  pathData: string;
+  nodes: CurveNode[];
+  fillRule: "nonzero" | "evenodd";
+  width: number;
+  height: number;
+  minX: number;
+  minY: number;
+} {
+  const allShapes = [primary, ...secondaries];
+  const minX = Math.min(...allShapes.map((s) => s.x));
+  const minY = Math.min(...allShapes.map((s) => s.y));
+  const maxX = Math.max(...allShapes.map((s) => s.x + s.width));
+  const maxY = Math.max(...allShapes.map((s) => s.y + s.height));
+  const width = Math.max(1, maxX - minX);
+  const height = Math.max(1, maxY - minY);
+
+  // Extract primary nodes
+  const primaryNodesRaw =
+    primary.nodes && primary.nodes.length > 0
+      ? primary.nodes
+      : shapeToCurveNodes(primary.shapeType || "rectangle", primary.width, primary.height, {
+          borderRadius: primary.style?.borderRadius,
+        }).nodes;
+
+  const dxP = primary.x - minX;
+  const dyP = primary.y - minY;
+  const primaryNodes: CurveNode[] = primaryNodesRaw.map((n, i) => ({
+    ...n,
+    id: `node-p-${i}`,
+    x: n.x + dxP,
+    y: n.y + dyP,
+    handleIn: n.handleIn ? { ...n.handleIn } : undefined,
+    handleOut: n.handleOut ? { ...n.handleOut } : undefined,
+  }));
+
+  const subpaths: string[] = [curveNodesToSvgPath(primaryNodes, true)];
+  const combinedNodes: CurveNode[] = [...primaryNodes];
+
+  secondaries.forEach((sec, sIdx) => {
+    const secNodesRaw =
+      sec.nodes && sec.nodes.length > 0
+        ? sec.nodes
+        : shapeToCurveNodes(sec.shapeType || "rectangle", sec.width, sec.height, {
+            borderRadius: sec.style?.borderRadius,
+          }).nodes;
+
+    const dxS = sec.x - minX;
+    const dyS = sec.y - minY;
+    let secNodes: CurveNode[] = secNodesRaw.map((n, i) => ({
+      ...n,
+      id: `node-s${sIdx}-${i}`,
+      x: n.x + dxS,
+      y: n.y + dyS,
+      handleIn: n.handleIn ? { ...n.handleIn } : undefined,
+      handleOut: n.handleOut ? { ...n.handleOut } : undefined,
+    }));
+
+    if (op === "subtract") {
+      // Invert node order to reverse path winding
+      secNodes = [...secNodes].reverse().map((n) => ({
+        ...n,
+        handleIn: n.handleOut ? { x: -n.handleOut.x, y: -n.handleOut.y } : undefined,
+        handleOut: n.handleIn ? { x: -n.handleIn.x, y: -n.handleIn.y } : undefined,
+      }));
+    }
+
+    subpaths.push(curveNodesToSvgPath(secNodes, true));
+    combinedNodes.push(...secNodes);
+  });
+
+  const pathData = subpaths.join(" ");
+  const fillRule: "nonzero" | "evenodd" =
+    op === "subtract" || op === "intersect" || op === "exclude" ? "evenodd" : "nonzero";
+
+  return {
+    pathData,
+    nodes: combinedNodes,
+    fillRule,
+    width,
+    height,
+    minX,
+    minY,
+  };
 }

@@ -1,5 +1,6 @@
 "use client";
 
+import { EducationalBlockTools } from "../educational/EducationalBlockTools";
 import { SIGNATURE_LAYOUTS } from "../../editor/educational/atelier/skins/signature";
 import { CURRICULUM_BLOCK_MAP, LAYOUT_NAMES } from "../../editor/curriculum/catalog";
 import { switchCurriculumLayout, reshuffleCurriculumBlock } from "../../editor/curriculum/actions";
@@ -10,6 +11,7 @@ import { useEditorStore } from "../../editor/stores/editorStore";
 import { useUiStore } from "../../editor/stores/uiStore";
 import { beginBlockContentEditing } from "../../editor/educational/blockContentEditing";
 import { useLayoutPartnerStore } from "../../editor/layoutPartner/layoutPartnerStore";
+import { SHAPE_STYLE_PRESETS } from "../../editor/vector/shapeEffects";
 import {
   AlignLeft,
   AlignCenter,
@@ -68,7 +70,7 @@ export const SmartQuickActionBar: React.FC<SmartQuickActionBarProps> = ({
   } = useEditorStore();
 
   const { quickActionBarVisible } = useUiStore();
-  const [activeMenu, setActiveMenu] = useState<"align" | "layer" | "ai" | "more" | "smartLayout" | null>(null);
+  const [activeMenu, setActiveMenu] = useState<"align" | "layer" | "ai" | "more" | "smartLayout" | "shapeStyles" | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Close menus when clicking outside
@@ -161,6 +163,7 @@ export const SmartQuickActionBar: React.FC<SmartQuickActionBarProps> = ({
   };
 
   const allLocked = selectedElements.every((el) => el.locked);
+  if (single?.smartBlockData?.presetId.startsWith("edu-")) return <EducationalBlockTools element={single} zoom={zoom}/>;
 
   return (
     <div
@@ -441,6 +444,65 @@ export const SmartQuickActionBar: React.FC<SmartQuickActionBarProps> = ({
           </div>
         )}
       </div>
+
+      {/* SHAPE STYLE PRESETS (ONE-CLICK) */}
+      {selectedElements.some((el) => el.type === "shape" || el.type === "compound-shape") && (
+        <>
+          <div className="w-[1px] h-4 bg-white/15 mx-0.5" />
+          <div className="relative">
+            <button
+              onClick={() => setActiveMenu(activeMenu === "shapeStyles" ? null : "shapeStyles")}
+              className={`flex items-center gap-1 px-2 py-1 rounded-lg text-slate-200 transition-all font-medium ${
+                activeMenu === "shapeStyles" ? "bg-white/20 text-white" : "bg-white/10 hover:bg-white/15"
+              }`}
+              title="Apply 1-Click Vector Style Preset"
+            >
+              <Sparkles className="w-3 h-3 text-amber-400" />
+              <span>Styles</span>
+              <ChevronDown className="w-2.5 h-2.5 opacity-60" />
+            </button>
+
+            {activeMenu === "shapeStyles" && (
+              <div className="absolute left-0 top-full mt-1.5 w-60 bg-[#10141D] border border-white/10 rounded-xl shadow-2xl p-1.5 z-50 animate-float-in text-[8pt] max-h-72 overflow-y-auto">
+                <div className="text-[7pt] uppercase tracking-wider text-amber-400 font-mono px-2 py-1 flex items-center justify-between">
+                  <span>Style Presets</span>
+                  <span className="text-[6.5pt] text-slate-400">1-Click</span>
+                </div>
+                {SHAPE_STYLE_PRESETS.map((preset) => (
+                  <button
+                    key={preset.id}
+                    onClick={() => {
+                      selectedElements
+                        .filter((el) => el.type === "shape" || el.type === "compound-shape")
+                        .forEach((el) => {
+                          updateElementStyle(el.id, {
+                            ...preset.style,
+                            shapeFill: preset.style.shapeFill,
+                            shapeStroke: preset.style.shapeStroke,
+                            shapeEffects: preset.style.shapeEffects,
+                            shapeCorners: preset.style.shapeCorners,
+                            backgroundColor: preset.style.backgroundColor,
+                            borderColor: preset.style.borderColor,
+                            borderWidth: preset.style.borderWidth,
+                            borderRadius: preset.style.borderRadius,
+                            boxShadow: preset.style.boxShadow,
+                          });
+                        });
+                      setActiveMenu(null);
+                    }}
+                    className="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-white/10 text-slate-200 flex flex-col group transition-colors"
+                  >
+                    <div className="font-medium text-slate-100 group-hover:text-amber-300 transition-colors">
+                      {preset.name}
+                    </div>
+                    <div className="text-[7pt] text-slate-400">{preset.description}</div>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </>
+      )}
 
       {/* 4. CONTEXTUAL: TEXT CONTROLS */}
       {single && isTextElement(single) && (

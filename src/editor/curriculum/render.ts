@@ -39,7 +39,7 @@ export function renderCurriculum(block: SmartBlockInstance, h: AtelierHelpers, o
   const variant = (o.layoutVariant || def?.layouts[0] || "editorial") as CurriculumLayout;
   if (
     m.type === "chapter-hero" ||
-    o.contentLayout?.enabled ||
+    (!o.compactScale && o.contentLayout?.enabled) ||
     variant.startsWith("universal-") ||
     m.type.startsWith("universal-") ||
     (["editorial", "explorer", "academy", "workbook"] as string[]).includes(String(o.blockStyle))

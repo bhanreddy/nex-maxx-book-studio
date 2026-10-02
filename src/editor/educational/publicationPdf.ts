@@ -1,7 +1,9 @@
 import {smartQrScene} from "../media/smartQr";
+import { mathSceneForElement } from "../math/mathScene";
 import { detachedSceneForElement } from "./detachScene";
 import { imageFilter, imageMaskPath } from "./imageTreatment";
 import { imagePlacement } from "./publicationScene";
+import { isImportedBorderArtwork } from '../pageFrame/types';
 import type jsPDF from "jspdf";
 import type { PageElement } from "../../domain/element/types";
 import type { PublicationScene, SceneNode } from "./publicationScene";
@@ -9,6 +11,7 @@ import { artworkNodes, buildPublicationScene, expandSceneText, textWidth } from 
 import { PUBLICATION_PALETTES } from "../../domain/educational/designTokens";
 import { toGrayHex } from "../design/contrast";
 import { textFlowScene } from "../layoutPartner/textWrapLayout";
+import { shapeToPublicationSceneNodes } from "../vector/shapeEffects";
 
 const sceneCache = new Map<PageElement, PublicationScene | null>();
 export function publicationSceneForElement(el:PageElement,pageElements?:PageElement[]):PublicationScene|null {
@@ -22,6 +25,7 @@ export function publicationSceneForElement(el:PageElement,pageElements?:PageElem
 function uncachedPublicationScene(el:PageElement,pageElements?:PageElement[]):PublicationScene|null {
   if(pageElements){const flow=textFlowScene(el,pageElements);if(flow)return flow;}
   if(el.type==="smart-media-qr")return smartQrScene(el);
+  if(el.type==="math-component")return mathSceneForElement(el);
   const detached=detachedSceneForElement(el);if(detached)return detached;
   if(el.smartBlockData)return buildPublicationScene({...el.smartBlockData,transform:el.transform});
   if(el.content.artwork) {const p=PUBLICATION_PALETTES[el.content.artwork.paletteId as keyof typeof PUBLICATION_PALETTES]||PUBLICATION_PALETTES.indigo;return {width:el.transform.width,height:el.transform.height,nodes:artworkNodes(el.content.artwork.kind,0,0,el.transform.width,el.transform.height,p),variant:el.content.artwork.kind,warnings:[]};}
@@ -58,11 +62,44 @@ function uncachedPublicationScene(el:PageElement,pageElements?:PageElement[]):Pu
       }],
     };
   }
+  if (el.type === "shape" || el.type === "compound-shape" || el.style.shapeType) {
+    const nodes = shapeToPublicationSceneNodes(
+      (el.style.shapeType as string) || "rectangle",
+      el.transform.width,
+      el.transform.height,
+      el.style,
+      el.style.shapeText
+    );
+    return {
+      width: el.transform.width,
+      height: el.transform.height,
+      nodes,
+      variant: "vector-shape",
+      warnings: [],
+    };
+  }
+  if (el.type === "vector-curve" && el.style.pathData) {
+    return {
+      width: el.transform.width,
+      height: el.transform.height,
+      nodes: [
+        {
+          kind: "path",
+          d: el.style.pathData,
+          fill: el.style.backgroundColor || "none",
+          stroke: el.style.strokeColor || "#e11d48",
+          strokeWidth: el.style.strokeWidth ?? 2,
+        },
+      ],
+      variant: "vector-curve",
+      warnings: [],
+    };
+  }
   return null;
 }
 export async function cropImage(node:Extract<SceneNode,{kind:"image"}>,gray:boolean):Promise<string> {
   const image=await new Promise<HTMLImageElement>((resolve,reject)=>{const img=new Image();img.crossOrigin="anonymous";img.onload=()=>resolve(img);img.onerror=()=>reject(new Error(`Unable to load image: ${node.alt||"unnamed image"}`));img.src=node.src;});
-  const placement=imagePlacement({...node,sourceWidth:image.naturalWidth,sourceHeight:image.naturalHeight});
+  const placement=isImportedBorderArtwork(node) ? { x: node.x, y: node.y, w: node.w, h: node.h } : imagePlacement({...node,sourceWidth:image.naturalWidth,sourceHeight:image.naturalHeight});
   const canvas=document.createElement("canvas");canvas.width=Math.max(1,Math.min(2400,Math.round(node.w/72*300)));canvas.height=Math.max(1,Math.round(canvas.width*node.h/node.w));
   const ctx=canvas.getContext("2d");if(!ctx)throw new Error("Image export canvas is unavailable.");
   const scale=canvas.width/node.w;
@@ -71,7 +108,7 @@ export async function cropImage(node:Extract<SceneNode,{kind:"image"}>,gray:bool
   if (maskPath) ctx.clip(new Path2D(maskPath));
   const radius=node.radius || (node.mask === "rounded" ? 16 : 0);
   if(radius){ctx.beginPath();ctx.roundRect(0,0,node.w,node.h,Math.min(radius,node.w/2,node.h/2));ctx.clip();}
-  ctx.translate(node.w/2,node.h/2);ctx.scale(node.flipX?-1:1,node.flipY?-1:1);ctx.translate(-node.w/2,-node.h/2);
+  ctx.translate(node.w/2,node.h/2);ctx.rotate((node.rotation||0)*Math.PI/180);ctx.scale(node.flipX?-1:1,node.flipY?-1:1);ctx.translate(-node.w/2,-node.h/2);
   ctx.filter=imageFilter(node,gray);
   ctx.drawImage(image,placement.x-node.x,placement.y-node.y,placement.w,placement.h);
   try{return canvas.toDataURL("image/png");}catch{throw new Error(`Image '${node.alt}' does not allow export. Upload a local copy.`);}
@@ -105,7 +142,7 @@ function svgPathToPdf(d: string): { op: string; c: number[] }[] {
   }
   return out;
 }
-export async function renderPublicationPdf(doc:jsPDF,scene:PublicationScene,el:PageElement,originX=0,originY=0,grayscale=false):Promise<void> {
+export async function renderPublicationPdf(doc:jsPDF,scene:PublicationScene,el:PageElement,originX=0,originY=0,grayscale=false,fontMap?:{sans:string;serif:string}):Promise<void> {
   const images=new Map<number,string>();
   await Promise.all(scene.nodes.map(async(n,i)=>{if(n.kind==="image")images.set(i,await cropImage(n,grayscale));}));
   const color=(value:string):[number,number,number]=>{const v=grayscale?toGrayHex(value):value;return [parseInt(v.slice(1,3),16)||0,parseInt(v.slice(3,5),16)||0,parseInt(v.slice(5,7),16)||0];};
@@ -121,7 +158,7 @@ export async function renderPublicationPdf(doc:jsPDF,scene:PublicationScene,el:P
       doc.saveGraphicsState();
       const opacity=(el.style.opacity??1)*("opacity"in n?(n.opacity??1):1);doc.setGState(doc.GState({opacity,"stroke-opacity":opacity}));
       if(n.kind==="gradient"||n.kind==="clip"){doc.restoreGraphicsState();return;}
-      if(n.clipId){const clip=scene.nodes.find(node=>node.kind==="clip"&&node.id===n.clipId);if(clip&&clip.kind==="clip"){doc.rect(clip.x,clip.y,clip.w,clip.h);doc.clip();doc.discardPath();}}
+      if(n.clipId){const clip=scene.nodes.find(node=>node.kind==="clip"&&node.id===n.clipId);if(clip&&clip.kind==="clip"){const radius=Math.min(clip.radius||0,clip.w/2,clip.h/2);if(radius)doc.roundedRect(clip.x,clip.y,clip.w,clip.h,radius,radius,null);else doc.rect(clip.x,clip.y,clip.w,clip.h);doc.clip();doc.discardPath();}}
       const paintable=(value?:string)=>!!value&&value!=="none"&&value.startsWith("#");
       if("fill"in n&&paintable(n.fill))doc.setFillColor(...color(n.fill));
       if("stroke"in n&&n.stroke&&paintable(n.stroke))doc.setDrawColor(...color(n.stroke));
@@ -131,13 +168,13 @@ export async function renderPublicationPdf(doc:jsPDF,scene:PublicationScene,el:P
         if(g&&g.kind==="gradient"){const bands=28,vertical=Math.abs(g.y2-g.y1)>Math.abs(g.x2-g.x1);for(let b=0;b<bands;b++){doc.setFillColor(...color(mixHex(g.from,g.to,b/Math.max(1,bands-1))));if(vertical)doc.rect(n.x,n.y+n.h*b/bands,n.w,n.h/bands+.2,"F");else doc.rect(n.x+n.w*b/bands,n.y,n.w/bands+.2,n.h,"F");}}
         else {const style=n.stroke?"FD":"F",r=Math.min(n.radius||0,n.w/2,n.h/2);if(r)doc.roundedRect(n.x,n.y,n.w,n.h,r,r,style);else doc.rect(n.x,n.y,n.w,n.h,style);}
       }
-      else if(n.kind==="rect") {const style=n.stroke?"FD":"F",r=Math.min(n.radius||0,n.w/2,n.h/2);if(r)doc.roundedRect(n.x,n.y,n.w,n.h,r,r,style);else doc.rect(n.x,n.y,n.w,n.h,style);}
+      else if(n.kind==="rect") {if(!paintable(n.fill)&&!paintable(n.stroke)){doc.restoreGraphicsState();return;} const style=paintable(n.fill)?(n.stroke?"FD":"F"):"S",r=Math.min(n.radius||0,n.w/2,n.h/2);if(r)doc.roundedRect(n.x,n.y,n.w,n.h,r,r,style);else doc.rect(n.x,n.y,n.w,n.h,style);}
       else if(n.kind==="ellipse")doc.ellipse(n.x,n.y,n.rx,n.ry,n.stroke?"FD":"F");
       else if(n.kind==="line")doc.line(n.x,n.y,n.x2,n.y2);
-      else if(n.kind==="polygon") {doc.path(n.points.map((point,index)=>({op:index?"l":"m",c:point})).concat([{op:"h",c:[]}]));doc.fill();}
+      else if(n.kind==="polygon") {doc.path(n.points.map((point,index)=>({op:index?"l":"m",c:point})).concat([{op:"h",c:[]}]));if(paintable(n.fill)&&paintable(n.stroke))doc.fillStroke();else if(paintable(n.stroke))doc.stroke();else doc.fill();}
       else if(n.kind==="path"){const commands=svgPathToPdf(n.d);if(commands.length){doc.path(commands);const filled=paintable(n.fill),stroked=paintable(n.stroke);if(filled&&stroked)doc.fillStroke();else if(filled)doc.fill();else doc.stroke();}}
       else if(n.kind==="text") {
-        doc.setTextColor(...color(n.fill));doc.setFont(n.font==="serif"?"times":"helvetica",n.bold?(n.italic?"bolditalic":"bold"):(n.italic?"italic":"normal"));doc.setFontSize(n.size);
+        doc.setTextColor(...color(n.fill));doc.setFont(fontMap?(n.font==="serif"?fontMap.serif:fontMap.sans):(n.font==="serif"?"times":"helvetica"),n.bold?(n.italic?"bolditalic":"bold"):(n.italic?"italic":"normal"));doc.setFontSize(n.size);
         for (const line of expandSceneText(n)) {
           if (line.kind !== "text") continue;
           const width=line.textLength??textWidth(line.text,line.size,!!line.bold,line.font==="serif"),shift=line.align==="middle"?width/2:line.align==="end"?width:0;

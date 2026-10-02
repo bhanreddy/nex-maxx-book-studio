@@ -388,6 +388,19 @@ export const ToolRail: React.FC = () => {
               </button>
             );
           })}
+          <div className="pt-1 mt-1 border-t border-slate-100 dark:border-white/10">
+            <button
+              onClick={() => {
+                setShapeMenuOpen(false);
+                useUiStore.getState().setLeftPanelOpen(true);
+                useUiStore.getState().setLeftPanelTab("shapes");
+              }}
+              className="w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/40"
+            >
+              <span>Explore All Shapes</span>
+              <span>→</span>
+            </button>
+          </div>
         </div>
       )}
     </div>

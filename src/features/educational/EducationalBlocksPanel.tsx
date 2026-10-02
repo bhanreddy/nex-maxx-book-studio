@@ -14,10 +14,15 @@ import { PublicationSceneView } from "../../editor/renderer/PublicationSceneView
 import type { GradeBand, SubjectDomain } from "../../domain/educational/blockSchema";
 import type { EducationalBlockDefinition } from "../../domain/educational/blockSchema";
 
+import { LIBRARY_BY_TYPE, LESSON_STAGES, RECOMMENDED_BLOCK_IDS } from "../../editor/educational/library/catalog";
+import { recentEducationalPresets, resolveBookGrade, resolveBookSubject } from "../../editor/educational/library/preferences";
+
+function subjectForBook(subject?:string){ return resolveBookSubject(subject || "General Knowledge"); }
+
 const cachedFilters = {
   tab: "blocks" as "blocks" | "pages" | "artwork",
   search: "",
-  category: "all",
+  category: "recommended",
   family: "all",
   subject: "all",
   grade: "all",
@@ -25,15 +30,21 @@ const cachedFilters = {
   signature: false,
 };
 
-const BlockPreview = memo(function BlockPreview({ definition, subject }: { definition: EducationalBlockDefinition; subject: string }) {
+const thumbnailCache = new Map<string,ReturnType<typeof buildPublicationScene>>();
+const BlockPreview = memo(function BlockPreview({ definition, subject, grade }: { definition: EducationalBlockDefinition; subject: string; grade: string }) {
   const scene = useMemo(() => {
+    const key=`${definition.id}:${subject}:${grade}`;
+    const cached=thumbnailCache.get(key);if(cached)return cached;
     let block = createSmartBlockInstance(definition.id, "preview")!;
     if (subject !== "all" && definition.supportedSubjects.includes("general")) {
       block = withSubjectExample(block, subject as SubjectDomain);
     }
+    if (grade !== "all") block.gradeBand = grade as GradeBand;
     block.transform.height = 0;
-    return buildPublicationScene(block);
-  }, [definition, subject]);
+    const scene=buildPublicationScene(block);
+    if(thumbnailCache.size>=240)thumbnailCache.delete(thumbnailCache.keys().next().value!);
+    thumbnailCache.set(key,scene);return scene;
+  }, [definition, subject, grade]);
   return (
     <div className="publication-thumb" style={{ aspectRatio: `${scene.width} / ${Math.min(scene.height, 330)}` }}>
       <PublicationSceneView scene={scene} label={`${definition.name} preview`} />
@@ -42,6 +53,8 @@ const BlockPreview = memo(function BlockPreview({ definition, subject }: { defin
 });
 
 export const EducationalBlocksPanel: React.FC = () => {
+  const book = useEditorStore(s => s.books.find(book => book.id === s.activeBookId));
+  const effectiveSubject = subjectForBook(book?.subject);
   const saved = useEditorStore((s) => s.publicationPresets);
   const insertSaved = useEditorStore((s) => s.insertPublicationPreset);
   const addPages = useEditorStore((s) => s.addPublicationPages);
@@ -55,6 +68,11 @@ export const EducationalBlocksPanel: React.FC = () => {
   const [subject, setSubject] = useState(cachedFilters.subject);
   const [grade, setGrade] = useState(cachedFilters.grade);
   const [favorites, setFavorites] = useState<string[]>([]);
+  const [recent, setRecent] = useState<string[]>([]);
+  const [chosenVariants, setChosenVariants] = useState<Record<string,string>>({});
+  const previewSubject = subject === "all" ? effectiveSubject : subject;
+  const previewGrade = grade === "all" ? resolveBookGrade(book?.grade || "Grade 3") : grade;
+  useEffect(() => { const refresh = () => setRecent(recentEducationalPresets()); refresh(); window.addEventListener("nex-educational-recent",refresh); return () => window.removeEventListener("nex-educational-recent",refresh); },[]);
   const [limit, setLimit] = useState(12);
   const [legacy, setLegacy] = useState(cachedFilters.legacy);
   const [signature, setSignature] = useState(cachedFilters.signature);
@@ -80,21 +98,22 @@ export const EducationalBlocksPanel: React.FC = () => {
     () =>
       Object.values(EDUCATIONAL_BLOCK_REGISTRY).filter(
         (b) =>
-          (legacy || b.collectionVersion === 3) &&
+          (legacy || b.collectionVersion === 4 || category === "favorites" || category === "recent") &&
+          (legacy || category === "recommended" || category === "favorites" || category === "recent" || !b.educationalType || b.id === `edu-${b.educationalType}-${LIBRARY_BY_TYPE[b.educationalType].variants[0]}`) &&
           (!signature || b.tags.includes("signature")) &&
-          (category === "all" || (category === "favorites" && favorites.includes(b.id)) || category === b.category) &&
+          (category === "all" || (category === "recommended" && RECOMMENDED_BLOCK_IDS.includes(b.id)) || (category === "recent" && recent.includes(b.id)) || (category === "favorites" && favorites.includes(b.id)) || category === b.lessonStage || category === b.category) &&
           (family === "all" || b.family === family) &&
           (subject === "all" || b.supportedSubjects.includes(subject as SubjectDomain) || b.supportedSubjects.includes("general")) &&
           (grade === "all" || b.supportedGrades.includes(grade as GradeBand)) &&
-          `${b.name} ${b.tags.join(" ")} ${b.category}`.toLowerCase().includes(search.toLowerCase())
-      ),
-    [search, category, family, subject, grade, legacy, favorites, signature]
+          `${b.name} ${b.tags.join(" ")} ${b.category} ${b.description || ""}`.toLowerCase().includes(search.toLowerCase())
+      ).sort((a,b) => category === "recent" ? recent.indexOf(a.id)-recent.indexOf(b.id) : category === "recommended" ? RECOMMENDED_BLOCK_IDS.indexOf(a.id)-RECOMMENDED_BLOCK_IDS.indexOf(b.id) : 0),
+    [search, category, family, subject, grade, legacy, favorites, signature, recent]
   );
 
   const filteredSaved = useMemo(
     () =>
       Object.entries(saved).filter(
-        ([, p]) => !search || `${p.name} ${p.block.presetId}`.toLowerCase().includes(search.toLowerCase())
+        ([, p]) => !search || `${p.name} ${p.category || ""} ${p.block.presetId}`.toLowerCase().includes(search.toLowerCase())
       ),
     [saved, search]
   );
@@ -126,17 +145,17 @@ export const EducationalBlocksPanel: React.FC = () => {
   };
 
   const insert = (id: string) => {
-    useEditorStore.getState().addEducationalBlock(id, undefined, undefined, { subject, grade });
+    useEditorStore.getState().addEducationalBlock(id, undefined, undefined, { subject: previewSubject, grade: previewGrade });
   };
 
   return (
-    <div className="publication-panel flex flex-1 flex-col min-h-0 overflow-hidden">
+    <div className="publication-panel educational-publishing-panel flex flex-1 flex-col min-h-0 overflow-hidden">
       {/* 1. Compact Sticky Top Tabs */}
       <div className="flex px-3 pt-2 gap-1 border-b border-slate-200 dark:border-white/10 shrink-0 bg-white dark:bg-[#0d121e]">
         {(["blocks", "pages", "artwork"] as const).map((t) => {
           const isActive = tab === t;
           const count =
-            t === "blocks" ? filtered.length : t === "pages" ? PUBLICATION_PAGES.length : ARTWORKS.length;
+            t === "blocks" ? (category === "saved" ? filteredSaved.length : filtered.length) : t === "pages" ? PUBLICATION_PAGES.length : ARTWORKS.length;
           return (
             <button
               key={t}
@@ -168,6 +187,7 @@ export const EducationalBlocksPanel: React.FC = () => {
                 value={search}
                 onChange={(e) => {
                   setSearch(e.target.value);
+                  if (category === "recommended") setCategory("all");
                   setLimit(12);
                 }}
                 placeholder="Search templates, warm-up…"
@@ -220,9 +240,10 @@ export const EducationalBlocksPanel: React.FC = () => {
             )}
           </div>
 
+          <nav aria-label="Educational block categories" className="educational-library-stages">{[["recommended","Recommended"],["all","All blocks"],...LESSON_STAGES,["favorites","Favourites"],["recent","Recent"],["saved","My Blocks"]].map(([id,label])=><button key={id} type="button" aria-pressed={category===id} onClick={()=>{setCategory(id);setLimit(12);}}>{label}</button>)}</nav>
           {/* Quick Segmented Toggle (All vs Signature) */}
           <div className="flex items-center justify-between gap-2">
-            <div className="inline-flex p-0.5 bg-slate-200/70 dark:bg-white/10 rounded-lg text-[11px] font-medium">
+            {legacy && <div className="inline-flex p-0.5 bg-slate-200/70 dark:bg-white/10 rounded-lg text-[11px] font-medium">
               <button
                 type="button"
                 aria-pressed={!signature}
@@ -253,10 +274,10 @@ export const EducationalBlocksPanel: React.FC = () => {
               >
                 <span>✦ Signature</span>
               </button>
-            </div>
+            </div>}
 
             <span className="text-[10px] text-slate-500 dark:text-slate-400 font-mono">
-              {filtered.length} layouts
+              {category === "saved" ? filteredSaved.length : filtered.length} {category === "saved" ? "saved blocks" : "layouts"}
             </span>
           </div>
 
@@ -276,8 +297,11 @@ export const EducationalBlocksPanel: React.FC = () => {
                     className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-white/15 rounded-md px-2 py-1 text-[11px] text-slate-800 dark:text-slate-200 outline-none"
                   >
                     <option value="all">All purposes</option>
+                    <option value="recommended">Recommended</option>
+                    <option value="recent">Recent</option>
                     <option value="favorites">★ Favourites</option>
-                    <option value="saved">My templates</option>
+                    <option value="saved">My Blocks</option>
+                    {LESSON_STAGES.map(([id,title])=><option key={id} value={id}>{title}</option>)}
                     {PUBLICATION_CATALOG.map(([id, title]) => (
                       <option value={id} key={id}>{title}</option>
                     ))}
@@ -366,17 +390,10 @@ export const EducationalBlocksPanel: React.FC = () => {
       {tab === "blocks" && (
         <div className="flex-1 min-h-0 overflow-y-auto px-3 py-3 space-y-3 custom-scrollbar">
           {/* Hero Branding — inside scroll area so it scrolls away naturally when browsing! */}
-          <div className="p-3 rounded-xl bg-gradient-to-br from-amber-500/10 via-orange-500/5 to-transparent border border-amber-500/20">
-            <div className="flex items-center gap-1.5 text-amber-700 dark:text-amber-300 text-[9px] uppercase tracking-[.18em] font-bold">
-              <span className="w-3.5 h-px bg-amber-600/60 dark:bg-amber-300/60" />
-              THE SIGNATURE COLLECTION
-            </div>
-            <h2 className="text-base text-slate-900 dark:text-white font-bold tracking-tight mt-0.5">
-              Little minds. Big ideas.
-            </h2>
-            <p className="text-[11px] text-slate-600 dark:text-slate-400 mt-0.5 leading-snug">
-              Beautiful pages for every subject. Made to explore. Made to make your own.
-            </p>
+          <div className="educational-library-intro">
+            <span className="studio-eyebrow">NEX MAXX · PUBLISHING STUDIO</span>
+            <h2>Lessons worth looking at.</h2>
+            <p>Illustrated, editable, and ready for your page.</p>
           </div>
 
           {category === "saved" && !Object.keys(saved).length && (
@@ -395,12 +412,12 @@ export const EducationalBlocksPanel: React.FC = () => {
                 <div className="publication-thumb" style={{ height: 160 }}>
                   <PublicationSceneView scene={buildPublicationScene(p.block)} label={p.name} />
                 </div>
-                <div className="p-3 text-xs text-slate-900 dark:text-white">{p.name} · Insert saved template</div>
+                <div className="p-3 text-xs text-slate-900 dark:text-white">{p.name} · {p.category || "Custom"} · Insert saved template</div>
               </button>
             ))}
 
           {category !== "saved" &&
-            filtered.slice(0, limit).map((b) => (
+            filtered.slice(0, limit).map((base) => { const b = EDUCATIONAL_BLOCK_REGISTRY[chosenVariants[base.id]] || base; const entry=b.educationalType?LIBRARY_BY_TYPE[b.educationalType]:undefined; return (
               <article
                 key={b.id}
                 className="publication-library-card"
@@ -409,21 +426,20 @@ export const EducationalBlocksPanel: React.FC = () => {
                   e.dataTransfer.setData("application/x-nexmaxx-block-id", b.id);
                   e.dataTransfer.setData(
                     "application/x-nexmaxx-block-payload",
-                    JSON.stringify({ id: b.id, subject, grade })
+                    JSON.stringify({ id: b.id, subject: previewSubject, grade: previewGrade })
                   );
                 }}
               >
                 <button className="block w-full text-left" onClick={() => insert(b.id)} aria-label={`Insert ${b.name}`}>
-                  <BlockPreview definition={b} subject={subject} />
+                  <BlockPreview definition={b} subject={previewSubject} grade={previewGrade} />
                   <div className="px-3 pt-2">
                     <div className="text-[9px] uppercase tracking-[.12em] text-amber-700 dark:text-amber-200/80 font-semibold">
-                      {COLLECTIONS[b.family]?.name}
-                      {b.tags.includes("signature") ? " · Signature" : b.collectionVersion === 3 ? " · Atelier" : ""}
+                      {entry ? `${LESSON_STAGES.find(([id])=>id===entry.stage)?.[1]} · ${entry.variants.length} designs` : COLLECTIONS[b.family]?.name}
                     </div>
-                    <div className="text-xs font-semibold text-slate-900 dark:text-slate-100 mt-1">{b.name}</div>
-                    <div className="text-[11px] text-slate-600 dark:text-slate-400 mt-1">
+                    <div className="text-sm font-semibold text-slate-900 dark:text-slate-100 mt-1">{entry?.title || b.name}</div>
+                    {!entry && <div className="text-[11px] text-slate-600 dark:text-slate-400 mt-1">
                       {PUBLICATION_CATALOG.find(([id]) => id === b.category)?.[1] || b.category}
-                    </div>
+                    </div>}
                     {b.description && (
                       <div className="text-[11px] text-slate-600 dark:text-slate-500 mt-1 leading-snug">
                         {b.description}
@@ -431,13 +447,14 @@ export const EducationalBlocksPanel: React.FC = () => {
                     )}
                   </div>
                 </button>
+                {entry && <label className="educational-variant-picker">Variant<select aria-label={`${entry.title} variant`} value={b.id} onChange={e=>setChosenVariants(old=>({...old,[base.id]:e.target.value}))}>{entry.variants.map(variant=><option key={variant} value={`edu-${entry.type}-${variant}`}>{variant.replaceAll('-',' ')}</option>)}</select></label>}
                 <div className="flex justify-between items-center px-3 pb-2 pt-1">
                   <button
                     onClick={() => insert(b.id)}
                     className="text-[11px] text-slate-700 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-white flex items-center gap-1 min-h-8 font-medium cursor-pointer"
                   >
                     <Plus size={12} />
-                    Insert or drag onto page
+                    Add to page
                   </button>
                   <button
                     onClick={() => toggle(b.id)}
@@ -452,7 +469,7 @@ export const EducationalBlocksPanel: React.FC = () => {
                   </button>
                 </div>
               </article>
-            ))}
+            ); })}
 
           {!filtered.length && category !== "saved" && (
             <div className="text-center py-8 px-4 text-slate-500 dark:text-slate-400">

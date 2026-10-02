@@ -1,10 +1,11 @@
 "use client";
+import { EducationalBlock } from "./EducationalBlock";
 import { selectionRoot, isElementLocked } from "../core/elementGroups";
 import {SmartQrRenderer} from "../../features/media/SmartQrRenderer";
 
 import React, { useRef, useEffect, memo } from "react";
 import { useUiStore } from "../stores/uiStore";
-import { DesignBinding, PageElement } from "../../domain/element/types";
+import { DesignBinding, PageElement, ShapeTextConfig } from "../../domain/element/types";
 import { LayoutView } from "../design/LayoutView";
 import { useEditorStore } from "../stores/editorStore";
 import {
@@ -41,6 +42,14 @@ import { UniversalBlockRenderer } from "./UniversalBlockRenderer";
 import { RichTextInlineEditor } from "./RichTextInlineEditor";
 import { FlowText } from "./FlowText";
 import { FLOW_FONT_FAMILY, isFlowText } from "../layoutPartner/textWrapLayout";
+import { MathComponentRenderer } from "../math/MathComponentRenderer";
+import { generateShapeSvgPath } from "../vector/shapeGeometry";
+import {
+  resolveShapeFill,
+  resolveShapeStroke,
+  buildShapeBoxShadow,
+  buildShapeSvgDropShadow,
+} from "../vector/shapeEffects";
 
 interface ElementRendererProps {
   element: PageElement;
@@ -219,6 +228,7 @@ export const ElementRenderer: React.FC<ElementRendererProps> = memo(function Ele
   zoom = 1,
 }) {
   const updateElementContent = useEditorStore(s => s.updateElementContent);
+  const updateElementStyle = useEditorStore(s => s.updateElementStyle);
   const addPage = useEditorStore(s => s.addPage);
   const shuffleEducationalBlockStyle = useEditorStore(s => s.shuffleEducationalBlockStyle);
   const detachEducationalBlock = useEditorStore(s => s.detachEducationalBlock);
@@ -266,11 +276,11 @@ export const ElementRenderer: React.FC<ElementRendererProps> = memo(function Ele
     height: `${transform.height}pt`,
     transform: transform.rotation ? `rotate(${transform.rotation}deg)` : undefined,
     zIndex: transform.zIndex,
-    backgroundColor: type === "smart-block" || content.publicationPrimitive ? undefined : style.backgroundColor,
-    borderRadius: style.borderRadius ? `${style.borderRadius}pt` : undefined,
-    ...(type === "smart-block" || content.publicationPrimitive ? {} : borderStyle(style)),
+    backgroundColor: type === "smart-block" || type === "shape" || content.publicationPrimitive ? undefined : style.backgroundColor,
+    borderRadius: type === "shape" ? undefined : (style.borderRadius ? `${style.borderRadius}pt` : undefined),
+    ...(type === "smart-block" || type === "shape" || content.publicationPrimitive ? {} : borderStyle(style)),
     opacity: style.opacity ?? 1,
-    boxShadow: style.boxShadow,
+    boxShadow: type === "shape" ? undefined : style.boxShadow,
     padding: !isFlowText(element) && style.padding
       ? `${style.padding.top}pt ${style.padding.right}pt ${style.padding.bottom}pt ${style.padding.left}pt`
       : undefined,
@@ -319,6 +329,9 @@ export const ElementRenderer: React.FC<ElementRendererProps> = memo(function Ele
     }
 
     switch (type) {
+      case "math-component":
+        return <MathComponentRenderer element={element} isSelected={isSelected} zoom={zoom} />;
+
       case "heading":
       case "subheading":
       case "body":
@@ -366,107 +379,178 @@ export const ElementRenderer: React.FC<ElementRendererProps> = memo(function Ele
           </div>
         );
 
-      case "shape":
-        const shape = style.shapeType || "rectangle";
-        const strokeW = style.borderWidth || 1.5;
-        const strokeColor = style.borderColor || "#4338ca";
-        const fillColor = style.backgroundColor || "#e0e7ff";
-        const strokeDash = style.borderStyle === "dashed" ? "5,4" : undefined;
-
-        if (shape === "circle" || shape === "ellipse") {
-          return (
-            <svg className="w-full h-full overflow-visible pointer-events-none">
-              <ellipse
-                cx="50%"
-                cy="50%"
-                rx="48%"
-                ry="48%"
-                fill={fillColor}
-                stroke={strokeColor}
-                strokeWidth={strokeW}
-                strokeDasharray={strokeDash}
-              />
-            </svg>
+      case "shape": {
+        const shapeType = style.shapeType || "rectangle";
+        const d =
+          style.pathData ||
+          generateShapeSvgPath(
+            shapeType,
+            transform.width,
+            transform.height,
+            style.shapeParams,
+            style.shapeCorners,
+            style.borderRadius
           );
-        }
-
-        if (shape === "star") {
-          return (
-            <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="w-full h-full overflow-visible pointer-events-none">
-              <polygon
-                points="50,2 62,38 100,38 69,60 81,96 50,74 19,96 31,60 0,38 38,38"
-                fill={fillColor}
-                stroke={strokeColor}
-                strokeWidth={strokeW}
-                strokeDasharray={strokeDash}
-                strokeLinejoin="round"
-              />
-            </svg>
-          );
-        }
-
-        if (shape === "polygon") {
-          return (
-            <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="w-full h-full overflow-visible pointer-events-none">
-              <polygon
-                points="50,3 95,25 95,75 50,97 5,75 5,25"
-                fill={fillColor}
-                stroke={strokeColor}
-                strokeWidth={strokeW}
-                strokeDasharray={strokeDash}
-                strokeLinejoin="round"
-              />
-            </svg>
-          );
-        }
-
-        if (shape === "line" || shape === "arrow") {
-          return (
-            <svg className="w-full h-full overflow-visible pointer-events-none">
-              <defs>
-                <marker
-                  id={`arrow-${element.id}`}
-                  viewBox="0 0 10 10"
-                  refX="6"
-                  refY="5"
-                  markerWidth="6"
-                  markerHeight="6"
-                  orient="auto-start-reverse"
-                >
-                  <path d="M 0 1 L 10 5 L 0 9 z" fill={strokeColor} />
-                </marker>
-              </defs>
-              <line
-                x1="4"
-                y1="50%"
-                x2="96%"
-                y2="50%"
-                stroke={strokeColor}
-                strokeWidth={strokeW}
-                strokeDasharray={strokeDash}
-                markerEnd={shape === "arrow" ? `url(#arrow-${element.id})` : undefined}
-              />
-            </svg>
-          );
-        }
-
-        // Default rectangle with corner radius
-        return (
-          <svg className="w-full h-full overflow-visible pointer-events-none">
-            <rect
-              x={strokeW / 2}
-              y={strokeW / 2}
-              width={`calc(100% - ${strokeW}px)`}
-              height={`calc(100% - ${strokeW}px)`}
-              rx={style.borderRadius || 6}
-              ry={style.borderRadius || 6}
-              fill={fillColor}
-              stroke={strokeColor}
-              strokeWidth={strokeW}
-              strokeDasharray={strokeDash}
-            />
-          </svg>
+        const fill = resolveShapeFill(style.shapeFill, style.backgroundColor, element.id);
+        const stroke = resolveShapeStroke(
+          style.shapeStroke,
+          style.borderColor,
+          style.borderWidth,
+          style.borderStyle === "dashed" ? "5,4" : undefined
         );
+        const svgDropShadow = buildShapeSvgDropShadow(style.shapeEffects);
+        const containerBoxShadow = buildShapeBoxShadow(style.shapeEffects, style.boxShadow);
+        const isRectangular = shapeType === "rectangle" || shapeType === "square" || shapeType === "rounded-rectangle";
+        const shapeText: ShapeTextConfig | undefined = style.shapeText || (content.text ? { text: content.text } : undefined);
+
+        return (
+          <div
+            className="w-full h-full relative"
+            style={{
+              boxShadow: isRectangular ? containerBoxShadow : undefined,
+              borderRadius: isRectangular ? (style.borderRadius ? `${style.borderRadius}pt` : (style.shapeCorners?.radius ? `${style.shapeCorners.radius}pt` : undefined)) : undefined,
+            }}
+          >
+            <svg
+              className="w-full h-full overflow-visible pointer-events-none"
+              style={{
+                filter: !isRectangular && svgDropShadow !== "none" ? svgDropShadow : undefined,
+              }}
+            >
+              <defs>
+                {fill.gradientDef && (
+                  fill.gradientDef.type === "linear" ? (
+                    <linearGradient
+                      id={fill.gradientDef.id}
+                      x1={fill.gradientDef.x1}
+                      y1={fill.gradientDef.y1}
+                      x2={fill.gradientDef.x2}
+                      y2={fill.gradientDef.y2}
+                    >
+                      {fill.gradientDef.stops.map((s, idx) => (
+                        <stop key={idx} offset={s.offset} stopColor={s.color} stopOpacity={s.opacity ?? 1} />
+                      ))}
+                    </linearGradient>
+                  ) : (
+                    <radialGradient
+                      id={fill.gradientDef.id}
+                      cx={fill.gradientDef.cx}
+                      cy={fill.gradientDef.cy}
+                      r={fill.gradientDef.r}
+                    >
+                      {fill.gradientDef.stops.map((s, idx) => (
+                        <stop key={idx} offset={s.offset} stopColor={s.color} stopOpacity={s.opacity ?? 1} />
+                      ))}
+                    </radialGradient>
+                  )
+                )}
+                {fill.patternDef && (
+                  <pattern
+                    id={fill.patternDef.id}
+                    width={fill.patternDef.scale}
+                    height={fill.patternDef.scale}
+                    patternUnits="userSpaceOnUse"
+                  >
+                    {fill.patternDef.type === "grid" ? (
+                      <path
+                        d={`M ${fill.patternDef.scale} 0 L 0 0 0 ${fill.patternDef.scale}`}
+                        fill="none"
+                        stroke={fill.patternDef.color}
+                        strokeWidth="1"
+                      />
+                    ) : fill.patternDef.type === "lines" ? (
+                      <line
+                        x1="0"
+                        y1={fill.patternDef.scale / 2}
+                        x2={fill.patternDef.scale}
+                        y2={fill.patternDef.scale / 2}
+                        stroke={fill.patternDef.color}
+                        strokeWidth="1"
+                      />
+                    ) : fill.patternDef.type === "diagonal-lines" ? (
+                      <line
+                        x1="0"
+                        y1="0"
+                        x2={fill.patternDef.scale}
+                        y2={fill.patternDef.scale}
+                        stroke={fill.patternDef.color}
+                        strokeWidth="1"
+                      />
+                    ) : (
+                      <circle
+                        cx={fill.patternDef.scale / 2}
+                        cy={fill.patternDef.scale / 2}
+                        r={Math.max(1, fill.patternDef.scale * 0.12)}
+                        fill={fill.patternDef.color}
+                      />
+                    )}
+                  </pattern>
+                )}
+                {fill.imageDef && (
+                  <pattern
+                    id={fill.imageDef.id}
+                    width="100%"
+                    height="100%"
+                    patternContentUnits="objectBoundingBox"
+                  >
+                    <image
+                      href={fill.imageDef.url}
+                      preserveAspectRatio={fill.imageDef.fit === "contain" ? "xMidYMid meet" : "xMidYMid slice"}
+                      width="1"
+                      height="1"
+                    />
+                  </pattern>
+                )}
+              </defs>
+              <path
+                d={d}
+                fill={fill.svgFill}
+                fillRule={style.fillRule || "nonzero"}
+                stroke={stroke.color}
+                strokeWidth={stroke.width}
+                strokeDasharray={stroke.dasharray}
+                strokeLinecap={stroke.linecap}
+                strokeLinejoin={stroke.linejoin}
+                strokeOpacity={stroke.opacity}
+              />
+            </svg>
+
+            {/* Embedded Text inside Shape */}
+            {shapeText && shapeText.text && (
+              <div
+                className="absolute inset-0 flex items-center justify-center pointer-events-auto p-2"
+                style={{
+                  alignItems: shapeText.verticalAlign === "top" ? "flex-start" : shapeText.verticalAlign === "bottom" ? "flex-end" : "center",
+                  justifyContent: shapeText.textAlign === "left" ? "flex-start" : shapeText.textAlign === "right" ? "flex-end" : "center",
+                  padding: shapeText.padding ?? 10,
+                }}
+              >
+                <div
+                  className="font-[inherit] leading-tight break-words max-w-full"
+                  style={{
+                    color: shapeText.color || style.color || "#0f172a",
+                    fontSize: shapeText.fontSize ? `${shapeText.fontSize}pt` : "11pt",
+                    fontFamily: shapeText.fontFamily || style.fontFamily,
+                    fontWeight: shapeText.fontWeight || style.fontWeight || 500,
+                    textAlign: shapeText.textAlign || "center",
+                  }}
+                >
+                  <InlineEditable
+                    value={shapeText.text}
+                    onCommit={(val) => {
+                      updateElementStyle(element.id, {
+                        shapeText: { ...shapeText, text: val },
+                      });
+                      updateElementContent(element.id, { text: val });
+                    }}
+                    placeholder="Shape Text..."
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+        );
+      }
 
       case "table":
         const headers: string[] = content.headers || ["Col 1", "Col 2", "Col 3"];
@@ -529,6 +613,21 @@ export const ElementRenderer: React.FC<ElementRendererProps> = memo(function Ele
         );
 
       case "compound-shape":
+        if (style.pathData) {
+          return (
+            <svg
+              className="w-full h-full overflow-visible pointer-events-none"
+              viewBox={`0 0 ${transform.width} ${transform.height}`}
+            >
+              <path
+                d={style.pathData}
+                fill={style.backgroundColor || "#e0e7ff"}
+                stroke={style.borderColor || style.strokeColor || "#4338ca"}
+                strokeWidth={style.borderWidth ?? style.strokeWidth ?? 1.5}
+              />
+            </svg>
+          );
+        }
         return (
           <div className="w-full h-full border border-indigo-400/40 bg-indigo-500/10 rounded-[inherit] flex items-center justify-center text-[8pt] text-indigo-300 font-mono">
             Compound ({element.compoundData?.operation.toUpperCase() || "UNION"})
@@ -1320,7 +1419,8 @@ export const ElementRenderer: React.FC<ElementRendererProps> = memo(function Ele
 
       case "smart-block":
         if (element.smartBlockData) {
-          if (element.smartBlockData.styleOverrides.contentLayout?.enabled || isPremiumBlockLayout(element.smartBlockData.styleOverrides.layoutVariant)) return <BlockContentEditor element={element} selected={isSelected && !locked && !grouped} zoom={zoom}/>;
+          if (element.smartBlockData.presetId.startsWith("edu-") && !element.smartBlockData.styleOverrides.contentLayout?.enabled) return <EducationalBlock element={element} selected={isSelected && !locked && !grouped}/>;
+          if (element.smartBlockData.styleOverrides.compactScale || element.smartBlockData.styleOverrides.contentLayout?.enabled || isPremiumBlockLayout(element.smartBlockData.styleOverrides.layoutVariant)) return <BlockContentEditor element={element} selected={isSelected && !locked && !grouped} zoom={zoom}/>;
           if (element.smartBlockData.styleOverrides.referenceElement) return <PublicationSceneView scene={buildPublicationScene({ ...element.smartBlockData, transform: blockTransform })} viewBox={`0 0 ${blockTransform.width} ${blockTransform.height}`} preserveAspectRatio="none" overflow="visible" label={element.smartBlockData.semanticContent.title}/>;
           if (element.smartBlockData.curriculum?.type === "lesson-schema") {
             return <LessonSchemaRenderer block={{ ...element.smartBlockData, transform: blockTransform }} elementId={element.id} selected={isSelected} locked={element.locked}/>;

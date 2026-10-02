@@ -1,3 +1,6 @@
+import type { PageElement } from "../../domain/element/types";
+import { isElementLocked, selectionRoot } from "./elementGroups";
+
 export interface Rect {
   x: number;
   y: number;
@@ -215,3 +218,147 @@ export function resizeSelectionMember(rect: Rect, initial: Rect, next: Rect): Re
   return { x: next.x + (rect.x - initial.x) * sx, y: next.y + (rect.y - initial.y) * sy,
     width: rect.width * sx, height: rect.height * sy };
 }
+
+/**
+ * Check if two axis-aligned bounding boxes intersect or contain one another
+ */
+export function doesRectIntersectRect(r1: Rect, r2: Rect): boolean {
+  return (
+    r1.x <= r2.x + r2.width &&
+    r1.x + r1.width >= r2.x &&
+    r1.y <= r2.y + r2.height &&
+    r1.y + r1.height >= r2.y
+  );
+}
+
+/**
+ * Get the 4 corners of a potentially rotated rectangle in document points
+ */
+export function getRotatedCorners(rect: Rect, rotationDeg: number = 0): { x: number; y: number }[] {
+  if (!rotationDeg) {
+    return [
+      { x: rect.x, y: rect.y },
+      { x: rect.x + rect.width, y: rect.y },
+      { x: rect.x + rect.width, y: rect.y + rect.height },
+      { x: rect.x, y: rect.y + rect.height },
+    ];
+  }
+  const cx = rect.x + rect.width / 2;
+  const cy = rect.y + rect.height / 2;
+  return [
+    rotatePoint(rect.x, rect.y, cx, cy, rotationDeg),
+    rotatePoint(rect.x + rect.width, rect.y, cx, cy, rotationDeg),
+    rotatePoint(rect.x + rect.width, rect.y + rect.height, cx, cy, rotationDeg),
+    rotatePoint(rect.x, rect.y + rect.height, cx, cy, rotationDeg),
+  ];
+}
+
+/**
+ * Separating Axis Theorem (SAT) intersection between a convex 4-point polygon and an axis-aligned box
+ */
+export function doesPolygonIntersectRect(polygon: { x: number; y: number }[], rect: Rect): boolean {
+  const boxPoints = [
+    { x: rect.x, y: rect.y },
+    { x: rect.x + rect.width, y: rect.y },
+    { x: rect.x + rect.width, y: rect.y + rect.height },
+    { x: rect.x, y: rect.y + rect.height },
+  ];
+
+  // Normals of box and polygon edges
+  const axes = [
+    { x: 1, y: 0 },
+    { x: 0, y: 1 },
+    { x: -(polygon[1].y - polygon[0].y), y: polygon[1].x - polygon[0].x },
+    { x: -(polygon[2].y - polygon[1].y), y: polygon[2].x - polygon[1].x },
+  ];
+
+  for (const axis of axes) {
+    let minB = Infinity;
+    let maxB = -Infinity;
+    for (const p of boxPoints) {
+      const dot = p.x * axis.x + p.y * axis.y;
+      if (dot < minB) minB = dot;
+      if (dot > maxB) maxB = dot;
+    }
+
+    let minP = Infinity;
+    let maxP = -Infinity;
+    for (const p of polygon) {
+      const dot = p.x * axis.x + p.y * axis.y;
+      if (dot < minP) minP = dot;
+      if (dot > maxP) maxP = dot;
+    }
+
+    if (maxB < minP || maxP < minB) {
+      return false; // Separating axis exists
+    }
+  }
+
+  return true;
+}
+
+/**
+ * Test whether a page element intersects or is inside a marquee rectangle in page coordinates
+ */
+export function elementIntersectsMarquee(element: PageElement, marqueeRect: Rect): boolean {
+  const width = element.smartBlockData?.styleOverrides?.resizeFrame?.width ?? element.transform.width;
+  const height = element.smartBlockData?.styleOverrides?.resizeFrame?.height ?? element.transform.height;
+  const elRect: Rect = {
+    x: element.transform.x,
+    y: element.transform.y,
+    width,
+    height,
+  };
+
+  const rotation = element.transform.rotation || 0;
+  if (rotation === 0) {
+    return doesRectIntersectRect(elRect, marqueeRect);
+  }
+
+  const corners = getRotatedCorners(elRect, rotation);
+  // Quick AABB rejection
+  let minX = Infinity;
+  let minY = Infinity;
+  let maxX = -Infinity;
+  let maxY = -Infinity;
+  for (const c of corners) {
+    if (c.x < minX) minX = c.x;
+    if (c.x > maxX) maxX = c.x;
+    if (c.y < minY) minY = c.y;
+    if (c.y > maxY) maxY = c.y;
+  }
+  const aabb: Rect = { x: minX, y: minY, width: maxX - minX, height: maxY - minY };
+  if (!doesRectIntersectRect(aabb, marqueeRect)) {
+    return false;
+  }
+
+  return doesPolygonIntersectRect(corners, marqueeRect);
+}
+
+/**
+ * Find all selection root element IDs intersecting the marquee box on the given page
+ */
+export function findElementsIntersectingMarquee(
+  elements: Record<string, PageElement>,
+  activePageId: string,
+  marqueeRectPt: Rect,
+): string[] {
+  const hitRoots = new Set<string>();
+
+  for (const id in elements) {
+    const el = elements[id];
+    if (!el || el.pageId !== activePageId || el.hidden || el.locked) continue;
+    if (isElementLocked(el.id, elements)) continue;
+    if ((el.type as string) === "page-frame") continue;
+
+    if (elementIntersectsMarquee(el, marqueeRectPt)) {
+      const rootId = selectionRoot(el.id, elements);
+      if (elements[rootId] && !elements[rootId].hidden && !elements[rootId].locked && !isElementLocked(rootId, elements)) {
+        hitRoots.add(rootId);
+      }
+    }
+  }
+
+  return Array.from(hitRoots);
+}
+

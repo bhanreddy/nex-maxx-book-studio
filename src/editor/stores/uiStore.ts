@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { PixelSelectionState } from "../../domain/creative/types";
+import { VectorShapeType } from "../../domain/element/types";
 
 export type StudioType =
   | "LAYOUT"
@@ -58,14 +59,7 @@ export type ToolType =
 
 export type EditorTool = ToolType;
 
-export type ShapeSubtype =
-  | "rectangle"
-  | "circle"
-  | "ellipse"
-  | "star"
-  | "polygon"
-  | "line"
-  | "arrow";
+export type ShapeSubtype = VectorShapeType;
 
 export type LeftPanelTab =
   | "curriculum"
@@ -73,13 +67,15 @@ export type LeftPanelTab =
   | "blocks"
   | "pages"
   | "elements"
+  | "shapes"
   | "templates"
   | "content"
   | "layers"
   | "assets"
   | "styles"
   | "comments"
-  | "ai";
+  | "ai"
+  | "maths";
 
 export interface ToastMessage {
   id: string;
@@ -313,7 +309,7 @@ export const useUiStore = create<UiState>((set, get) => ({
 
   themeMode: (typeof window !== "undefined" && (localStorage.getItem("nex-theme-mode") as "light" | "dark")) || "light",
   leftPanelOpen: true,
-  leftPanelTab: "curriculum",
+  leftPanelTab: "blocks",
   rightInspectorOpen: true,
   bottomStripOpen: true,
   viewMode: "single",

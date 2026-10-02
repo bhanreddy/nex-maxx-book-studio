@@ -119,6 +119,9 @@ export interface BlockSlotDefinition {
 }
 
 export interface EducationalBlockDefinition {
+  /** Optional v4 publishing identity; older preset IDs remain valid. */
+  educationalType?: string;
+  lessonStage?: "start" | "discover" | "learn" | "think" | "practice" | "activity" | "review";
   id: string;                      // e.g. "outcomes-cards-v1"
   archetypeId: EducationalBlockCategory; // e.g. "learning-outcomes"
   version: number;
@@ -203,6 +206,12 @@ export interface StudySkillTopic {
   note?: string;
 }
 
+export interface EducationalImage extends ImageTreatment {
+  src?: string; alt?: string; caption?: string;
+  focalX?: number; focalY?: number; scale?: number; opacity?: number; rotation?: number;
+  rawWidthPx?: number; rawHeightPx?: number; originalSrc?: string; maskDataUrl?: string;
+}
+
 export interface SmartBlockInstance {
   id: string;                     // Unique instance UUID
   curriculum?: import("./curriculum").CurriculumMetadata;
@@ -253,6 +262,18 @@ export interface SmartBlockInstance {
     numberValue?: number;
     numberSystem?: "indian" | "international";
     passage?: string;
+    hint?: string;
+    quote?: string;
+    prediction?: string;
+    reveal?: string;
+    finalAnswer?: string;
+    difficulty?: string;
+    vocabulary?: Array<{ word: string; pronunciation?: string; meaning: string; example?: string }>;
+    formula?: { expression: string; variables?: string[]; units?: string; diagram?: "rectangle" | "triangle" | "none" };
+    images?: EducationalImage[];
+    annotations?: Array<{ imageIndex: number; x: number; y: number; label: string }>;
+    comparison?: { leftLabel: string; rightLabel: string; left: string[]; right: string[] };
+    grid?: { rows: string[]; clues: string[]; solution?: string[] };
   };
 
   // Visual Overrides & Adaptive Sizing
@@ -266,10 +287,13 @@ export interface SmartBlockInstance {
     answerSpacePt?: number;
     illustration?: "number-city" | "botanical" | "geometry" | "none";
     decorationOpacity?: number;
+    illustrationPreset?: string;
     backgroundImage?: { src: string; alt: string; focalX: number; focalY: number; opacity: number; scale: number; rawWidthPx?: number; rawHeightPx?: number };
     motifs?: BlockMotif[];
     /** Design dimensions: corners scale content; height-only edits trim or add whitespace. */
     resizeFrame?: { width: number; height: number };
+    /** Compact insertion scale, baked into scene geometry before pagination/export. */
+    compactScale?: number;
     /** Authored text/image positions stay inside the original block, without detaching it. */
     contentLayout?: {
       enabled: boolean;

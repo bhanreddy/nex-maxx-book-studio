@@ -28,6 +28,7 @@ import {
   Unlock,
   Search,
   Shapes,
+  Calculator,
 } from "lucide-react";
 import { EducationalBlocksPanel } from "../educational/EducationalBlocksPanel";
 import { CurriculumBlocksPanel } from "../curriculum/CurriculumBlocksPanel";
@@ -38,6 +39,8 @@ import { FactZoneLibraryCard } from "../curriculum/FactZoneLibraryCard";
 import { TopicBannerLibraryCard } from "../curriculum/TopicBannerLibraryCard";
 import { LifeConnectLibraryCard } from "../curriculum/LifeConnectLibraryCard";
 import { ChapterStructurePanel } from "../curriculum/ChapterStructurePanel";
+import { MathTemplatesPanel } from "./MathTemplatesPanel";
+import { ShapesPanel } from "./ShapesPanel";
 
 export const LeftSidebar: React.FC = () => {
   const {
@@ -67,6 +70,7 @@ export const LeftSidebar: React.FC = () => {
   const [presetGradeFilter, setPresetGradeFilter] = useState("all");
   const [presetSubjectFilter, setPresetSubjectFilter] = useState("all");
   const [presetSearch, setPresetSearch] = useState("");
+  const [templatesSubSection, setTemplatesSubSection] = useState<"maths" | "general">("maths");
   const [panelWidth, setPanelWidth] = useState(360);
   useEffect(() => {
     const width = window.innerWidth;
@@ -137,7 +141,8 @@ export const LeftSidebar: React.FC = () => {
         <div className="studio-side-tabs-scroll" role="tablist" aria-label="Sidebar">
           {(
             [
-              { id: "curriculum", label: "Blocks", icon: Sparkles },
+              { id: "blocks", label: "Blocks", icon: Sparkles },
+              { id: "shapes", label: "Shapes", icon: Shapes },
               { id: "elements", label: "Presets", icon: LayoutGrid },
               { id: "pages", label: "Pages", icon: FileText },
 
@@ -164,8 +169,9 @@ export const LeftSidebar: React.FC = () => {
         </div>
           {(() => {
             const moreTabs = [
+              { id: "maths", label: "Maths Studio", icon: Calculator },
               { id: "structure", label: "Chapter Plan", icon: BookOpen },
-              { id: "blocks", label: "Educational Blocks", icon: Shapes },
+              { id: "curriculum", label: "Chapter elements", icon: Shapes },
               { id: "layers", label: "Layers", icon: Layers },
               { id: "templates", label: "Templates", icon: LayoutGrid },
               { id: "content", label: "Curriculum", icon: BookOpen },
@@ -234,17 +240,20 @@ export const LeftSidebar: React.FC = () => {
               <SmartQrLibrary />
             </div>
           </details>
+          <button type="button" className="shrink-0 px-3 py-3 border-b border-slate-200 dark:border-white/10 text-xs font-semibold text-indigo-700 dark:text-indigo-300 text-left" onClick={()=>setLeftPanelTab("blocks")}>Educational Blocks · publishing library →</button>
           <CurriculumBlocksPanel />
         </div>
       )}
+      {leftPanelTab === "maths" && <MathTemplatesPanel />}
       {leftPanelTab === "structure" && <ChapterStructurePanel />}
-      {leftPanelTab === "blocks" && (
-        <EducationalBlocksPanel />
-      )}
+      {leftPanelTab === "blocks" && <div className="flex flex-1 min-h-0 flex-col"><button type="button" className="shrink-0 px-3 py-2 text-xs text-slate-500 text-left" onClick={()=>setLeftPanelTab("curriculum")}>← Chapter elements</button><EducationalBlocksPanel /></div>}
+
+      {leftPanelTab === "shapes" && <ShapesPanel />}
 
       {/* Tab 1: Elements Browser */}
       {leftPanelTab === "elements" && (
         <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
+          <button type="button" className="shrink-0 px-3 py-3 border-b border-slate-200 dark:border-white/10 text-xs font-semibold text-indigo-700 dark:text-indigo-300 text-left" onClick={()=>setLeftPanelTab("blocks")}>Educational Blocks · publishing library →</button>
           <details className="shrink-0 border-b border-slate-200 dark:border-white/10"><summary className="px-3 py-2 text-xs text-slate-600 dark:text-slate-300 cursor-pointer">Learning media / Smart QR</summary><SmartQrLibrary/></details>
           <PresetLibrary />
         </div>
@@ -366,14 +375,45 @@ export const LeftSidebar: React.FC = () => {
         </div>
       )}
 
-      {/* Tab 3: 160+ Massive Preset Ecosystem Browser (Directives 23-37) */}
+      {/* Tab 3: Templates Ecosystem Browser */}
       {leftPanelTab === "templates" && (
-        <div className="flex-1 flex flex-col overflow-hidden p-3 text-xs">
-          {/* Header & Total Count */}
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-[10.5pt] font-semibold text-slate-800 dark:text-slate-200">
-              Preset Library
-            </span>
+        <div className="flex-1 flex flex-col overflow-hidden">
+          {/* Top Sub-Navigation: Templates → Maths vs General */}
+          <div className="shrink-0 flex border-b border-slate-200 dark:border-white/10 px-3 pt-2 pb-1.5 gap-1.5 bg-slate-50/80 dark:bg-white/[0.03]">
+            <button
+              onClick={() => setTemplatesSubSection("maths")}
+              className={`flex-1 py-1.5 px-2 rounded-lg font-bold text-xs flex items-center justify-center gap-1.5 transition-all ${
+                templatesSubSection === "maths"
+                  ? "bg-indigo-600 text-white shadow-xs font-semibold"
+                  : "bg-slate-100 hover:bg-slate-200 text-slate-600 hover:text-slate-900 border border-slate-200 dark:bg-white/5 dark:text-slate-400 dark:hover:text-white dark:border-transparent"
+              }`}
+            >
+              <Calculator className="w-3.5 h-3.5" />
+              <span>Maths Studio</span>
+              <span className="text-[9px] px-1.5 py-0.2 rounded-full bg-white/20 font-mono">1–5</span>
+            </button>
+            <button
+              onClick={() => setTemplatesSubSection("general")}
+              className={`flex-1 py-1.5 px-2 rounded-lg font-bold text-xs flex items-center justify-center gap-1.5 transition-all ${
+                templatesSubSection === "general"
+                  ? "bg-indigo-600 text-white shadow-xs font-semibold"
+                  : "bg-slate-100 hover:bg-slate-200 text-slate-600 hover:text-slate-900 border border-slate-200 dark:bg-white/5 dark:text-slate-400 dark:hover:text-white dark:border-transparent"
+              }`}
+            >
+              <LayoutGrid className="w-3.5 h-3.5" />
+              <span>General Presets</span>
+            </button>
+          </div>
+
+          {templatesSubSection === "maths" ? (
+            <MathTemplatesPanel />
+          ) : (
+            <div className="flex-1 flex flex-col overflow-hidden p-3 text-xs">
+              {/* Header & Total Count */}
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-[10.5pt] font-semibold text-slate-800 dark:text-slate-200">
+                  Preset Library
+                </span>
             <span className="px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 font-mono text-[7.5pt] border border-indigo-500/30">
               {COMPREHENSIVE_PRESET_LIBRARY.length} Presets
             </span>
@@ -568,6 +608,8 @@ export const LeftSidebar: React.FC = () => {
             ))}
           </div>
         </div>
+        )}
+      </div>
       )}
 
       {/* Tab 4: Structured Curriculum Content Tree */}

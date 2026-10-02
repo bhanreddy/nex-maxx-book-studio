@@ -1,14 +1,15 @@
-import { buildPageFrameScene, pageFrameFor } from "../pageFrame/pageFrame";
+import { buildPageFrameScene, pageFrameFor, isFrameBackgroundNode } from "../pageFrame/pageFrame";
 import {hydrateSmartQrs} from '../media/smartQr';
 import type {Book} from '../../domain/book/types';
 import type {PageElement} from '../../domain/element/types';
 import type {SceneNode,PublicationScene} from '../educational/publicationScene';
 import {publicationSceneForElement,cropImage} from '../educational/publicationPdf';
-import {wrapText} from '../educational/publicationScene';
+import {wrapText,expandSceneText} from '../educational/publicationScene';
 import {toGrayHex} from '../design/contrast';
 import {printFont,PRINT_FONTS} from './fontRegistry';
 import {prepareTextWrapContours} from '../layoutPartner/textWrapLayout';
 import { buildPublisherFooterScene } from '../branding/publisherFooter';
+import { imageMaskPath } from '../educational/imageTreatment';
 const escape=(value:unknown)=>String(value??'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#39;');
 const num=(value:number)=>{if(!Number.isFinite(value))throw new Error('Print layout contains invalid coordinates');return String(value);};
 export interface PrintScenePage{number:string;frame?:PublicationScene;footer?:PublicationScene;elements:{element:PageElement;scene:PublicationScene}[]}
@@ -52,16 +53,18 @@ export function buildPrintHtml(book:Book,pages:PrintScenePage[],fontCss:string,o
       if(n.kind==='polygon')return `<polygon points="${n.points.map(p=>p.map(num).join(',')).join(' ')}" fill="${paint(n.fill)}"${stroke}${common}/>`;
       if(n.kind==='path')return `<path d="${escape(n.d)}" fill="${paint(n.fill)}"${stroke}${common}/>`;
       if(!/^data:image\/(?:png|jpeg|webp);base64,[a-zA-Z0-9+/=]+$/.test(n.src))throw new Error('Print images must be verified and embedded before export');
-      return `<image x="${num(n.x)}" y="${num(n.y)}" width="${num(n.w)}" height="${num(n.h)}" href="${n.src}"${common}/>`;
+      const mask = imageMaskPath(n, n.w, n.h), clip = `${prefix}image-${counter++}`;
+      return `${mask ? `<defs><clipPath id="${clip}"><path d="${escape(mask)}" transform="translate(${num(n.x)} ${num(n.y)})"/></clipPath></defs>` : ''}<g${mask ? ` clip-path="url(#${clip})"` : ''}><image x="${num(n.x)}" y="${num(n.y)}" width="${num(n.w)}" height="${num(n.h)}" href="${n.src}" preserveAspectRatio="none"${common}/></g>`;
     };
-    return `<defs>${scene.nodes.filter(n=>n.kind==='gradient'||n.kind==='clip').map(node).join('')}</defs>${scene.nodes.filter(n=>n.kind!=='gradient'&&n.kind!=='clip').map(node).join('')}`;
+    const printNodes=scene.nodes.flatMap(expandSceneText);
+    return `<defs>${printNodes.filter(n=>n.kind==='gradient'||n.kind==='clip').map(node).join('')}</defs>${printNodes.filter(n=>n.kind!=='gradient'&&n.kind!=='clip').map(node).join('')}`;
   }
   const body=pages.map(page=>{
     if(page.footer?.warnings.length)throw new Error(page.footer.warnings.join(' '));
     return `<section><svg xmlns="http://www.w3.org/2000/svg" width="${num(width)}pt" height="${num(height)}pt" viewBox="0 0 ${num(width)} ${num(height)}">
-    ${page.frame ? `<g data-page-frame-background="1" transform="translate(${num(offsetX)},${num(offsetY)})">${sceneSvg({...page.frame,nodes:page.frame.nodes.filter(node=>'motifId' in node&&node.motifId==='Paper')})}</g>` : ''}
+    ${page.frame ? `<g data-page-frame-background="1" transform="translate(${num(offsetX)},${num(offsetY)})">${sceneSvg({...page.frame,nodes:page.frame.nodes.filter(isFrameBackgroundNode)})}</g>` : ''}
     ${page.elements.map(({element,scene})=>{const t=element.transform,frame=element.smartBlockData?.styleOverrides.resizeFrame;return `<g data-print-frame="${escape(element.id)}" transform="translate(${num(offsetX+t.x)},${num(offsetY+t.y)}) rotate(${num(t.rotation)} ${num(t.width/2)} ${num(t.height/2)})" opacity="${num(element.style.opacity??1)}"><svg width="${num(t.width)}" height="${num(t.height)}" viewBox="0 0 ${num(frame?.width??scene.width)} ${num(frame?.height??scene.height)}"${frame?' preserveAspectRatio="none"':''} overflow="visible">${sceneSvg(scene)}</svg></g>`;}).join('')}
-    ${page.frame ? `<g data-page-frame="scholar-wave" transform="translate(${num(offsetX)},${num(offsetY)})">${sceneSvg({...page.frame,nodes:page.frame.nodes.filter(node=>!('motifId' in node)||node.motifId!=='Paper')})}</g>` : ''}
+    ${page.frame ? `<g data-page-frame="${escape(page.frame.variant.replace(/-frame$/, ''))}" transform="translate(${num(offsetX)},${num(offsetY)})">${sceneSvg({...page.frame,nodes:page.frame.nodes.filter(node=>!isFrameBackgroundNode(node))})}</g>` : ''}
     ${page.footer ? `<g data-publisher-footer="1" transform="translate(${num(offsetX)},${num(offsetY)})">${sceneSvg(page.footer)}</g>` : ''}
     ${options.cropMarks&&options.bleed?`<path d="M ${offsetX} 0 V ${offsetY-2} M 0 ${offsetY} H ${offsetX-2} M ${offsetX+book.dimensions.widthPt} 0 V ${offsetY-2} M ${width} ${offsetY} H ${offsetX+book.dimensions.widthPt+2} M ${offsetX} ${height} V ${offsetY+book.dimensions.heightPt+2} M 0 ${offsetY+book.dimensions.heightPt} H ${offsetX-2} M ${offsetX+book.dimensions.widthPt} ${height} V ${offsetY+book.dimensions.heightPt+2} M ${width} ${offsetY+book.dimensions.heightPt} H ${offsetX+book.dimensions.widthPt+2}" fill="none" stroke="#000" stroke-width=".5"/>`:''}
     </svg></section>`;}).join('');

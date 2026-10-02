@@ -1,6 +1,13 @@
 import { SubjectDomain, GradeBand, DesignFamily } from "./blockSchema";
 import type { ChapterPersonality, CurriculumGrade, FrameworkStage } from "./curriculum";
 
+/** Illustrated publishing uses flat vector colour and measured editorial spacing. */
+export const PUBLISHING_COMPOSITION_TOKENS = {
+  paper: "#FFFFFF", ink: "#172B36", radius: 12, plateRadius: 20,
+  stroke: .8, shadowOffset: 3, headingScale: 1.12, displayScale: 1.6,
+  eyebrowPt: 10, tintStrength: .1, secondaryTintStrength: .08,
+} as const;
+
 /** Print-safe premium treatments share the existing publication token system. */
 export const PREMIUM_BLOCK_TOKENS = {
   "premium-editorial": { paper: "#FFFCF5", card: "#F4EFE4", ink: "#242B34", muted: "#59616A", edge: "#D7CDB9", accent: "#946B2D", radius: 3, stroke: .7, shadow: "#E4DDD0" },

@@ -211,5 +211,7 @@ test('print draws the wave artwork above a native full-page backdrop without cov
   const html = buildPrintHtml(printable, embedFooterFixture(collectPrintPages(printable, { [backdrop.id]: backdrop })), '');
   assert.ok(html.indexOf('data-page-frame-background') < html.indexOf('data-print-frame="native-paper"'));
   assert.ok(html.indexOf('data-print-frame="native-paper"') < html.indexOf('data-page-frame="scholar-wave"'));
-  assert.equal((html.match(/<rect /g) || []).length, 2);
+  // A plain rectangular shape may be emitted as a vector path by the shape renderer.
+  assert.equal((html.match(/<(?:rect|path) [^>]*fill="#FFFFFF"/g) || []).length, 1);
+  assert.equal((html.match(/<rect [^>]*fill="#FFFEFC"/g) || []).length, 1);
 });

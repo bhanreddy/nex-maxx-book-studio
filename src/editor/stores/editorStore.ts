@@ -1,3 +1,5 @@
+import { duplicateEducationalBlock } from '../educational/library/actions';
+import { refreshPublishingLayout } from '../educational/library/refreshLayout';
 import { cloneElementTree, elementTree, selectionRoot, isElementLocked, transformGroupChildren } from "../core/elementGroups";
 import { withBlockTransform, type BlockResizeMode } from "../core/blockResize";
 import { repaginateFromPage } from "../core/paginationEngine";
@@ -22,7 +24,7 @@ import {
   LiveFilterType,
   AIGenerationMetadata,
 } from "../../domain/creative/types";
-import { shapeToCurveNodes, curveNodesToSvgPath, applyCornerFillet } from "../vector/bezier";
+import { shapeToCurveNodes, curveNodesToSvgPath, applyCornerFillet, combineShapesBoolean } from "../vector/bezier";
 import { traceImageToVector, ImageTraceOptions } from "../vector/imageTrace";
 import { generateBackgroundRemovalMask } from "../pixel/selectionEngine";
 import { EducationalAIProvider } from "../ai/aiProvider";
@@ -56,8 +58,10 @@ import {
   detachSmartBlockToElements,
 } from "../educational/smartBlockSolver";
 import { SubjectDomain, SmartBlockInstance, GradeBand } from "../../domain/educational/blockSchema";
+import { recordEducationalPreset, resolveBookGrade, resolveBookSubject } from "../educational/library/preferences";
 import { withSubjectExample } from "../educational/subjectExamples";
 import { cloudChapterRepository, defaultChapterRepository, type ChapterRepository, type ChapterSaveTarget, type CloudChapterRepository } from "../persistence/chapterRepository";
+import { getMathTemplate } from "../math/mathRegistry";
 import {recoverActiveCentralBook,rememberCentralBook} from "../persistence/centralBookRecovery";
 import {restoreChapter,type BookSnapshotDocument} from "../persistence/bookSnapshots";
 import { restoreSemanticFramework, toSemanticDocument } from "../persistence/semanticDocument";
@@ -101,6 +105,7 @@ interface EditorState {
 
   // Element Operations
   selectElement: (id: string, multiSelect?: boolean) => void;
+  setSelectedElementIds: (ids: string[]) => void;
   clearSelection: () => void;
   selectAllOnActivePage: () => void;
   addElement: (presetId: string, initialX?: number, initialY?: number) => PageElement | null;
@@ -219,8 +224,8 @@ interface EditorState {
   evaluateActivePageOverflow: () => void;
   flowPageOverflowToNextPage: (targetPageId?: string) => void;
 
-  publicationPresets: Record<string, { name: string; block: SmartBlockInstance }>;
-  savePublicationPreset: (name: string, elementId: string) => void;
+  publicationPresets: Record<string, { name: string; category?: string; block: SmartBlockInstance }>;
+  savePublicationPreset: (name: string, elementId: string, category?: string) => void;
   insertPublicationPreset: (id: string) => void;
   insertPublicationElement: (element: PageElement) => void;
   insertElement: (element: PageElement) => void;
@@ -242,6 +247,7 @@ interface EditorState {
   createPublicationDemo: () => void;
   addPublicationArtwork: (kind: ArtworkKind, x?: number, y?: number) => void;
   // Educational Smart Block System
+  addMathElement: (templateId: string, initialX?: number, initialY?: number, customData?: Record<string, unknown>, styleVariant?: string) => PageElement | null;
   addEducationalBlock: (blockId: string, initialX?: number, initialY?: number, options?: { subject?: string; grade?: string }) => PageElement | null;
   shuffleEducationalBlockStyle: (elementId: string) => void;
   setEducationalBlockPreset: (elementId: string, presetId: string) => void;
@@ -638,6 +644,11 @@ export const useEditorStore = create<EditorState>((set, get) => {
       });
     },
 
+    setSelectedElementIds: (ids) => {
+      const roots = [...new Set(ids.map((id) => selectionRoot(id, get().elements)).filter(Boolean))];
+      set({ selectedElementIds: roots });
+    },
+
     clearSelection: () => {
       set({ selectedElementIds: [] });
     },
@@ -753,7 +764,7 @@ export const useEditorStore = create<EditorState>((set, get) => {
       const activeElements = get().getActivePageElements();
       const maxZ = activeElements.reduce((max, el) => Math.max(max, el.transform.zIndex), 0);
 
-      const colorMap: Record<ShapeSubtype, { bg: string; border: string }> = {
+      const colorMap: Partial<Record<ShapeSubtype, { bg: string; border: string }>> = {
         rectangle: { bg: "#e0e7ff", border: "#4338ca" },
         circle: { bg: "#ecfdf5", border: "#059669" },
         ellipse: { bg: "#fef3c7", border: "#d97706" },
@@ -1015,28 +1026,60 @@ export const useEditorStore = create<EditorState>((set, get) => {
 
       // Keep primary element, update its geometry to compound
       const primary = selected[0];
-      const otherIds = selectedElementIds.slice(1);
+      const otherElements = selected.slice(1);
+      const otherIds = otherElements.map((e) => e.id);
+
+      const booleanResult = combineShapesBoolean(
+        {
+          shapeType: (primary.style.shapeType as string) || "rectangle",
+          width: primary.transform.width,
+          height: primary.transform.height,
+          x: primary.transform.x,
+          y: primary.transform.y,
+          style: primary.style,
+          nodes: primary.curveData?.nodes,
+        },
+        otherElements.map((sec) => ({
+          shapeType: (sec.style.shapeType as string) || "rectangle",
+          width: sec.transform.width,
+          height: sec.transform.height,
+          x: sec.transform.x,
+          y: sec.transform.y,
+          style: sec.style,
+          nodes: sec.curveData?.nodes,
+        })),
+        op
+      );
 
       get().updateElementTransform(
         primary.id,
         {
-          x: minX,
-          y: minY,
-          width: maxX - minX,
-          height: maxY - minY,
+          x: booleanResult.minX,
+          y: booleanResult.minY,
+          width: booleanResult.width,
+          height: booleanResult.height,
         },
         true
       );
 
-      get().updateElementStyle(primary.id, {
-        shapeType: "path",
-        backgroundColor: "#c7d2fe",
-        borderColor: "#4338ca",
-        borderWidth: 2,
-      });
+      const nextPrimary: PageElement = {
+        ...primary,
+        type: "shape" as const,
+        curveData: {
+          nodes: booleanResult.nodes,
+          closed: true,
+          windingRule: booleanResult.fillRule,
+        },
+        style: {
+          ...primary.style,
+          shapeType: "path" as const,
+          pathData: booleanResult.pathData,
+          fillRule: booleanResult.fillRule,
+        },
+      };
 
       // Remove secondary items
-      const nextElements = { ...elements };
+      const nextElements = { ...elements, [primary.id]: nextPrimary };
       otherIds.forEach((id) => delete nextElements[id]);
 
       const page = get().getActivePage();
@@ -2000,7 +2043,7 @@ export const useEditorStore = create<EditorState>((set, get) => {
       }
       if (next.smartBlockData) next.smartBlockData = { ...next.smartBlockData, transform: { ...next.transform } };
       const activeBook = get().getActiveBook();
-      if (activeBook?.autoPagination && (updates.content || updates.smartBlockData || updates.style) &&
+      if (activeBook && (activeBook.autoPagination || next.smartBlockData?.presetId.startsWith("edu-")) && (updates.content || updates.smartBlockData || updates.style) &&
           !next.smartBlockData?.curriculum && !next.smartBlockData?.styleOverrides.contentLayout?.enabled && !next.smartBlockData?.styleOverrides.resizeFrame && !next.content.publicationPrimitive && ['body','body-text','smart-block'].includes(next.type)) {
         const previous = get();
         if (next.smartBlockData) {
@@ -2256,12 +2299,14 @@ export const useEditorStore = create<EditorState>((set, get) => {
           const central = recoverActiveCentralBook();
           if (!central) return false;
           const branded = integrateFirstPageLogo(integrateBookPageBorder(central.book), central.elements);
-          set({ books: [branded.book], elements: branded.elements, activeBookId: central.book.id, activePageIndex: 0, selectedElementIds: [] });
-          if (branded.book !== central.book) get().saveToStorage();
+          const publishing=refreshPublishingLayout(branded.book,branded.elements);
+          set({ books: [publishing.book], elements: publishing.elements, activeBookId: central.book.id, activePageIndex: 0, selectedElementIds: [] });
+          if (branded.book !== central.book || publishing.changed) get().saveToStorage();
           return true;
         }
         if (data.books && data.elements) {
           let recoveredElements = data.elements;
+          let publishingLayoutsChanged = false;
           const recoveredBooks = data.books.map((storedBook: Book) => {
             let recoveredBook = storedBook;
             for (const storedChapter of storedBook.chapters) {
@@ -2281,8 +2326,10 @@ export const useEditorStore = create<EditorState>((set, get) => {
               }
             }
             const branded = integrateFirstPageLogo(integrateBookPageBorder(renumberBookPages(recoveredBook)), recoveredElements);
-            recoveredElements = branded.elements;
-            return branded.book;
+            const publishing=refreshPublishingLayout(branded.book,branded.elements);
+            recoveredElements = publishing.elements;
+            publishingLayoutsChanged ||= publishing.changed;
+            return publishing.book;
           });
           set({
             books: recoveredBooks,
@@ -2295,7 +2342,7 @@ export const useEditorStore = create<EditorState>((set, get) => {
           });
           useUiStore.setState({ userGuides: get().getActiveBook()?.userGuides || [] });
           useUiStore.getState().setSaveStatus("Recovered");
-          if (recoveredBooks.some((book, index) => book.publisherBrandingVersion !== data.books[index].publisherBrandingVersion || book.premiumPageBorderVersion !== data.books[index].premiumPageBorderVersion)) get().saveToStorage();
+          if (publishingLayoutsChanged || recoveredBooks.some((book, index) => book.publisherBrandingVersion !== data.books[index].publisherBrandingVersion || book.premiumPageBorderVersion !== data.books[index].premiumPageBorderVersion)) get().saveToStorage();
           return true;
         }
       } catch (err) {
@@ -3299,15 +3346,21 @@ export const useEditorStore = create<EditorState>((set, get) => {
       });
     },
 
-    savePublicationPreset: (name, elementId) => {
+    savePublicationPreset: (name, elementId, category) => {
       const el=get().elements[elementId];if(!el?.smartBlockData)return;
       const id=crypto.randomUUID();
-      set(state=>({publicationPresets:{...state.publicationPresets,[id]:{name:name.trim()||el.smartBlockData!.semanticContent.title,block:structuredClone(el.smartBlockData?.curriculum ? curriculumSource(el)! : {...el.smartBlockData!,transform:el.transform})}}}));get().saveToStorage();
+      set(state=>({publicationPresets:{...state.publicationPresets,[id]:{name:name.trim()||el.smartBlockData!.semanticContent.title,category,block:structuredClone(el.smartBlockData?.curriculum ? curriculumSource(el)! : {...el.smartBlockData!,transform:el.transform})}}}));get().saveToStorage();
       useUiStore.getState().showToast({type:"success",title:"Template saved",message:"Available in the library under My templates."});
     },
     insertPublicationPreset: (presetId) => {
       const saved = get().publicationPresets[presetId];
       if (!saved) return;
+      if(saved.block.presetId.startsWith('edu-')){
+        const destination=get().getActiveBook();if(!destination)return;
+        const contextual={...structuredClone(saved.block),subject:resolveBookSubject(destination.subject),gradeBand:resolveBookGrade(destination.grade)};
+        duplicateEducationalBlock({id:saved.block.id,pageId:saved.block.pageId,type:'smart-block',category:'educational',version:4,displayName:saved.name,presetId:saved.block.presetId,smartBlockData:contextual,transform:saved.block.transform,style:{},content:{},locked:false,hidden:false},saved.block.presetId,saved.name);
+        return;
+      }
       if (saved.block.curriculum) { insertCurriculumBlock(saved.block.curriculum.type, undefined, undefined, undefined, saved.block); return; }
       const book = get().getActiveBook();
       if (!book) return;
@@ -3320,6 +3373,7 @@ export const useEditorStore = create<EditorState>((set, get) => {
         margins.topPt
       );
       const block = structuredClone(saved.block);
+      block.transform.width = Math.min(block.transform.width, book.dimensions.widthPt - margins.insidePt - margins.outsidePt);
       block.id = crypto.randomUUID();
       const height = buildPublicationScene(block).height;
       let y = bottom;
@@ -3658,6 +3712,115 @@ export const useEditorStore = create<EditorState>((set, get) => {
       get().insertPublicationElement({id:crypto.randomUUID(),pageId:page.id,type:"illustration",category:"decorative",version:2,displayName:`Artwork · ${kind}`,locked:false,hidden:false,style:{opacity:1},transform:{x,y,width:200,height:170,rotation:0,zIndex:Math.max(0,...get().getActivePageElements().map(e=>e.transform.zIndex))+1},content:{artwork:{kind,paletteId:"indigo"},scope:"free",provenance:"Original NEX vector artwork"}});
     },
 
+    // Math Smart Component Engine Actions
+    addMathElement: (templateId, initialX, initialY, customData, styleVariant = "color-coded") => {
+      const page = get().getActivePage();
+      const book = get().getActiveBook();
+      const template = getMathTemplate(templateId);
+      if (!page || !book || !template) return null;
+
+      const activeElements = get().getActivePageElements();
+      const maxZ = activeElements.reduce((max, el) => Math.max(max, el.transform.zIndex), 0);
+      const id = `el-math-${Math.random().toString(36).substring(2, 9)}`;
+
+      const targetX = initialX !== undefined ? initialX : Math.max(40, Math.round((book.dimensions.widthPt - template.defaultWidth) / 2));
+      const targetY = initialY !== undefined ? initialY : 140;
+
+      const dataPayload = customData || template.defaultData;
+
+      const newElement: PageElement = {
+        id,
+        pageId: page.id,
+        type: "math-component",
+        category: "math",
+        version: 1,
+        displayName: template.name,
+        presetId: template.id,
+        transform: {
+          x: targetX,
+          y: targetY,
+          width: template.defaultWidth,
+          height: template.defaultHeight,
+          rotation: 0,
+          zIndex: maxZ + 1,
+        },
+        style: {
+          backgroundColor: "transparent",
+        },
+        content: {
+          mathTemplateId: template.id,
+          mathData: structuredClone(dataPayload),
+          mathMode: "teacher",
+          styleVariant,
+          ...dataPayload,
+        },
+        locked: false,
+        hidden: false,
+      };
+
+      set((state) => ({
+        elements: { ...state.elements, [id]: newElement },
+        books: state.books.map((b) =>
+          b.id === state.activeBookId
+            ? {
+                ...b,
+                pages: b.pages.map((p) =>
+                  p.id === page.id ? { ...p, elementIds: [...p.elementIds, id] } : p
+                ),
+              }
+            : b
+        ),
+        selectedElementIds: [id],
+      }));
+
+      useHistoryStore.getState().pushAction({
+        description: `Add ${template.name}`,
+        undo: () => {
+          set((s) => {
+            const next = { ...s.elements };
+            delete next[id];
+            return {
+              elements: next,
+              books: s.books.map((b) =>
+                b.id === s.activeBookId
+                  ? {
+                      ...b,
+                      pages: b.pages.map((p) =>
+                        p.id === page.id ? { ...p, elementIds: p.elementIds.filter((elId) => elId !== id) } : p
+                      ),
+                    }
+                  : b
+              ),
+              selectedElementIds: [],
+            };
+          });
+        },
+        redo: () => {
+          set((s) => ({
+            elements: { ...s.elements, [id]: newElement },
+            books: s.books.map((b) =>
+              b.id === s.activeBookId
+                ? {
+                    ...b,
+                    pages: b.pages.map((p) =>
+                      p.id === page.id ? { ...p, elementIds: [...p.elementIds, id] } : p
+                    ),
+                  }
+                : b
+            ),
+            selectedElementIds: [id],
+          }));
+        },
+      });
+
+      get().saveToStorage();
+      useUiStore.getState().showToast({
+        type: "success",
+        title: `Added ${template.name}`,
+      });
+      return newElement;
+    },
+
     // Educational Smart Block Actions
     addEducationalBlock: (blockId, initialX, initialY, options) => {
       const book = get().getActiveBook();
@@ -3668,6 +3831,7 @@ export const useEditorStore = create<EditorState>((set, get) => {
       let smartBlock = createSmartBlockInstance(blockId, page.id);
       if (!smartBlock) return null;
 
+      if (blockId.startsWith("edu-")) { smartBlock.subject = resolveBookSubject(book.subject); smartBlock.gradeBand = resolveBookGrade(book.grade); }
       if (options?.subject && options.subject !== "all" && def.supportedSubjects.includes("general")) {
         smartBlock = withSubjectExample(smartBlock, options.subject as SubjectDomain);
       }
@@ -3677,6 +3841,10 @@ export const useEditorStore = create<EditorState>((set, get) => {
 
       const margins = pageMarginsFor(book,page);
       const fullWidth = book.dimensions.widthPt - margins.insidePt - margins.outsidePt;
+      if (blockId.startsWith("edu-") && fullWidth < 180) {
+        useUiStore.getState().showToast({type:"warning",title:"Page is too narrow",message:"Publishing blocks need at least 180 pt of usable page width. Increase the page width or reduce its margins before inserting."});
+        return null;
+      }
       smartBlock.transform.width = fullWidth;
       const height = buildPublicationScene({ ...smartBlock, transform: { ...smartBlock.transform, height: 0 } }).height;
       smartBlock.transform.height = height;
@@ -3687,12 +3855,19 @@ export const useEditorStore = create<EditorState>((set, get) => {
         margins.topPt
       );
 
-      const targetX = initialX !== undefined ? Math.max(margins.insidePt, Math.min(initialX, book.dimensions.widthPt - margins.outsidePt - 40)) : margins.insidePt;
-      const targetY = initialY !== undefined ? initialY : bottom;
+      if (height > book.dimensions.heightPt - margins.topPt - margins.bottomPt) {
+        useUiStore.getState().showToast({type:"warning",title:"Block needs more room",message:"Choose a wider page or a compact variant before inserting. The reading type will not be reduced."});
+        return null;
+      }
+      const targetX = initialX !== undefined ? Math.max(margins.insidePt, Math.min(initialX, book.dimensions.widthPt - margins.outsidePt - fullWidth)) : margins.insidePt;
+      const requestedY = Math.max(margins.topPt, initialY ?? bottom);
+      const collides = activeElements.some(el => el.category !== "decorative" && !el.hidden && targetX < el.transform.x + el.transform.width && targetX + fullWidth > el.transform.x && requestedY < el.transform.y + el.transform.height + 12 && requestedY + height + 12 > el.transform.y);
+      const targetY = collides ? bottom : requestedY;
 
       const pageBottom = book.dimensions.heightPt - margins.bottomPt;
-      const isOverflow = targetY + height > pageBottom && activeElements.length > 0;
+      const isOverflow = targetY + height > pageBottom;
 
+      recordEducationalPreset(blockId);
       const id = smartBlock.id;
       const maxZ = activeElements.reduce((max, el) => Math.max(max, el.transform.zIndex), 0);
       smartBlock.transform.zIndex = maxZ + 1;
@@ -3732,7 +3907,7 @@ export const useEditorStore = create<EditorState>((set, get) => {
             backgroundColor: def.defaultBackgroundStyle.color || "#ffffff",
             borderRadius: def.defaultBackgroundStyle.cornerRadiusPt || 8,
           },
-          content: {},
+          content: {teacherOnly:def.educationalType==="teacher-note"},
           locked: false,
           hidden: false,
         };
@@ -3816,7 +3991,7 @@ export const useEditorStore = create<EditorState>((set, get) => {
           backgroundColor: def.defaultBackgroundStyle.color || "#ffffff",
           borderRadius: def.defaultBackgroundStyle.cornerRadiusPt || 8,
         },
-        content: {},
+        content: {teacherOnly:def.educationalType==="teacher-note"},
         presetId: def.id,
         smartBlockData: smartBlock,
         locked: false,
@@ -3893,13 +4068,14 @@ export const useEditorStore = create<EditorState>((set, get) => {
     shuffleEducationalBlockStyle: (elementId) => {
       const el=get().elements[elementId]; if(!el?.smartBlockData || isElementLocked(elementId, get().elements) || el.smartBlockData.isLockedDesign)return;
       if (el.smartBlockData.curriculum) { reshuffleCurriculumBlock(el); return; }
-      const presets=getPresetsByArchetype(el.smartBlockData.archetypeId);
+      const type = EDUCATIONAL_BLOCK_REGISTRY[el.smartBlockData.presetId]?.educationalType;
+      const presets=getPresetsByArchetype(el.smartBlockData.archetypeId).filter(def=>!type || def.educationalType===type);
       const index=presets.findIndex(p=>p.id===el.smartBlockData!.presetId);
       if(presets.length>1)get().setEducationalBlockPreset(elementId,presets[(index+1)%presets.length].id);
     },
     setEducationalBlockPreset: (elementId, presetId) => {
       const el=get().elements[elementId],def=EDUCATIONAL_BLOCK_REGISTRY[presetId];
-      if(!el?.smartBlockData || !def || isElementLocked(elementId, get().elements) || el.smartBlockData.isLockedDesign || def.archetypeId!==el.smartBlockData.archetypeId)return;
+      if(!el?.smartBlockData || !def || isElementLocked(elementId, get().elements) || el.smartBlockData.isLockedDesign || def.archetypeId!==el.smartBlockData.archetypeId || (EDUCATIONAL_BLOCK_REGISTRY[el.smartBlockData.presetId]?.educationalType && def.educationalType !== EDUCATIONAL_BLOCK_REGISTRY[el.smartBlockData.presetId]?.educationalType))return;
       if (el.smartBlockData.curriculum) { if (presetId.startsWith("curriculum-")) convertBlock(el,presetId.slice(11)); return; }
       const kept=(el.smartBlockData.styleOverrides.motifs||[]).filter(motif=>motif.role==="plate"||motif.role==="photo"||motif.role==="illustration");
       const block:SmartBlockInstance={...el.smartBlockData,presetId,family:def.family,transform:{...el.transform,height:0},styleOverrides:{...el.smartBlockData.styleOverrides,layoutVariant:undefined,motifs:kept}};
@@ -3908,7 +4084,7 @@ export const useEditorStore = create<EditorState>((set, get) => {
     },
     reSkinEducationalBlock: (elementId, subject) => {
       const el=get().elements[elementId];if(!el?.smartBlockData || isElementLocked(elementId, get().elements) || el.smartBlockData.isLockedDesign)return;
-      get().updateElement(elementId,{smartBlockData:reSkinBlockSubject(el.smartBlockData,subject)});
+      get().updateElement(elementId,{smartBlockData:el.smartBlockData.presetId.startsWith("edu-") ? {...el.smartBlockData,subject,styleOverrides:{...el.smartBlockData.styleOverrides,paletteId:undefined,customPalette:undefined}} : reSkinBlockSubject(el.smartBlockData,subject)});
     },
     updateBlockContentLayout: (elementId, layout) => {
       const state = get();

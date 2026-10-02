@@ -1,3 +1,4 @@
+import { EDUCATIONAL_LIBRARY_BLOCKS } from './library/catalog';
 import { PUBLICATION_BLOCKS } from "./publicationCatalog";
 import { CURRICULUM_PRESETS, CURRICULUM_BLOCK_MAP } from "../curriculum/catalog";
 import { ATELIER_BLOCKS, atelierSkinFor } from "./atelier/catalog";
@@ -985,7 +986,7 @@ const LEGACY_EDUCATIONAL_BLOCK_REGISTRY: Record<string, EducationalBlockDefiniti
   },
 };
 
-export const EDUCATIONAL_BLOCK_REGISTRY = { ...PUBLICATION_BLOCKS, ...ATELIER_BLOCKS, ...LEGACY_EDUCATIONAL_BLOCK_REGISTRY, ...CURRICULUM_PRESETS };
+export const EDUCATIONAL_BLOCK_REGISTRY = { ...PUBLICATION_BLOCKS, ...ATELIER_BLOCKS, ...LEGACY_EDUCATIONAL_BLOCK_REGISTRY, ...CURRICULUM_PRESETS, ...EDUCATIONAL_LIBRARY_BLOCKS };
 
 /**
  * Helper to query available block presets by archetype

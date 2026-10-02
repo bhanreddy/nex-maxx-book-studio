@@ -44,6 +44,8 @@ import { ArrangeControls } from "../panels/ArrangeControls";
 import { PublicationInspector, ArtworkInspector } from "../educational/PublicationInspector";
 import { CurriculumBlockInspector } from "../curriculum/CurriculumBlockInspector";
 import { SmartScrubInput } from "../ui/SmartScrubInput";
+import { MathTemplateInspector } from "../../editor/math/MathTemplateInspector";
+import { ShapeInspector } from "./ShapeInspector";
 
 export const InspectorPanel: React.FC = () => {
   const {
@@ -461,6 +463,7 @@ export const InspectorPanel: React.FC = () => {
             </div>
           </div>
 
+          {singleElement?.type === "math-component" && <MathTemplateInspector element={singleElement} />}
           {singleElement?.type === "smart-media-qr" && <SmartQrInspector element={singleElement}/>}
           {singleElement?.smartBlockData && (singleElement.smartBlockData.curriculum ? <CurriculumBlockInspector key={singleElement.smartBlockData.curriculum.sourceBlockId || singleElement.id} element={singleElement} /> : <PublicationInspector element={singleElement} />)}
           {singleElement && (singleElement.content.artwork || singleElement.type === "image" || singleElement.type === "picture-frame" || singleElement.type === "pictureFrame" || singleElement.type === "ai-image" || Boolean(singleElement.content.src || singleElement.content.imageUrl)) && <ArtworkInspector element={singleElement} />}
@@ -1065,159 +1068,12 @@ export const InspectorPanel: React.FC = () => {
               </div>
             )}
 
-          {/* Vector Shape Inspector */}
-          {singleElement &&
-            (singleElement.type === "shape" || singleElement.style.shapeType) && (
-              <div className="space-y-2.5 pt-2 border-t border-slate-200/80 dark:border-white/5">
-                <span className="text-[10px] font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider font-mono flex items-center gap-1.5">
-                  <Shapes className="w-3.5 h-3.5 text-rose-500 dark:text-rose-400" /> Vector Geometry & Stroke
-                </span>
-
-                {/* Shape Type Selector */}
-                <div>
-                  <label className="text-[10px] text-slate-600 dark:text-slate-400 block mb-0.5">Shape Type</label>
-                  <select
-                    value={singleElement.style.shapeType || "rectangle"}
-                    onChange={(e) =>
-                      updateElementStyle(singleElement.id, {
-                        shapeType: e.target.value as VectorShapeType,
-                      })
-                    }
-                    className="w-full bg-white dark:bg-black/40 border border-slate-300 dark:border-white/10 rounded px-2 py-1 text-xs text-slate-800 dark:text-slate-200 outline-none capitalize"
-                  >
-                    <option value="rectangle">Rectangle</option>
-                    <option value="circle">Circle</option>
-                    <option value="ellipse">Ellipse</option>
-                    <option value="star">5-Point Star</option>
-                    <option value="polygon">Hexagon Polygon</option>
-                    <option value="line">Straight Line</option>
-                    <option value="arrow">Vector Arrow</option>
-                  </select>
-                </div>
-
-                {/* Fill & Stroke Colors */}
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <label className="text-[10px] text-slate-600 dark:text-slate-400 block mb-0.5">Fill Color</label>
-                    <div className="flex items-center gap-1.5">
-                      <input
-                        type="color"
-                        value={singleElement.style.backgroundColor || "#800020"}
-                        onChange={(e) =>
-                          updateElementStyle(singleElement.id, {
-                            backgroundColor: e.target.value,
-                          })
-                        }
-                        className="w-7 h-6 bg-transparent rounded cursor-pointer border border-slate-300 dark:border-white/10"
-                      />
-                      <span className="text-[10px] font-mono text-slate-700 dark:text-slate-300">
-                        {singleElement.style.backgroundColor || "#800020"}
-                      </span>
-                    </div>
-                  </div>
-                  <div>
-                    <label className="text-[10px] text-slate-600 dark:text-slate-400 block mb-0.5">Stroke Color</label>
-                    <div className="flex items-center gap-1.5">
-                      <input
-                        type="color"
-                        value={singleElement.style.strokeColor || "#ffffff"}
-                        onChange={(e) =>
-                          updateElementStyle(singleElement.id, {
-                            strokeColor: e.target.value,
-                          })
-                        }
-                        className="w-7 h-6 bg-transparent rounded cursor-pointer border border-slate-300 dark:border-white/10"
-                      />
-                      <span className="text-[10px] font-mono text-slate-700 dark:text-slate-300">
-                        {singleElement.style.strokeColor || "None"}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Stroke Width & Corner Radius */}
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <label className="text-[10px] text-slate-600 dark:text-slate-400 block mb-0.5">Stroke Width (pt)</label>
-                    <input
-                      type="number"
-                      value={singleElement.style.strokeWidth || 0}
-                      onChange={(e) =>
-                        updateElementStyle(singleElement.id, {
-                          strokeWidth: Math.max(0, Number(e.target.value)),
-                        })
-                      }
-                      className="w-full bg-white dark:bg-black/40 border border-slate-300 dark:border-white/10 rounded px-2 py-1 text-xs text-right font-mono text-slate-800 dark:text-slate-200"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-[10px] text-slate-600 dark:text-slate-400 block mb-0.5">Corner Radius (pt)</label>
-                    <input
-                      type="number"
-                      value={singleElement.style.borderRadius || 0}
-                      onChange={(e) =>
-                        updateElementStyle(singleElement.id, {
-                          borderRadius: Math.max(0, Number(e.target.value)),
-                        })
-                      }
-                      className="w-full bg-white dark:bg-black/40 border border-slate-300 dark:border-white/10 rounded px-2 py-1 text-xs text-right font-mono text-slate-800 dark:text-slate-200"
-                    />
-                  </div>
-                </div>
-
-                {/* Stroke Dash & Caps */}
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <label className="text-[10px] text-slate-600 dark:text-slate-400 block mb-0.5">Stroke Dash</label>
-                    <select
-                      value={singleElement.style.strokeDasharray || "none"}
-                      onChange={(e) =>
-                        updateElementStyle(singleElement.id, {
-                          strokeDasharray: e.target.value === "none" ? undefined : e.target.value,
-                        })
-                      }
-                      className="w-full bg-white dark:bg-black/40 border border-slate-300 dark:border-white/10 rounded px-1.5 py-1 text-xs text-slate-800 dark:text-slate-200 outline-none"
-                    >
-                      <option value="none">Solid Line</option>
-                      <option value="4,4">Dashed (4,4)</option>
-                      <option value="2,2">Dotted (2,2)</option>
-                      <option value="8,4,2,4">Dash-Dot</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="text-[10px] text-slate-600 dark:text-slate-400 block mb-0.5">Arrow Caps</label>
-                    <div className="flex items-center gap-2 mt-1">
-                      <label className="flex items-center gap-1 text-[10px] text-slate-700 dark:text-slate-300">
-                        <input
-                          type="checkbox"
-                          checked={singleElement.style.arrowEnd || false}
-                          onChange={(e) =>
-                            updateElementStyle(singleElement.id, {
-                              arrowEnd: e.target.checked,
-                            })
-                          }
-                          className="accent-rose-500 rounded"
-                        />
-                        Tip
-                      </label>
-                      <label className="flex items-center gap-1 text-[10px] text-slate-700 dark:text-slate-300">
-                        <input
-                          type="checkbox"
-                          checked={singleElement.style.arrowStart || false}
-                          onChange={(e) =>
-                            updateElementStyle(singleElement.id, {
-                              arrowStart: e.target.checked,
-                            })
-                          }
-                          className="accent-rose-500 rounded"
-                        />
-                        Tail
-                      </label>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
+          {/* Vector Shape Engine Inspector */}
+          {selectedElements.some((el) => el.type === "shape" || el.style.shapeType) && (
+            <ShapeInspector
+              selectedElements={selectedElements.filter((el) => el.type === "shape" || el.style.shapeType)}
+            />
+          )}
 
           {/* Pixel Adjustments & DPI Inspector (For Images) */}
           {singleElement && singleElement.type === "image" && (

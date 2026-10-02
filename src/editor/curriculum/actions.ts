@@ -88,6 +88,8 @@ export function insertCurriculumBlock(type: string, layout?: CurriculumLayout, g
     const block = makeCurriculumBlock(type, { ...chapter.framework.config, grade: grade || chapter.framework.config.grade, subject: subject || chapter.framework.config.subject }, chapter.id);
     if (template) { block.semanticContent = structuredClone(template.semanticContent); block.styleOverrides = { ...structuredClone(template.styleOverrides), sceneSlice: undefined }; }
     if (chapter.framework.config.referenceElements && !block.styleOverrides.referenceElement) block.styleOverrides = withReferenceElements(block).styleOverrides;
+    block.styleOverrides.compactScale = .8;
+    block.curriculum!.pageRules.startOnNewPage = false;
     if (type === "lesson-schema") block.semanticContent.calloutText = chapter.framework.config.title;
     if (layout) block.styleOverrides.layoutVariant = layout;
     editFramework(chapter.id, `Insert ${CURRICULUM_BLOCK_MAP[type].name}`, f => {
@@ -112,14 +114,15 @@ export function insertCurriculumBlock(type: string, layout?: CurriculumLayout, g
     useUiStore.getState().showToast({ type: "success", title: `${placed.name} added`, message: `It is in the ${stageName(placed.stage)} section. Edit the words in the inspector.` });
   } else {
     const st = useEditorStore.getState(), book = st.getActiveBook();
-    let page = st.getActivePage();
+    const page = st.getActivePage();
     if (!page || !book) return;
-    const margins = frameMargins(book, pageFrameFor(book, page));
+    const margins = pageMarginsFor(book, page);
     const owningChapter = book.chapters.find(ch => ch.id === page!.chapterId || ch.pageIds.includes(page!.id));
     const header = page.elementIds.map(id => st.elements[id]).find(el => el?.smartBlockData?.curriculum?.type === "chapter-hero" || el?.type === "heading");
     const schemaConfig = type === "lesson-schema" ? { title: owningChapter?.title || header?.smartBlockData?.semanticContent.title || header?.content.text || "Chapter name", concepts: [] } : {};
     const block = makeCurriculumBlock(type, { ...DEFAULT_CHAPTER_CONFIG, ...schemaConfig, subject: subject || book.subject, grade: grade || (['NURSERY','LKG','UKG'].includes(book.grade.toUpperCase()) ? book.grade.toUpperCase() as CurriculumGrade : (parseInt(book.grade.slice(-1)) >= 1 && parseInt(book.grade.slice(-1)) <= 5 ? parseInt(book.grade.slice(-1)) as 1|2|3|4|5 : 3)) });
     if (template) { block.semanticContent = structuredClone(template.semanticContent); block.styleOverrides = { ...structuredClone(template.styleOverrides), sceneSlice: undefined }; }
+    block.styleOverrides.compactScale = .8;
     if (owningChapter?.referenceElements && !block.styleOverrides.referenceElement) block.styleOverrides = withReferenceElements(block).styleOverrides;
     if (type === "lesson-schema" && (owningChapter || header)) block.semanticContent.calloutText = schemaConfig.title;
     if (layout) block.styleOverrides.layoutVariant = layout;
@@ -127,20 +130,10 @@ export function insertCurriculumBlock(type: string, layout?: CurriculumLayout, g
     const nextY = Math.max(margins.topPt, ...occupied.map(el => el.transform.y + el.transform.height + 18));
     block.transform = { ...block.transform, x: margins.insidePt, y: nextY, width: book.dimensions.widthPt - margins.insidePt - margins.outsidePt, height: 0 };
     block.transform.height = buildPublicationScene(block).height;
-    if (type === "lesson-schema" || block.styleOverrides.referenceElement) {
-      block.pageId = page.id;
-      reflowStandaloneLessonSchema(book, { id: block.id, pageId: page.id, type: "smart-block", category: "educational", version: 4, displayName: CURRICULUM_BLOCK_MAP[type].name, transform: block.transform, content: {}, style: {}, smartBlockData: block, presetId: block.presetId, locked: false, hidden: false }, block, "Insert lesson schema");
-      useUiStore.getState().showToast({ type: "success", title: block.styleOverrides.referenceElement ? "Editable reference element added" : "Lesson Schema added", message: "Edit words in Content and appearance in Style. Long content continues safely onto new pages." });
-      return;
-    }
-    if (nextY + block.transform.height > book.dimensions.heightPt - margins.bottomPt && occupied.length) {
-      st.addPage(st.activePageIndex); page = useEditorStore.getState().getActivePage()!;
-      block.transform.y = margins.topPt;
-    }
+    // Every family uses the same safe, undoable pagination, including long questions/passages.
     block.pageId = page.id;
-    // Native insertion handles the page registration and undo. Long stand-alone blocks can be reflowed by building a chapter.
-    st.insertPublicationElement({ id: block.id, pageId: page.id, type: "smart-block", category: "educational", version: 4, displayName: CURRICULUM_BLOCK_MAP[type].name, transform: block.transform, content: {}, style: {}, smartBlockData: block, presetId: block.presetId, locked: false, hidden: false });
-    useUiStore.getState().showToast({ type: "success", title: `${CURRICULUM_BLOCK_MAP[type].name} added`, message: "It is on this page, under the last block. Edit the words in the inspector." });
+    reflowStandaloneLessonSchema(book, { id: block.id, pageId: page.id, type: "smart-block", category: "educational", version: 4, displayName: CURRICULUM_BLOCK_MAP[type].name, transform: block.transform, content: {}, style: {}, smartBlockData: block, presetId: block.presetId, locked: false, hidden: false }, block, `Insert ${CURRICULUM_BLOCK_MAP[type].name}`);
+    useUiStore.getState().showToast({ type: "success", title: `${CURRICULUM_BLOCK_MAP[type].name} added`, message: "Compact block added below your content. Long content continues safely onto new pages." });
   }
 }
 export function editCurriculumBlock(element: PageElement, description: string, edit: (block: SmartBlockInstance) => SmartBlockInstance) {
@@ -199,7 +192,7 @@ export function editCurriculumBlock(element: PageElement, description: string, e
       }
       return f;
     }, source.id);
-  } else if (book && (next.curriculum?.type === "lesson-schema" || next.styleOverrides.referenceElement || source.styleOverrides.referenceElement)) {
+  } else if (book && (next.curriculum?.type === "lesson-schema" || next.styleOverrides.compactScale || next.styleOverrides.referenceElement || source.styleOverrides.referenceElement)) {
     reflowStandaloneLessonSchema(book, element, next, description);
   } else {
     next.transform = { ...element.transform, height: 0 }; next.transform.height = buildPublicationScene(next).height;
@@ -213,7 +206,7 @@ function reflowStandaloneLessonSchema(book: Book, element: PageElement, next: Sm
   const primary = st.elements[rootId] || element;
   const anchor = book.pages.find(p => p.id === primary.pageId);
   if (!anchor) return;
-  const margins = frameMargins(book, pageFrameFor(book, anchor));
+  const margins = pageMarginsFor(book, anchor);
   const projections = Object.values(st.elements).filter(el => el.id === rootId || (el.smartBlockData?.curriculum?.sourceBlockId === rootId));
   const oldIds = new Set(projections.map(el => el.id));
   const elements = { ...st.elements };
@@ -227,7 +220,7 @@ function reflowStandaloneLessonSchema(book: Book, element: PageElement, next: Sm
   const canonical = { ...next, id: rootId, transform: { ...primary.transform, x: margins.insidePt, width: book.dimensions.widthPt - margins.insidePt - margins.outsidePt, height: 0 }, styleOverrides: { ...next.styleOverrides, sceneSlice: undefined } };
   const scene = buildPublicationScene(canonical);
   const firstPanel = scene.motifs?.find(m => m.role === "schema-panel");
-  const freshFirst = firstCapacity < 64 || Boolean(firstPanel && firstPanel.h <= available && firstCapacity < firstPanel.h);
+  const freshFirst = firstCapacity < 64 || (scene.height <= available && scene.height > firstCapacity) || Boolean(firstPanel && firstPanel.h <= available && firstCapacity < firstPanel.h);
   if (freshFirst) firstY = margins.topPt;
   const windows = sceneWindows(scene, available, freshFirst ? available : firstCapacity);
   const oldContinuationPages = new Set(projections.filter(el => el.pageId !== anchor.id).map(el => el.pageId));

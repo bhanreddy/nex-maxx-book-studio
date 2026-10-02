@@ -251,7 +251,7 @@ export function composeChapter(book: Book, chapter: Chapter, allElements: Record
     const ideal = remainingWeight / remainingPages;
     const filled = y - margins.topPt;
     if (!page || (page.elementIds.length && (y + piece.height > book.dimensions.heightPt - margins.bottomPt || piece.index > 0 ||
-      piece.block.curriculum?.pageRules.startOnNewPage || (pieces[i - 1]?.block.curriculum?.type === "chapter-hero" && !["lesson-schema", "study-skills", "learning-outcomes"].includes(piece.block.curriculum?.type || "")) ||
+      piece.block.curriculum?.pageRules.startOnNewPage || (pieces[i - 1]?.block.curriculum?.type === "chapter-hero" && !piece.block.styleOverrides.compactScale && !["lesson-schema", "study-skills", "learning-outcomes"].includes(piece.block.curriculum?.type || "")) ||
       pieces.length - i === target - pages.length || (filled >= ideal && pieces.length - i >= target - pages.length)))) newPage();
     const pageId = page!.id;
     if (!frame && !piece.index && piece.block.curriculum?.type === "chapter-hero") {

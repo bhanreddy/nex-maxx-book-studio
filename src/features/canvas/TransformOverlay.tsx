@@ -412,6 +412,30 @@ export const TransformOverlay: React.FC<TransformOverlayProps> = ({
         </div>
       ))}
 
+      {/* Individual Selected Member Outlines */}
+      {movableElements.length > 1 && (
+        <div className="absolute inset-0 pointer-events-none z-30">
+          {movableElements.map((el) => {
+            const w = el.smartBlockData?.styleOverrides?.resizeFrame?.width ?? el.transform.width;
+            const h = el.smartBlockData?.styleOverrides?.resizeFrame?.height ?? el.transform.height;
+            return (
+              <div
+                key={`multi-member-outline-${el.id}`}
+                data-member-outline={el.id}
+                className="absolute border border-indigo-500/60 rounded-[1px] pointer-events-none"
+                style={{
+                  left: `${el.transform.x}pt`,
+                  top: `${el.transform.y}pt`,
+                  width: `${w}pt`,
+                  height: `${h}pt`,
+                  transform: el.transform.rotation ? `rotate(${el.transform.rotation}deg)` : undefined,
+                }}
+              />
+            );
+          })}
+        </div>
+      )}
+
       {/* Main Selection Bounding Box */}
       <div
         data-canvas-controls
@@ -428,13 +452,17 @@ export const TransformOverlay: React.FC<TransformOverlayProps> = ({
         onDoubleClick={e => {
           if (singleElement?.type === "image") { e.stopPropagation(); setCropElementId(singleElement.id); }
           else if (singleElement && ["body", "heading", "subheading", "caption", "quote", "chapter-title", "lesson-title"].includes(singleElement.type)) { e.stopPropagation(); setEditingTextElementId(singleElement.id); }
+          else if (singleElement?.type === "math-component") {
+            e.stopPropagation();
+            useUiStore.getState().setRightInspectorOpen(true);
+          }
         }}
         onPointerDown={(singleElement?.type === "smart-block" || Boolean(curriculumMeta)) ? undefined : handleBoxPointerDown}
       >
         {(singleElement?.type === "smart-block" || Boolean(curriculumMeta)) && (
           <>
             {/* Dedicated Top Move & Unlock Header Bar */}
-            <div
+            {!singleElement?.smartBlockData?.presetId.startsWith("edu-") && <div
               className="block-edit-bar absolute left-0 pointer-events-auto select-none z-50"
               style={{ top: boundingBox.y * zoom < 45 ? 20 / zoom : -60 / zoom, transform: `scale(${1 / zoom})`, transformOrigin: "top left" }}
               onPointerDown={e => e.stopPropagation()}
@@ -464,7 +492,7 @@ export const TransformOverlay: React.FC<TransformOverlayProps> = ({
                 <Unlink2 size={14} />
                 {zoom >= 0.65 && <span>Detach</span>}
               </button>
-            </div>
+            </div>}
             {/* Edge Drag Hit Areas (8pt border perimeter) */}
             <div className="absolute -top-2 left-0 right-0 h-4 pointer-events-auto cursor-move" onPointerDown={handleBoxPointerDown} title="Drag border to move block" />
             <div className="absolute -bottom-2 left-0 right-0 h-4 pointer-events-auto cursor-move" onPointerDown={handleBoxPointerDown} title="Drag border to move block" />
