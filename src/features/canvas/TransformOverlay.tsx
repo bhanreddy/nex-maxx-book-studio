@@ -22,7 +22,7 @@ import { MotifOverlay } from "./MotifOverlay";
 import { stageName } from "../../editor/curriculum/frameworkPlan";
 import { CURRICULUM_BLOCK_MAP } from "../../editor/curriculum/catalog";
 import { setFrameworkMode } from "../../editor/curriculum/actions";
-import { Move, Unlink2, MousePointer2, LockKeyhole } from "lucide-react";
+import { Move, Unlink2, MousePointer2 } from "lucide-react";
 import { beginBlockContentEditing } from "../../editor/educational/blockContentEditing";
 
 /** Coalesce high-frequency mouse events and flush the final position before undo commits. */
@@ -100,8 +100,8 @@ export const TransformOverlay: React.FC<TransformOverlayProps> = ({
   const boundingBox = getBoundingBox(rects);
   const singleElement = selectedElements.length === 1 ? selectedElements[0] : null;
   const rotation = singleElement ? singleElement.transform.rotation : 0;
-  const fixedBlockSize = elementTree(selectedElements.map(el => el.id), useEditorStore.getState().elements).some(el => el.smartBlockData?.styleOverrides.contentLayout?.enabled);
-  const handles = fixedBlockSize ? [] : getTransformHandles(boundingBox, rotation);
+  const editingContents = Boolean(singleElement?.smartBlockData?.styleOverrides.contentLayout?.enabled);
+  const handles = getTransformHandles(boundingBox, rotation);
   const curriculumMeta = singleElement?.smartBlockData?.curriculum;
   const curriculumName = curriculumMeta ? (CURRICULUM_BLOCK_MAP[curriculumMeta.type]?.name || singleElement?.displayName) : singleElement?.displayName;
 
@@ -310,16 +310,17 @@ export const TransformOverlay: React.FC<TransformOverlayProps> = ({
         updateElementTransform(singleElement.id, { rotation: deg }, false);
       } else if (singleElement) {
         // Standard Resize
-        const lockAspect = moveEvent.shiftKey || singleElement.type === "image";
-        const newRect = calculateResize(initialRect, handle, deltaX, deltaY, lockAspect);
+        const corner = ["nw", "ne", "sw", "se"].includes(handle);
+        const lockAspect = moveEvent.shiftKey || singleElement.type === "image" || (corner && (Boolean(singleElement.smartBlockData) || singleElement.type === "group"));
+        const newRect = calculateResize(initialRect, handle, deltaX, deltaY, lockAspect, singleElement.smartBlockData ? 60 : 20, singleElement.smartBlockData ? 30 : 20);
 
         updateElementTransform(
           singleElement.id,
           {
             x: Math.round(newRect.x * 10) / 10,
             y: Math.round(newRect.y * 10) / 10,
-            width: Math.round(newRect.width * 10) / 10,
-            height: Math.round(newRect.height * 10) / 10,
+            width: newRect.width === initialRect.width ? initialRect.width : Math.round(newRect.width * 10) / 10,
+            height: newRect.height === initialRect.height ? initialRect.height : Math.round(newRect.height * 10) / 10,
           },
           false
         );
@@ -448,11 +449,10 @@ export const TransformOverlay: React.FC<TransformOverlayProps> = ({
                 <Move size={14} />
                 {zoom >= 0.65 && <span>Move block</span>}
               </div>
-              <button type="button" className="block-edit-primary" disabled={fixedBlockSize} title="Edit text and move every text line and image inside this block" onClick={e => {
+              <button type="button" className="block-edit-primary" disabled={editingContents} title="Edit text and move every text line and image inside this block" onClick={e => {
                 e.stopPropagation();
                 if (singleElement) beginBlockContentEditing(singleElement.id);
-              }}><MousePointer2 size={14}/>{fixedBlockSize ? (zoom < 0.65 ? "Contents" : "Contents editable") : "Edit contents"}</button>
-              {fixedBlockSize && <span className="block-edit-fixed" title="Fixed frame"><LockKeyhole size={12}/>{zoom >= 0.65 && "Fixed frame"}</span>}
+              }}><MousePointer2 size={14}/>{editingContents ? (zoom < 0.65 ? "Contents" : "Contents editable") : "Edit contents"}</button>
               <button
                 type="button"
                 onClick={(e) => {
@@ -473,7 +473,7 @@ export const TransformOverlay: React.FC<TransformOverlayProps> = ({
             <div className="absolute top-0 bottom-0 -right-2 w-4 pointer-events-auto cursor-move" onMouseDown={handleBoxMouseDown} title="Drag border to move block" />
           </>
         )}
-        {Boolean(singleElement?.smartBlockData) && !fixedBlockSize && <MotifOverlay element={singleElement!} zoom={zoom} />}
+        {Boolean(singleElement?.smartBlockData) && !editingContents && <MotifOverlay element={singleElement!} zoom={zoom} />}
         {curriculumMeta && singleElement?.type !== "smart-block" && (
           <div
             className="studio-selection-label pointer-events-auto cursor-move select-none"
@@ -487,7 +487,6 @@ export const TransformOverlay: React.FC<TransformOverlayProps> = ({
         {/* Dimensions Tag */}
         <div className="absolute -bottom-6 left-1/2 -translate-x-1/2 bg-indigo-600 text-white text-[7pt] font-mono px-1.5 py-0.5 rounded shadow pointer-events-none whitespace-nowrap">
           {Math.round(boundingBox.width)} × {Math.round(boundingBox.height)} pt
-          {fixedBlockSize ? " · fixed" : ""}
           {rotation ? ` (${rotation}°)` : ""}
         </div>
 
@@ -529,6 +528,7 @@ export const TransformOverlay: React.FC<TransformOverlayProps> = ({
               key={h.type}
               className="absolute w-7 h-7 flex items-center justify-center group"
               aria-label={`Resize from ${h.type}`}
+              title={singleElement?.smartBlockData ? (["n", "s"].includes(h.type) ? "Trim empty space without shrinking text or images" : "Drag corners to scale text, images and artwork together") : `Resize from ${h.type}`}
               style={{
                 ...posStyle,
                 cursor: h.cursor,

@@ -11,7 +11,8 @@ export function composePage(elements:PageElement[], dimensions:Book["dimensions"
   const sorted=[...movable].sort((a,b)=>(suggested[a.id]?.y??a.transform.y)-(suggested[b.id]?.y??b.transform.y));
   for(const el of sorted){
     const t={...el.transform,...suggested[el.id]};
-    if(el.smartBlockData){t.width=Math.max(180,t.width);t.height=buildPublicationScene({...el.smartBlockData,transform:{...t,height:0}}).height;}
+    if(el.smartBlockData?.styleOverrides.resizeFrame){t.width=el.transform.width;t.height=el.transform.height;}
+    else if(el.smartBlockData){t.width=Math.max(180,t.width);t.height=buildPublicationScene({...el.smartBlockData,transform:{...t,height:0}}).height;}
     else if(el.category==="text"&&t.width<el.transform.width)t.height=Math.max(t.height,el.transform.height*el.transform.width/t.width);
     // Resolve collisions after measuring the new reading width, including locked obstacles.
     for(let pass=0;pass<=placed.length;pass++){

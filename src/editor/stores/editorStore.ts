@@ -1,4 +1,5 @@
 import { cloneElementTree, elementTree, selectionRoot, isElementLocked, transformGroupChildren } from "../core/elementGroups";
+import { withBlockTransform } from "../core/blockResize";
 import { repaginateFromPage } from "../core/paginationEngine";
 import { solveElementConstraint } from "../core/snapping";
 import { synchronizeBookStructure } from "../structure/bookStructureEngine";
@@ -1988,8 +1989,9 @@ export const useEditorStore = create<EditorState>((set, get) => {
       }
       if ((old.locked || old.smartBlockData?.isLockedDesign) && updates.transform) return;
       const next = { ...old, ...updates };
-      if (next.smartBlockData?.styleOverrides.contentLayout?.enabled && updates.transform) {
-        next.transform = { ...next.transform, width: old.transform.width, height: old.transform.height };
+      if (next.smartBlockData && updates.transform && !updates.smartBlockData && !updates.content && !updates.style) {
+        const resized = withBlockTransform({ ...next, transform: old.transform }, next.transform);
+        next.transform = resized.transform; next.smartBlockData = resized.smartBlockData;
       }
       if (updates.content && old.metadata?.tags?.some(tag => ['master-header','master-footer','master-folio'].includes(tag))) next.metadata = { ...next.metadata, styleOverride: true };
       if (next.type === "body" && next.content.publicationPrimitive && (updates.content || updates.style || updates.transform)) {
@@ -1999,7 +2001,7 @@ export const useEditorStore = create<EditorState>((set, get) => {
       if (next.smartBlockData) next.smartBlockData = { ...next.smartBlockData, transform: { ...next.transform } };
       const activeBook = get().getActiveBook();
       if (activeBook?.autoPagination && (updates.content || updates.smartBlockData || updates.style) &&
-          !next.smartBlockData?.curriculum && !next.smartBlockData?.styleOverrides.contentLayout?.enabled && !next.content.publicationPrimitive && ['body','body-text','smart-block'].includes(next.type)) {
+          !next.smartBlockData?.curriculum && !next.smartBlockData?.styleOverrides.contentLayout?.enabled && !next.smartBlockData?.styleOverrides.resizeFrame && !next.content.publicationPrimitive && ['body','body-text','smart-block'].includes(next.type)) {
         const previous = get();
         if (next.smartBlockData) {
           const height = buildPublicationScene({ ...next.smartBlockData, transform: { ...next.transform, height: 0 } }).height;
@@ -2032,26 +2034,22 @@ export const useEditorStore = create<EditorState>((set, get) => {
       if (!current || isElementLocked(id, get().elements) || current.smartBlockData?.isLockedDesign || elementTree(current.childElementIds || [], get().elements).some(el => el.locked)) return;
 
       const beforeTree = elementTree([id], get().elements);
-      const fixed = elementTree([id], get().elements).some(item => item.smartBlockData?.styleOverrides.contentLayout?.enabled);
-      const updatedTransform = { ...current.transform, ...newTransform, ...(fixed ? { width: current.transform.width, height: current.transform.height } : {}) };
-      if(current.smartBlockData && !fixed && (newTransform.width !== undefined || newTransform.height !== undefined)) {
+      const updatedTransform = { ...current.transform, ...newTransform };
+      if(current.smartBlockData && (newTransform.width !== undefined || newTransform.height !== undefined)) {
         updatedTransform.width = Math.max(60, updatedTransform.width);
         if (newTransform.height !== undefined) {
           updatedTransform.height = Math.max(30, updatedTransform.height);
         } else {
-          updatedTransform.height = Math.max(updatedTransform.height, buildPublicationScene({...current.smartBlockData, transform:{...updatedTransform, height:0}}).height);
+          updatedTransform.height = Math.max(30, current.transform.height * updatedTransform.width / current.transform.width);
         }
       }
 
+      const updated = withBlockTransform(current, updatedTransform);
       set((state) => ({
         elements: {
           ...state.elements,
-          ...transformGroupChildren(current, updatedTransform, state.elements),
-          [id]: {
-            ...state.elements[id],
-            transform: updatedTransform,
-            smartBlockData: current.smartBlockData ? {...current.smartBlockData,transform:updatedTransform} : undefined,
-          },
+          ...transformGroupChildren(current, updated.transform, state.elements),
+          [id]: updated,
         },
       }));
 
@@ -3578,7 +3576,7 @@ export const useEditorStore = create<EditorState>((set, get) => {
     },
     fitRenderedBlockHeight: (id, height) => {
       const el = get().elements[id];
-      if (el?.smartBlockData?.styleOverrides.contentLayout?.enabled) return;
+      if (el?.smartBlockData?.styleOverrides.contentLayout?.enabled || el?.smartBlockData?.styleOverrides.resizeFrame) return;
       if (!el?.smartBlockData || el.groupId || isElementLocked(id, get().elements) || !Number.isFinite(height) || height <= el.transform.height + 1) return;
       
       const deltaHeight = height - el.transform.height;
@@ -3904,7 +3902,7 @@ export const useEditorStore = create<EditorState>((set, get) => {
       if (el.smartBlockData.curriculum) { if (presetId.startsWith("curriculum-")) convertBlock(el,presetId.slice(11)); return; }
       const kept=(el.smartBlockData.styleOverrides.motifs||[]).filter(motif=>motif.role==="plate"||motif.role==="photo"||motif.role==="illustration");
       const block:SmartBlockInstance={...el.smartBlockData,presetId,family:def.family,transform:{...el.transform,height:0},styleOverrides:{...el.smartBlockData.styleOverrides,layoutVariant:undefined,motifs:kept}};
-      const height=buildPublicationScene(block).height;
+      const height=block.styleOverrides.resizeFrame?el.transform.height:buildPublicationScene(block).height;
       get().updateElement(elementId,{smartBlockData:block,presetId,displayName:def.name,transform:{...el.transform,height}});
     },
     reSkinEducationalBlock: (elementId, subject) => {
@@ -3943,7 +3941,7 @@ export const useEditorStore = create<EditorState>((set, get) => {
         return;
       }
       const block={...el.smartBlockData,transform:{...el.transform,height:0},semanticContent:{...el.smartBlockData.semanticContent,...partialContent}};
-      get().updateElement(elementId,{smartBlockData:block,transform:{...el.transform,height:buildPublicationScene(block).height}});
+      get().updateElement(elementId,{smartBlockData:block,transform:{...el.transform,height:block.styleOverrides.resizeFrame?el.transform.height:buildPublicationScene(block).height}});
     },
     updateSmartBlockStyle: (elementId, partialStyle) => {
       const el=get().elements[elementId];if(!el?.smartBlockData || isElementLocked(elementId, get().elements) || el.smartBlockData.isLockedDesign)return;
@@ -3953,12 +3951,12 @@ export const useEditorStore = create<EditorState>((set, get) => {
         return;
       }
       const block={...el.smartBlockData,transform:{...el.transform,height:0},styleOverrides:{...el.smartBlockData.styleOverrides,...partialStyle}};
-      get().updateElement(elementId,{smartBlockData:block,transform:{...el.transform,height:buildPublicationScene(block).height}});
+      get().updateElement(elementId,{smartBlockData:block,transform:{...el.transform,height:block.styleOverrides.resizeFrame?el.transform.height:buildPublicationScene(block).height}});
     },
     setBlockMotifs: (elementId, motifs) => {
       const el=get().elements[elementId];if(!el?.smartBlockData || isElementLocked(elementId, get().elements) || el.smartBlockData.isLockedDesign)return;
       const block={...el.smartBlockData,transform:{...el.transform,height:0},styleOverrides:{...el.smartBlockData.styleOverrides,motifs}};
-      const height=buildPublicationScene(block).height;
+      const height=block.styleOverrides.resizeFrame?el.transform.height:buildPublicationScene(block).height;
       block.transform={...el.transform,height};
       set(state=>({elements:{...state.elements,[elementId]:{...el,transform:block.transform,smartBlockData:block}}}));
     },

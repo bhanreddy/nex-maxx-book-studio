@@ -60,22 +60,31 @@ test('new content never inherits stale text or nonfinite positions', () => {
   assert.equal(buildPublicationScene(block).nodes.find(n => n.contentId === node.contentId).y, node.y);
 });
 
-test('fixed block frames reject resizing but permit movement, with undo and redo', () => {
+test('resizing scales the authored layout, survives repeated gestures, and undoes as one edit', () => {
   reset();
   const element = store.getState().addEducationalBlock('studio-quick-check-1', 40, 40);
   const node = buildPublicationScene(element.smartBlockData).nodes.find(n => n.kind === 'text');
   store.getState().updateBlockContentLayout(element.id, layoutFor(node));
-  const before = store.getState().elements[element.id].transform;
-  store.getState().updateElementTransform(element.id, { x: before.x + 8, width: 999, height: 999 }, true);
-  const after = store.getState().elements[element.id].transform;
-  assert.equal(after.x, before.x + 8); assert.equal(after.width, before.width); assert.equal(after.height, before.height);
-  history.getState().undo(); assert.deepEqual(store.getState().elements[element.id].transform, before);
-  history.getState().redo(); assert.deepEqual(store.getState().elements[element.id].transform, after);
+  const before = structuredClone(store.getState().elements[element.id]);
+  const originalScene = buildPublicationScene(before.smartBlockData);
+  store.getState().updateElementTransform(element.id, { x: before.transform.x + 8, width: before.transform.width / 2, height: before.transform.height / 2 }, true);
+  const after = structuredClone(store.getState().elements[element.id]);
+  assert.equal(after.transform.x, before.transform.x + 8);
+  assert.equal(after.transform.width, before.transform.width / 2);
+  assert.equal(after.transform.height, before.transform.height / 2);
+  assert.deepEqual(after.smartBlockData.styleOverrides.resizeFrame, { width: before.transform.width, height: before.transform.height });
+  assert.deepEqual(buildPublicationScene(after.smartBlockData), originalScene);
+  history.getState().undo(); assert.deepEqual(store.getState().elements[element.id], before);
+  history.getState().redo(); assert.deepEqual(store.getState().elements[element.id], after);
   store.getState().fitRenderedBlockHeight(element.id, 999);
-  store.getState().updateElement(element.id, { transform: { ...after, width: 999, height: 999 } });
-  assert.deepEqual(store.getState().elements[element.id].transform, after);
-  history.getState().undo(); history.getState().undo(); history.getState().undo();
-  assert.equal(store.getState().elements[element.id].smartBlockData.styleOverrides.contentLayout, undefined);
+  assert.deepEqual(store.getState().elements[element.id], after);
+  store.getState().updateElementTransform(element.id, { width: before.transform.width * .75 }, true);
+  const resized = store.getState().elements[element.id];
+  assert.equal(resized.transform.height, before.transform.height * .75);
+  assert.deepEqual(resized.smartBlockData.styleOverrides.resizeFrame, after.smartBlockData.styleOverrides.resizeFrame);
+  assert.deepEqual(buildPublicationScene(resized.smartBlockData), originalScene);
+  store.getState().updateElement(element.id, { transform: { ...resized.transform, width: before.transform.width, height: before.transform.height } });
+  assert.deepEqual(buildPublicationScene(store.getState().elements[element.id].smartBlockData), originalScene);
 });
 
 test('curriculum source and placed block share edits without recomposition or page movement', () => {

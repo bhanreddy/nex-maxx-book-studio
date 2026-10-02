@@ -234,6 +234,8 @@ export const ElementRenderer: React.FC<ElementRendererProps> = memo(function Ele
   }, [isEditingText]);
 
   const { transform, style, content, type } = element;
+  const resizeFrame = element.smartBlockData?.styleOverrides.resizeFrame;
+  const blockTransform = resizeFrame ? { ...transform, width: resizeFrame.width, height: resizeFrame.height } : transform;
   const grouped = Boolean(element.groupId);
   const locked = isElementLocked(element.id, useEditorStore.getState().elements);
   const selectGroup = (e: React.SyntheticEvent) => {
@@ -1318,29 +1320,29 @@ export const ElementRenderer: React.FC<ElementRendererProps> = memo(function Ele
       case "smart-block":
         if (element.smartBlockData) {
           if (element.smartBlockData.styleOverrides.contentLayout?.enabled) return <BlockContentEditor element={element} selected={isSelected && !locked && !grouped} zoom={zoom}/>;
-          if (element.smartBlockData.styleOverrides.referenceElement) return <PublicationSceneView scene={buildPublicationScene({ ...element.smartBlockData, transform: element.transform })} label={element.smartBlockData.semanticContent.title}/>;
+          if (element.smartBlockData.styleOverrides.referenceElement) return <PublicationSceneView scene={buildPublicationScene({ ...element.smartBlockData, transform: blockTransform })} label={element.smartBlockData.semanticContent.title}/>;
           if (element.smartBlockData.curriculum?.type === "lesson-schema") {
-            return <LessonSchemaRenderer block={{ ...element.smartBlockData, transform: element.transform }} elementId={element.id} selected={isSelected} locked={element.locked}/>;
+            return <LessonSchemaRenderer block={{ ...element.smartBlockData, transform: blockTransform }} elementId={element.id} selected={isSelected} locked={element.locked}/>;
           }
           if (element.smartBlockData.curriculum?.type === "study-skills") {
-            return <StudySkillsRenderer block={{ ...element.smartBlockData, transform: element.transform }} elementId={element.id} selected={isSelected} locked={element.locked}/>;
+            return <StudySkillsRenderer block={{ ...element.smartBlockData, transform: blockTransform }} elementId={element.id} selected={isSelected} locked={element.locked}/>;
           }
           if (element.smartBlockData.curriculum?.type === "learning-outcomes" || element.smartBlockData.curriculum?.type === "learning-mission") {
-            return <LearningOutcomesRenderer block={{ ...element.smartBlockData, transform: element.transform }} elementId={element.id} selected={isSelected} locked={element.locked}/>;
+            return <LearningOutcomesRenderer block={{ ...element.smartBlockData, transform: blockTransform }} elementId={element.id} selected={isSelected} locked={element.locked}/>;
           }
           if (element.smartBlockData.curriculum?.type === "fact-zone") {
-            return <FactZoneRenderer block={{ ...element.smartBlockData, transform: element.transform }} elementId={element.id} selected={isSelected} locked={element.locked}/>;
+            return <FactZoneRenderer block={{ ...element.smartBlockData, transform: blockTransform }} elementId={element.id} selected={isSelected} locked={element.locked}/>;
           }
           if (element.smartBlockData.curriculum?.type === "topic-banner") {
-            return <TopicBannerRenderer block={{ ...element.smartBlockData, transform: element.transform }} elementId={element.id} selected={isSelected} locked={element.locked}/>;
+            return <TopicBannerRenderer block={{ ...element.smartBlockData, transform: blockTransform }} elementId={element.id} selected={isSelected} locked={element.locked}/>;
           }
           if (element.smartBlockData.curriculum?.type === "life-connect") {
-            return <LifeConnectRenderer block={{ ...element.smartBlockData, transform: element.transform }} elementId={element.id} selected={isSelected} locked={element.locked}/>;
+            return <LifeConnectRenderer block={{ ...element.smartBlockData, transform: blockTransform }} elementId={element.id} selected={isSelected} locked={element.locked}/>;
           }
           if (element.smartBlockData.curriculum) {
             return (
               <UniversalBlockRenderer
-                block={{ ...element.smartBlockData, transform: element.transform }}
+                block={{ ...element.smartBlockData, transform: blockTransform }}
                 isSelected={isSelected}
                 zoom={zoom}
                 onExploreStyles={() => shuffleEducationalBlockStyle(element.id)}
@@ -1351,14 +1353,14 @@ export const ElementRenderer: React.FC<ElementRendererProps> = memo(function Ele
           if (element.smartBlockData.presetId.startsWith("atelier-") || element.smartBlockData.presetId.startsWith("studio-")) {
             return (
               <PublicationSceneView
-                scene={buildPublicationScene({ ...element.smartBlockData, transform: element.transform })}
+                scene={buildPublicationScene({ ...element.smartBlockData, transform: blockTransform })}
                 label={`${element.smartBlockData.semanticContent.title} educational block`}
               />
             );
           }
           return (
             <SmartBlockRenderer
-              block={{ ...element.smartBlockData, transform: element.transform }}
+              block={{ ...element.smartBlockData, transform: blockTransform }}
               isSelected={isSelected}
               zoom={zoom}
               onExploreStyles={() => shuffleEducationalBlockStyle(element.id)}
@@ -1381,6 +1383,11 @@ export const ElementRenderer: React.FC<ElementRendererProps> = memo(function Ele
     }
   };
 
+  const renderedContent = renderContent();
+  const scaledContent = resizeFrame && !element.smartBlockData?.styleOverrides.contentLayout?.enabled
+    ? <div style={{ width: `${resizeFrame.width}pt`, height: `${resizeFrame.height}pt`, transform: `scale(${transform.width / resizeFrame.width}, ${transform.height / resizeFrame.height})`, transformOrigin: "top left" }}>{renderedContent}</div>
+    : renderedContent;
+
   return (
     <div
       id={`element-${element.id}`}
@@ -1401,8 +1408,8 @@ export const ElementRenderer: React.FC<ElementRendererProps> = memo(function Ele
       }`}
     >
       {grouped ? <div className="w-full h-full relative" onClickCapture={selectGroup} onDoubleClickCapture={selectGroup} onMouseDownCapture={selectGroup}>
-        <div className="w-full h-full pointer-events-none">{renderContent()}</div>
-      </div> : <div className={`w-full h-full ${locked ? "pointer-events-none" : ""}`}>{renderContent()}</div>}
+        <div className="w-full h-full pointer-events-none">{scaledContent}</div>
+      </div> : <div className={`w-full h-full ${locked ? "pointer-events-none" : ""}`}>{scaledContent}</div>}
 
       {/* Review Comments Badge Indicator */}
       {element.comments && element.comments.length > 0 && (

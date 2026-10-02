@@ -142,6 +142,8 @@ export function backgroundPatternNodes(pattern:string,w:number,h:number,p:Public
   return nodes;
 }
 export function buildPublicationScene(block: SmartBlockInstance, options: { teacher?: boolean } = {}): PublicationScene {
+  const resizeFrame = block.styleOverrides.resizeFrame;
+  if (resizeFrame) block = { ...block, transform: { ...block.transform, width: resizeFrame.width, height: resizeFrame.height } };
   const scene = buildScene(block, options);
   const family = block.styleOverrides.fontFamily;
   const counts = { text: 0, image: 0 };

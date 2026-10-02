@@ -27,7 +27,9 @@ export function collectPrintPages(book:Book,elements:Record<string,PageElement>)
     }
     if(!scene&&['shape','divider','borderFrame'].includes(element.type))scene={width:element.transform.width,height:element.transform.height,variant:'native-shape',warnings:[],nodes:[{kind:'rect',x:0,y:0,w:element.transform.width,h:element.transform.height,fill:element.style.backgroundColor||'#FFFFFF',stroke:element.style.borderColor,radius:element.style.borderRadius}]};
     if(!scene)throw new Error(`“${element.displayName}” does not have a verified print renderer. Export is blocked to prevent omitted content.`);
-    if(scene.height>element.transform.height+1||element.isOverset)throw new Error(`“${element.displayName}” needs more vertical space before printing.`);
+    const resizeFrame=element.smartBlockData?.styleOverrides.resizeFrame;
+    const renderedHeight=scene.height*(resizeFrame?element.transform.height/resizeFrame.height:1);
+    if(renderedHeight>element.transform.height+1||element.isOverset)throw new Error(`“${element.displayName}” needs more vertical space before printing.`);
     // Export embeds cropped images into its own scene; retain the reusable renderer cache.
     return {element,scene:structuredClone(scene)};
   })}));
@@ -58,7 +60,7 @@ export function buildPrintHtml(book:Book,pages:PrintScenePage[],fontCss:string,o
     if(page.footer?.warnings.length)throw new Error(page.footer.warnings.join(' '));
     return `<section><svg xmlns="http://www.w3.org/2000/svg" width="${num(width)}pt" height="${num(height)}pt" viewBox="0 0 ${num(width)} ${num(height)}">
     ${page.frame ? `<g data-page-frame-background="1" transform="translate(${num(offsetX)},${num(offsetY)})">${sceneSvg({...page.frame,nodes:page.frame.nodes.filter(node=>'motifId' in node&&node.motifId==='Paper')})}</g>` : ''}
-    ${page.elements.map(({element,scene})=>{const t=element.transform;return `<g data-print-frame="${escape(element.id)}" transform="translate(${num(offsetX+t.x)},${num(offsetY+t.y)}) rotate(${num(t.rotation)} ${num(t.width/2)} ${num(t.height/2)})" opacity="${num(element.style.opacity??1)}"><svg width="${num(t.width)}" height="${num(t.height)}" viewBox="0 0 ${num(scene.width)} ${num(scene.height)}" overflow="visible">${sceneSvg(scene)}</svg></g>`;}).join('')}
+    ${page.elements.map(({element,scene})=>{const t=element.transform,frame=element.smartBlockData?.styleOverrides.resizeFrame;return `<g data-print-frame="${escape(element.id)}" transform="translate(${num(offsetX+t.x)},${num(offsetY+t.y)}) rotate(${num(t.rotation)} ${num(t.width/2)} ${num(t.height/2)})" opacity="${num(element.style.opacity??1)}"><svg width="${num(t.width)}" height="${num(t.height)}" viewBox="0 0 ${num(frame?.width??scene.width)} ${num(frame?.height??scene.height)}"${frame?' preserveAspectRatio="none"':''} overflow="visible">${sceneSvg(scene)}</svg></g>`;}).join('')}
     ${page.frame ? `<g data-page-frame="scholar-wave" transform="translate(${num(offsetX)},${num(offsetY)})">${sceneSvg({...page.frame,nodes:page.frame.nodes.filter(node=>!('motifId' in node)||node.motifId!=='Paper')})}</g>` : ''}
     ${page.footer ? `<g data-publisher-footer="1" transform="translate(${num(offsetX)},${num(offsetY)})">${sceneSvg(page.footer)}</g>` : ''}
     ${options.cropMarks&&options.bleed?`<path d="M ${offsetX} 0 V ${offsetY-2} M 0 ${offsetY} H ${offsetX-2} M ${offsetX+book.dimensions.widthPt} 0 V ${offsetY-2} M ${width} ${offsetY} H ${offsetX+book.dimensions.widthPt+2} M ${offsetX} ${height} V ${offsetY+book.dimensions.heightPt+2} M 0 ${offsetY+book.dimensions.heightPt} H ${offsetX-2} M ${offsetX+book.dimensions.widthPt} ${height} V ${offsetY+book.dimensions.heightPt+2} M ${width} ${offsetY+book.dimensions.heightPt} H ${offsetX+book.dimensions.widthPt+2}" fill="none" stroke="#000" stroke-width=".5"/>`:''}

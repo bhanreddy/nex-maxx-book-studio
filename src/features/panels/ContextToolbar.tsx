@@ -148,8 +148,7 @@ export const ContextToolbar: React.FC = () => {
               <input
                 type="number"
                 value={Math.round(currentTransform.width)}
-                disabled={singleElement.smartBlockData?.styleOverrides.contentLayout?.enabled}
-                title={singleElement.smartBlockData?.styleOverrides.contentLayout?.enabled ? "Fixed block width" : "Block width"}
+                title="Block width"
                 onChange={(e) => {
                   if (singleElement.smartBlockData?.curriculum?.chapterId && singleElement.smartBlockData.isLockedDesign) {
                     setFrameworkMode(singleElement.smartBlockData.curriculum.chapterId, "design");
@@ -166,8 +165,7 @@ export const ContextToolbar: React.FC = () => {
               <input
                 type="number"
                 value={Math.round(currentTransform.height)}
-                disabled={singleElement.smartBlockData?.styleOverrides.contentLayout?.enabled}
-                title={singleElement.smartBlockData?.styleOverrides.contentLayout?.enabled ? "Fixed block height" : "Block height"}
+                    title="Block height — trim empty space without shrinking content"
                 onChange={(e) => {
                   if (singleElement.smartBlockData?.curriculum?.chapterId && singleElement.smartBlockData.isLockedDesign) {
                     setFrameworkMode(singleElement.smartBlockData.curriculum.chapterId, "design");
@@ -547,9 +545,9 @@ export const ContextToolbar: React.FC = () => {
               disabled={singleElement.locked || singleElement.smartBlockData?.styleOverrides.contentLayout?.enabled}
               onClick={() => beginBlockContentEditing(singleElement.id)}
               className="px-2.5 py-0.5 rounded bg-amber-500/20 hover:bg-amber-500/30 text-amber-200 border border-amber-500/30 text-[10.5px] font-medium transition-all cursor-pointer shadow-sm active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
-              title="Move and edit text and images within a fixed block frame"
+              title="Move and edit text and images inside the block"
             >
-              {singleElement.smartBlockData?.styleOverrides.contentLayout?.enabled ? "Contents editable · fixed frame" : "Edit block contents"}
+              {singleElement.smartBlockData?.styleOverrides.contentLayout?.enabled ? "Contents editable" : "Edit block contents"}
             </button>
           </div>
         )}

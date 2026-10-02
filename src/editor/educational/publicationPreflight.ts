@@ -12,8 +12,10 @@ export function publicationPreflight(book:Book,elements:Record<string,PageElemen
     const add=(title:string,message:string,category:PreflightIssue["category"],severity:PreflightIssue["severity"]="warning")=>issues.push({id:`publication-${id}-${issues.length}`,title,message,category,severity,pageIndex,pageId:page.id,elementId:id,elementName:el.displayName});
     if(el.smartBlockData) {
       const block={...el.smartBlockData,transform:el.transform},scene=buildPublicationScene(block),p=resolvePublicationPalette(block);
-      if(scene.height>el.transform.height+1)add("Block needs more height",`${el.displayName} needs ${Math.ceil(scene.height)} pt. Resize before export; content has been preserved.`,"text","error");
-      if(el.transform.y+scene.height>book.dimensions.heightPt-pageMarginsFor(book,page).bottomPt)add("Content reaches the bottom margin","Move the block to another page or edit its content. Do not shrink the reading size.","geometry","error");
+      const frame=block.styleOverrides.resizeFrame;
+      const renderedHeight=scene.height*(frame?el.transform.height/frame.height:1);
+      if(renderedHeight>el.transform.height+1)add("Block needs more height",`${el.displayName} needs ${Math.ceil(renderedHeight)} pt. Resize before export; content has been preserved.`,"text","error");
+      if(el.transform.y+renderedHeight>book.dimensions.heightPt-pageMarginsFor(book,page).bottomPt)add("Content reaches the bottom margin","Move the block to another page or edit its content. Do not shrink the reading size.","geometry","error");
       for (const node of scene.nodes) if (node.kind === 'text') {
         try { printFont(node.text, node.fontFamily, node.font === 'serif'); }
         catch (error) { add('Font unavailable for print', String(error), 'font', 'error'); break; }

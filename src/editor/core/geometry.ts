@@ -119,6 +119,15 @@ export function calculateResize(
   let { x, y, width, height } = initialRect;
   const initialAspect = initialRect.width / initialRect.height;
 
+  if (lockAspectRatio && ["nw", "ne", "sw", "se"].includes(handle)) {
+    const west = handle.includes("w"), north = handle.includes("n");
+    const sx = 1 + (west ? -deltaX : deltaX) / width;
+    const sy = 1 + (north ? -deltaY : deltaY) / height;
+    const factor = Math.max(minWidth / width, minHeight / height, Math.abs(sx - 1) >= Math.abs(sy - 1) ? sx : sy);
+    const nextWidth = width * factor, nextHeight = height * factor;
+    return { x: west ? x + width - nextWidth : x, y: north ? y + height - nextHeight : y, width: nextWidth, height: nextHeight };
+  }
+
   switch (handle) {
     case "se":
       width = Math.max(minWidth, initialRect.width + deltaX);

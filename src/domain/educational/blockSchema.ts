@@ -268,6 +268,8 @@ export interface SmartBlockInstance {
     decorationOpacity?: number;
     backgroundImage?: { src: string; alt: string; focalX: number; focalY: number; opacity: number; scale: number; rawWidthPx?: number; rawHeightPx?: number };
     motifs?: BlockMotif[];
+    /** Design dimensions: corners scale content; height-only edits trim or add whitespace. */
+    resizeFrame?: { width: number; height: number };
     /** Authored text/image positions stay inside the original block, without detaching it. */
     contentLayout?: {
       enabled: boolean;

@@ -783,7 +783,6 @@ export const InspectorPanel: React.FC = () => {
                     />
                   </>
                 )}
-                {singleElement.smartBlockData?.styleOverrides.contentLayout?.enabled ? <div className="col-span-2 rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-bg)] p-3 text-xs text-[var(--text-muted)]">Fixed block frame · {Math.round(singleElement.transform.width)} × {Math.round(singleElement.transform.height)} pt</div> : <>
                 <SmartScrubInput
                   label="W"
                   value={Math.round(singleElement.transform.width)}
@@ -802,7 +801,6 @@ export const InspectorPanel: React.FC = () => {
                   }
                   unit="pt"
                 />
-                </>}
                 {complexityMode !== "quick" && (
                   <>
                     <SmartScrubInput

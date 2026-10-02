@@ -570,7 +570,7 @@ export const SmartQuickActionBar: React.FC<SmartQuickActionBarProps> = ({
             onClick={() => beginBlockContentEditing(single.id)}
             disabled={single.smartBlockData?.styleOverrides.contentLayout?.enabled}
             className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-200 border border-amber-500/40 hover:border-amber-400 transition-all font-medium cursor-pointer shadow-sm active:scale-95"
-            title="Move and edit text and images within a fixed block frame"
+            title="Move and edit text and images inside the block"
           >
             <Unlink2 className="w-3.5 h-3.5 text-amber-400" />
             <span>{single.smartBlockData?.styleOverrides.contentLayout?.enabled ? "Contents editable" : "Edit contents"}</span>

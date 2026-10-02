@@ -14,6 +14,10 @@ export function MotifOverlay({ element, zoom }: { element: PageElement; zoom: nu
   const [active, setActive] = useState<string | null>(null);
   const [cropping, setCropping] = useState(false);
   if (!block) return null;
+  const resizeFrame = block.styleOverrides.resizeFrame;
+  const sourceWidth = resizeFrame?.width || element.transform.width;
+  const scaleX = element.transform.width / sourceWidth;
+  const scaleY = element.transform.height / (resizeFrame?.height || element.transform.height);
   const scene = buildPublicationScene({ ...block, transform: element.transform });
   // Whole-card semantic frames are for export/editing metadata. Covering them
   // with drag targets intercepts the native content buttons underneath.
@@ -41,7 +45,7 @@ export function MotifOverlay({ element, zoom }: { element: PageElement; zoom: nu
     const found = motifs.find(motif => motif.id === id);
     const next = found
       ? motifs.map(motif => motif.id === id ? { ...motif, ...patch } : motif)
-      : [...motifs, { id, role: frame.role as BlockMotif["role"], kind: frame.kind, x: frame.x, y: frame.y, w: frame.w, h: frame.h, rotation: 0, locked: false, opacity: frame.role === "photo" ? 1 : .8, behind: true, originWidth: current.transform.width, ...patch }];
+      : [...motifs, { id, role: frame.role as BlockMotif["role"], kind: frame.kind, x: frame.x, y: frame.y, w: frame.w, h: frame.h, rotation: 0, locked: false, opacity: frame.role === "photo" ? 1 : .8, behind: true, originWidth: sourceWidth, ...patch }];
     useEditorStore.getState().setBlockMotifs(element.id, next);
   };
   const begin = (frame: SceneMotifFrame, event: React.PointerEvent, mode: "move" | "resize" | "crop") => {
@@ -55,11 +59,11 @@ export function MotifOverlay({ element, zoom }: { element: PageElement; zoom: nu
     const focal = { x: motif?.focalX ?? .5, y: motif?.focalY ?? .5 };
     setActive(frame.id);
     const move = (e: PointerEvent) => {
-      const dx = (e.clientX - startX) * .75 / zoom;
-      const dy = (e.clientY - startY) * .75 / zoom;
+      const dx = (e.clientX - startX) * .75 / zoom / scaleX;
+      const dy = (e.clientY - startY) * .75 / zoom / scaleY;
       if (mode === "crop") apply(frame.id, frame, { focalX: Math.max(0, Math.min(1, focal.x - dx / Math.max(24, origin.w))), focalY: Math.max(0, Math.min(1, focal.y - dy / Math.max(24, origin.h))) });
-      else if (mode === "resize") apply(frame.id, frame, { x: origin.x, y: origin.y, w: Math.max(28, origin.w + dx), h: Math.max(28, origin.h + dy), nudged: true, originWidth: before.transform.width });
-      else apply(frame.id, frame, { x: origin.x + dx, y: origin.y + dy, w: origin.w, h: origin.h, nudged: true, originWidth: before.transform.width });
+      else if (mode === "resize") apply(frame.id, frame, { x: origin.x, y: origin.y, w: Math.max(28, origin.w + dx), h: Math.max(28, origin.h + dy), nudged: true, originWidth: sourceWidth });
+      else apply(frame.id, frame, { x: origin.x + dx, y: origin.y + dy, w: origin.w, h: origin.h, nudged: true, originWidth: sourceWidth });
     };
     const up = () => {
       useEditorStore.getState().commitBlockMotifs(element.id, before);
@@ -69,7 +73,7 @@ export function MotifOverlay({ element, zoom }: { element: PageElement; zoom: nu
     window.addEventListener("pointermove", move);
     window.addEventListener("pointerup", up);
   };
-  return <>
+  return <div className="absolute left-0 top-0" style={{ width: `${sourceWidth}pt`, height: `${resizeFrame?.height || element.transform.height}pt`, transform: `scale(${scaleX}, ${scaleY})`, transformOrigin: "top left" }}>
     {frames.map(frame => <div key={frame.id} role="button" aria-label={`Drag ${frame.kind} plate`} tabIndex={0}
       onPointerDown={e => { setCropping(false); begin(frame, e, "move"); }}
       onDoubleClick={e => { if (frame.role === "photo") { e.stopPropagation(); setActive(frame.id); setCropping(true); } }}
@@ -83,7 +87,7 @@ export function MotifOverlay({ element, zoom }: { element: PageElement; zoom: nu
       <button className="bg-slate-900 text-amber-100 text-[8px] px-1.5 py-0.5 rounded" onClick={() => { const frame = frames.find(item => item.id === active)!; const before = useEditorStore.getState().elements[element.id]; apply(active, frame, { locked: !frame.locked }); useEditorStore.getState().commitBlockMotifs(element.id, before); }}>{frameLocked(element, active) ? "Unlock" : "Lock"}</button>
       <button className="bg-slate-900 text-rose-200 text-[8px] px-1.5 py-0.5 rounded" onClick={() => { const before = useEditorStore.getState().elements[element.id]; useEditorStore.getState().setBlockMotifs(element.id, liveMotifs(before).filter(motif => motif.id !== active)); useEditorStore.getState().commitBlockMotifs(element.id, before); setActive(null); }}>Remove</button>
     </div>}
-  </>;
+  </div>;
 }
 function frameLocked(element: PageElement, id: string) {
   return Boolean(liveMotifs(element).find(motif => motif.id === id)?.locked);

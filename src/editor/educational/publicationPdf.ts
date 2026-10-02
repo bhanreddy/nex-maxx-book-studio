@@ -113,7 +113,9 @@ export async function renderPublicationPdf(doc:jsPDF,scene:PublicationScene,el:P
     doc.saveGraphicsState();
     const angle=el.transform.rotation*Math.PI/180,co=Math.cos(angle),si=Math.sin(angle),cx=el.transform.width/2,cy=el.transform.height/2;
     doc.setCurrentTransformationMatrix(doc.Matrix(co,si,-si,co,originX+el.transform.x+cx-co*cx+si*cy,originY+el.transform.y+cy-si*cx-co*cy));
-    if(el.content?.publicationPrimitive)doc.setCurrentTransformationMatrix(doc.Matrix(el.transform.width/scene.width,0,0,el.transform.height/scene.height,0,0));
+    const resizeFrame = el.smartBlockData?.styleOverrides.resizeFrame;
+    if (resizeFrame) doc.setCurrentTransformationMatrix(doc.Matrix(el.transform.width/resizeFrame.width,0,0,el.transform.height/resizeFrame.height,0,0));
+    else if(el.content?.publicationPrimitive)doc.setCurrentTransformationMatrix(doc.Matrix(el.transform.width/scene.width,0,0,el.transform.height/scene.height,0,0));
     doc.rect(0,0,scene.width,scene.height);doc.clip();doc.discardPath();
     scene.nodes.forEach((n,i)=>{
       doc.saveGraphicsState();

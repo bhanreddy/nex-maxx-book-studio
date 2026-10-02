@@ -126,7 +126,7 @@ export function BlockContentEditor({ element, selected = false, zoom = 1 }: { el
   </div>;
 
   return <div ref={rootRef} className="block-content-editor" data-block-content-editor>
-    <PublicationSceneView scene={scene} label={`${block.semanticContent.title} — editable contents`} overflow="visible" wrapNode={canMove ? (painted, node) => {
+    <PublicationSceneView scene={scene} label={`${block.semanticContent.title} — editable contents`} viewBox={block.styleOverrides.resizeFrame ? `0 0 ${block.styleOverrides.resizeFrame.width} ${block.styleOverrides.resizeFrame.height}` : undefined} preserveAspectRatio={block.styleOverrides.resizeFrame ? "none" : "xMidYMid meet"} overflow="visible" wrapNode={canMove ? (painted, node) => {
       if (node.kind !== "text" && node.kind !== "image") return painted;
       const id = node.contentId!;
       const bounds = contentNodeBounds(node);
