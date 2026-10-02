@@ -27,6 +27,7 @@ export function renderCurriculum(block: SmartBlockInstance, h: AtelierHelpers, o
   const def = CURRICULUM_BLOCK_MAP[m.type];
   const variant = (o.layoutVariant || def?.layouts[0] || "editorial") as CurriculumLayout;
   if (
+    o.contentLayout?.enabled ||
     variant.startsWith("universal-") ||
     m.type.startsWith("universal-") ||
     (["editorial", "explorer", "academy", "workbook"] as string[]).includes(String(o.blockStyle))

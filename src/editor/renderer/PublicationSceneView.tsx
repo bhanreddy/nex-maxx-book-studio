@@ -19,7 +19,7 @@ function shape(n: SceneNode, i: number, uid: string) {
   return null;
 }
 
-export const PublicationSceneView = memo(function PublicationSceneView({ scene, label = "Educational layout", viewBox }: { scene: PublicationScene; label?: string; viewBox?: string }) {
+export const PublicationSceneView = memo(function PublicationSceneView({ scene, label = "Educational layout", viewBox, wrapNode, overflow = "hidden" }: { scene: PublicationScene; label?: string; viewBox?: string; overflow?: "hidden" | "visible"; wrapNode?: (painted: React.ReactNode, node: SceneNode, index: number) => React.ReactNode }) {
   const [mounted, setMounted] = useState(false);
   useEffect(() => {
     setMounted(true);
@@ -28,7 +28,7 @@ export const PublicationSceneView = memo(function PublicationSceneView({ scene, 
   const id = useId().replace(/:/g, "");
   const gradients = scene.nodes.filter(n => n.kind === "gradient");
   const clips = scene.nodes.filter(n => n.kind === "clip");
-  return <svg suppressHydrationWarning xmlns="http://www.w3.org/2000/svg" role="img" aria-label={label} viewBox={viewBox || `0 0 ${scene.width} ${scene.height}`} preserveAspectRatio="xMidYMid meet" width="100%" height="100%" style={{ display: "block", overflow: "hidden" }}>
+  return <svg suppressHydrationWarning xmlns="http://www.w3.org/2000/svg" role={wrapNode ? "group" : "img"} aria-label={label} viewBox={viewBox || `0 0 ${scene.width} ${scene.height}`} preserveAspectRatio="xMidYMid meet" width="100%" height="100%" style={{ display: "block", overflow }}>
     <title>{label}</title>
     {mounted && (
       <>
@@ -39,7 +39,8 @@ export const PublicationSceneView = memo(function PublicationSceneView({ scene, 
         {scene.nodes.map((n, i) => {
           const painted = shape(n, i, id);
           if (!painted) return null;
-          return n.kind !== "gradient" && n.kind !== "clip" && n.clipId ? <g key={i} clipPath={`url(#${id}-clip-${n.clipId})`}>{painted}</g> : painted;
+          const clipped = n.kind !== "gradient" && n.kind !== "clip" && n.clipId ? <g key={i} clipPath={`url(#${id}-clip-${n.clipId})`}>{painted}</g> : painted;
+          return wrapNode ? <React.Fragment key={i}>{wrapNode(clipped, n, i)}</React.Fragment> : clipped;
         })}
       </>
     )}

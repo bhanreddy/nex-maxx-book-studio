@@ -22,7 +22,8 @@ import { MotifOverlay } from "./MotifOverlay";
 import { stageName } from "../../editor/curriculum/frameworkPlan";
 import { CURRICULUM_BLOCK_MAP } from "../../editor/curriculum/catalog";
 import { setFrameworkMode } from "../../editor/curriculum/actions";
-import { Move, Unlink2 } from "lucide-react";
+import { Move, Unlink2, MousePointer2, LockKeyhole } from "lucide-react";
+import { beginBlockContentEditing } from "../../editor/educational/blockContentEditing";
 
 /** Coalesce high-frequency mouse events and flush the final position before undo commits. */
 function frameMouseMoves(apply: (event: MouseEvent) => void) {
@@ -99,7 +100,8 @@ export const TransformOverlay: React.FC<TransformOverlayProps> = ({
   const boundingBox = getBoundingBox(rects);
   const singleElement = selectedElements.length === 1 ? selectedElements[0] : null;
   const rotation = singleElement ? singleElement.transform.rotation : 0;
-  const handles = getTransformHandles(boundingBox, rotation);
+  const fixedBlockSize = elementTree(selectedElements.map(el => el.id), useEditorStore.getState().elements).some(el => el.smartBlockData?.styleOverrides.contentLayout?.enabled);
+  const handles = fixedBlockSize ? [] : getTransformHandles(boundingBox, rotation);
   const curriculumMeta = singleElement?.smartBlockData?.curriculum;
   const curriculumName = curriculumMeta ? (CURRICULUM_BLOCK_MAP[curriculumMeta.type]?.name || singleElement?.displayName) : singleElement?.displayName;
 
@@ -430,33 +432,38 @@ export const TransformOverlay: React.FC<TransformOverlayProps> = ({
         }}
         onMouseDown={(singleElement?.type === "smart-block" || Boolean(curriculumMeta)) ? undefined : handleBoxMouseDown}
       >
-        {curriculumMeta?.type === "lesson-schema" && <button type="button" aria-label="Move lesson schema" className="absolute -top-7 right-0 pointer-events-auto rounded bg-slate-900 px-2 py-1 text-[8pt] text-white cursor-move" onMouseDown={handleBoxMouseDown}>Move schema</button>}
         {(singleElement?.type === "smart-block" || Boolean(curriculumMeta)) && (
           <>
             {/* Dedicated Top Move & Unlock Header Bar */}
             <div
-              className="absolute -top-9 left-0 pointer-events-auto flex items-center gap-2 bg-slate-950/95 text-amber-200 border border-amber-500/40 text-[7.5pt] font-sans px-2.5 py-1 rounded-lg shadow-xl select-none z-50 backdrop-blur-md"
+              className="block-edit-bar absolute left-0 pointer-events-auto select-none z-50"
+              style={{ top: -60 / zoom, transform: `scale(${1 / zoom})`, transformOrigin: "top left" }}
+              onMouseDown={e => e.stopPropagation()}
             >
               <div
-                className="flex items-center gap-1.5 cursor-grab active:cursor-grabbing hover:text-amber-300 font-bold"
+                className="block-edit-move"
                 onMouseDown={handleBoxMouseDown}
                 title="Click and drag to move block anywhere on the page"
               >
-                <Move className="w-3.5 h-3.5 text-amber-400" />
-                <span>Move {curriculumName || singleElement?.displayName || "Block"}</span>
+                <Move size={14} />
+                {zoom >= 0.65 && <span>Move block</span>}
               </div>
-              <div className="h-3 w-px bg-amber-500/30" />
+              <button type="button" className="block-edit-primary" disabled={fixedBlockSize} title="Edit text and move every text line and image inside this block" onClick={e => {
+                e.stopPropagation();
+                if (singleElement) beginBlockContentEditing(singleElement.id);
+              }}><MousePointer2 size={14}/>{fixedBlockSize ? (zoom < 0.65 ? "Contents" : "Contents editable") : "Edit contents"}</button>
+              {fixedBlockSize && <span className="block-edit-fixed" title="Fixed frame"><LockKeyhole size={12}/>{zoom >= 0.65 && "Fixed frame"}</span>}
               <button
                 type="button"
                 onClick={(e) => {
                   e.stopPropagation();
                   if (singleElement) detachEducationalBlock(singleElement.id);
                 }}
-                className="flex items-center gap-1 px-2 py-0.5 rounded bg-amber-500/20 hover:bg-amber-500/30 text-amber-200 hover:text-white border border-amber-400/40 hover:border-amber-400 text-[7pt] font-medium transition-all"
+                className="block-edit-secondary"
                 title="Detach into independent movable text and image layers"
               >
-                <Unlink2 className="w-3 h-3 text-amber-300" />
-                <span>Make Text & Images Movable</span>
+                <Unlink2 size={14} />
+                {zoom >= 0.65 && <span>Detach</span>}
               </button>
             </div>
             {/* Edge Drag Hit Areas (8pt border perimeter) */}
@@ -466,8 +473,8 @@ export const TransformOverlay: React.FC<TransformOverlayProps> = ({
             <div className="absolute top-0 bottom-0 -right-2 w-4 pointer-events-auto cursor-move" onMouseDown={handleBoxMouseDown} title="Drag border to move block" />
           </>
         )}
-        {Boolean(singleElement?.smartBlockData) && <MotifOverlay element={singleElement!} zoom={zoom} />}
-        {curriculumMeta && (
+        {Boolean(singleElement?.smartBlockData) && !fixedBlockSize && <MotifOverlay element={singleElement!} zoom={zoom} />}
+        {curriculumMeta && singleElement?.type !== "smart-block" && (
           <div
             className="studio-selection-label pointer-events-auto cursor-move select-none"
             onMouseDown={handleBoxMouseDown}
@@ -480,6 +487,7 @@ export const TransformOverlay: React.FC<TransformOverlayProps> = ({
         {/* Dimensions Tag */}
         <div className="absolute -bottom-6 left-1/2 -translate-x-1/2 bg-indigo-600 text-white text-[7pt] font-mono px-1.5 py-0.5 rounded shadow pointer-events-none whitespace-nowrap">
           {Math.round(boundingBox.width)} × {Math.round(boundingBox.height)} pt
+          {fixedBlockSize ? " · fixed" : ""}
           {rotation ? ` (${rotation}°)` : ""}
         </div>
 

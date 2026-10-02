@@ -8,7 +8,7 @@ import { renderReferenceElement } from "../curriculum/renderReferenceElement";
 import { renderCurriculum } from "../curriculum/render";
 import { sliceScene } from "../curriculum/pagination";
 
-type SceneMark = { opacity?: number; motifId?: string; clipId?: string };
+type SceneMark = { opacity?: number; motifId?: string; clipId?: string; contentId?: string };
 export type SceneNode =
   | ({ kind: "rect"; x: number; y: number; w: number; h: number; fill: string; stroke?: string; radius?: number; strokeWidth?: number; gradientId?: string } & SceneMark)
   | ({ kind: "ellipse"; x: number; y: number; rx: number; ry: number; fill: string; stroke?: string; strokeWidth?: number } & SceneMark)
@@ -144,7 +144,26 @@ export function backgroundPatternNodes(pattern:string,w:number,h:number,p:Public
 export function buildPublicationScene(block: SmartBlockInstance, options: { teacher?: boolean } = {}): PublicationScene {
   const scene = buildScene(block, options);
   const family = block.styleOverrides.fontFamily;
-  return family ? { ...scene, nodes: scene.nodes.map(node => node.kind === 'text' ? { ...node, fontFamily: family } : node) } : scene;
+  const counts = { text: 0, image: 0 };
+  const layout = block.styleOverrides.contentLayout;
+  const result = { ...scene, nodes: scene.nodes.map(node => {
+    if (node.kind !== 'text' && node.kind !== 'image') return node;
+    const contentId = `${node.kind}-${counts[node.kind]++}`;
+    const base = node.kind === 'text' ? node.text : node.src;
+    const edit = layout?.enabled ? layout.items[contentId] : undefined;
+    const next = { ...node, contentId, ...(node.kind === 'text' && family ? { fontFamily: family } : {}) };
+    // Stale overrides must never replace new curriculum content after a layout/content change.
+    if (!edit || edit.base !== base) return next;
+    next.x += Number.isFinite(edit.dx) ? edit.dx : 0;
+    next.y += Number.isFinite(edit.dy) ? edit.dy : 0;
+    if (next.kind === 'text' && edit.text !== undefined) next.text = edit.text;
+    if (next.kind === 'image' && edit.src !== undefined) next.src = edit.src;
+    // A moved image keeps its own mask, but leaves its former template clipping frame.
+    next.clipId = undefined;
+    return next;
+  }) };
+  return block.styleOverrides.sceneSlice && (block.curriculum || block.styleOverrides.referenceElement)
+    ? sliceScene(result, block.styleOverrides.sceneSlice) : result;
 }
 function buildScene(block: SmartBlockInstance, options: { teacher?: boolean } = {}): PublicationScene {
   if (block.curriculum || block.styleOverrides.referenceElement) {
@@ -157,7 +176,7 @@ function buildScene(block: SmartBlockInstance, options: { teacher?: boolean } = 
       if (n.kind === "image") n.saturation = 0;
       return n;
     });
-    return block.styleOverrides.sceneSlice ? sliceScene(scene, block.styleOverrides.sceneSlice) : scene;
+    return scene;
   }
   const def = EDUCATIONAL_BLOCK_REGISTRY[block.presetId];
   if (def?.skinId) {

@@ -216,6 +216,7 @@ interface EditorState {
   savePageAsPreset: (name: string, category: string, tags?: string[]) => PagePresetDefinition | null;
   reflowActivePageElement: (elementId: string, newHeightPt: number) => void;
   evaluateActivePageOverflow: () => void;
+  flowPageOverflowToNextPage: (targetPageId?: string) => void;
 
   publicationPresets: Record<string, { name: string; block: SmartBlockInstance }>;
   savePublicationPreset: (name: string, elementId: string) => void;
@@ -246,6 +247,7 @@ interface EditorState {
   reSkinEducationalBlock: (elementId: string, subject: SubjectDomain) => void;
   updateSmartBlockContent: (elementId: string, partialContent: Partial<SmartBlockInstance["semanticContent"]>) => void;
   updateSmartBlockStyle: (elementId: string, partialStyle: Partial<SmartBlockInstance["styleOverrides"]>) => void;
+  updateBlockContentLayout: (elementId: string, layout: NonNullable<SmartBlockInstance["styleOverrides"]["contentLayout"]>) => void;
   setBlockMotifs: (elementId: string, motifs: NonNullable<SmartBlockInstance["styleOverrides"]["motifs"]>) => void;
   commitBlockMotifs: (elementId: string, before: PageElement) => void;
   detachEducationalBlock: (elementId: string) => string[];
@@ -1986,6 +1988,9 @@ export const useEditorStore = create<EditorState>((set, get) => {
       }
       if ((old.locked || old.smartBlockData?.isLockedDesign) && updates.transform) return;
       const next = { ...old, ...updates };
+      if (next.smartBlockData?.styleOverrides.contentLayout?.enabled && updates.transform) {
+        next.transform = { ...next.transform, width: old.transform.width, height: old.transform.height };
+      }
       if (updates.content && old.metadata?.tags?.some(tag => ['master-header','master-footer','master-folio'].includes(tag))) next.metadata = { ...next.metadata, styleOverride: true };
       if (next.type === "body" && next.content.publicationPrimitive && (updates.content || updates.style || updates.transform)) {
         const height = detachedSceneForElement(next)?.height;
@@ -1994,7 +1999,7 @@ export const useEditorStore = create<EditorState>((set, get) => {
       if (next.smartBlockData) next.smartBlockData = { ...next.smartBlockData, transform: { ...next.transform } };
       const activeBook = get().getActiveBook();
       if (activeBook?.autoPagination && (updates.content || updates.smartBlockData || updates.style) &&
-          !next.smartBlockData?.curriculum && !next.content.publicationPrimitive && ['body','body-text','smart-block'].includes(next.type)) {
+          !next.smartBlockData?.curriculum && !next.smartBlockData?.styleOverrides.contentLayout?.enabled && !next.content.publicationPrimitive && ['body','body-text','smart-block'].includes(next.type)) {
         const previous = get();
         if (next.smartBlockData) {
           const height = buildPublicationScene({ ...next.smartBlockData, transform: { ...next.transform, height: 0 } }).height;
@@ -2027,8 +2032,9 @@ export const useEditorStore = create<EditorState>((set, get) => {
       if (!current || isElementLocked(id, get().elements) || current.smartBlockData?.isLockedDesign || elementTree(current.childElementIds || [], get().elements).some(el => el.locked)) return;
 
       const beforeTree = elementTree([id], get().elements);
-      const updatedTransform = { ...current.transform, ...newTransform };
-      if(current.smartBlockData && (newTransform.width !== undefined || newTransform.height !== undefined)) {
+      const fixed = elementTree([id], get().elements).some(item => item.smartBlockData?.styleOverrides.contentLayout?.enabled);
+      const updatedTransform = { ...current.transform, ...newTransform, ...(fixed ? { width: current.transform.width, height: current.transform.height } : {}) };
+      if(current.smartBlockData && !fixed && (newTransform.width !== undefined || newTransform.height !== undefined)) {
         updatedTransform.width = Math.max(60, updatedTransform.width);
         if (newTransform.height !== undefined) {
           updatedTransform.height = Math.max(30, updatedTransform.height);
@@ -2590,9 +2596,24 @@ export const useEditorStore = create<EditorState>((set, get) => {
     autoArrangeActivePage: (style = "balanced") => {
       const book=get().getActiveBook(),page=get().getActivePage();if(!book||!page)return;
       const compositionElements=get().getActivePageElements().filter(el=>!el.groupId).map(el=>el.childElementIds?.length ? {...el, locked:true, category:"media" as const} : el);
-      const result=composePage(compositionElements,book.dimensions,pageMarginsFor(book,page),style);
+      const margins = pageMarginsFor(book, page);
+      const result=composePage(compositionElements,book.dimensions,margins,style);
       if(!result.count)return;
-      if(!result.fits){useUiStore.getState().showToast({type:"warning",title:"This layout needs more space",message:"Move some content to a new page before applying this composition. Text has not been shrunk or cropped."});return;}
+      if(!result.fits){
+        // Try compact layout first to keep content on current page
+        const compactResult = composePage(compositionElements, book.dimensions, margins, "compact");
+        if (compactResult.fits && compactResult.count) {
+          const before=Object.keys(compactResult.transforms).map(id=>get().elements[id]);
+          Object.entries(compactResult.transforms).forEach(([id,t])=>get().updateElementTransform(id,t,false));
+          get().commitTransformGesture(before);
+          get().evaluateActivePageOverflow();
+          useUiStore.getState().showToast({type:"success",title:"Page composed (compact)",message:`${compactResult.count} objects arranged to fit print-safe margins.`});
+          return;
+        }
+        // If content cannot fit safely on one page, flow the overflowing content to the next page!
+        get().flowPageOverflowToNextPage(page.id);
+        return;
+      }
       const before=Object.keys(result.transforms).map(id=>get().elements[id]);
       Object.entries(result.transforms).forEach(([id,t])=>get().updateElementTransform(id,t,false));
       get().commitTransformGesture(before);get().evaluateActivePageOverflow();
@@ -3141,6 +3162,144 @@ export const useEditorStore = create<EditorState>((set, get) => {
       }));
     },
 
+    flowPageOverflowToNextPage: (targetPageId?: string) => {
+      const book = get().getActiveBook();
+      if (!book) return;
+      const pageId = targetPageId || get().getActivePage()?.id;
+      const pageIndex = book.pages.findIndex((p) => p.id === pageId);
+      if (pageIndex < 0) return;
+      const page = book.pages[pageIndex];
+      const pageElements = page.elementIds.map((id) => get().elements[id]).filter(Boolean);
+      const margins = pageMarginsFor(book, page);
+      const safeBottom = book.dimensions.heightPt - margins.bottomPt;
+      const safeRight = book.dimensions.widthPt - margins.outsidePt;
+
+      // Find overflowing elements, excluding full-bleed background and decorative shapes
+      const overflowingElements = pageElements.filter((el) => {
+        if (el.hidden || el.locked) return false;
+        const isBg =
+          (el.category === "decorative" &&
+            (el.transform.width >= book.dimensions.widthPt - 2 ||
+              el.transform.height >= book.dimensions.heightPt - 2)) ||
+          Boolean(el.content?.curriculumDecoration) ||
+          Boolean(el.metadata?.tags?.includes("bleed-bg"));
+        if (isBg) return false;
+        return (
+          el.transform.y + el.transform.height > safeBottom + 4 ||
+          el.transform.x + el.transform.width > safeRight + 4
+        );
+      }).sort((a, b) => a.transform.y - b.transform.y);
+
+      if (overflowingElements.length === 0) return;
+
+      let pages = [...book.pages];
+      let nextPage = pages[pageIndex + 1];
+      const isSameChapter = nextPage && (nextPage.chapterId === page.chapterId || !page.chapterId);
+
+      if (!nextPage || !isSameChapter) {
+        const newPageId = crypto.randomUUID();
+        nextPage = {
+          ...page,
+          id: newPageId,
+          pageIndex: pageIndex + 1,
+          displayNumber: String(pageIndex + 2),
+          elementIds: [],
+          status: "Draft",
+          overflowWarning: undefined,
+        };
+        pages.splice(pageIndex + 1, 0, nextPage);
+      }
+
+      pages = renumberPages(pages);
+      const nextTargetPage = pages.find((p) => p.id === nextPage.id)!;
+      const nextMargins = pageMarginsFor(book, nextTargetPage);
+      const nextContentWidth = Math.floor(
+        (book.dimensions.widthPt - nextMargins.insidePt - nextMargins.outsidePt) * 10
+      ) / 10;
+      const nextSafeBottom = book.dimensions.heightPt - nextMargins.bottomPt;
+
+      const existingNextElements = nextTargetPage.elementIds
+        .map((id) => get().elements[id])
+        .filter(Boolean);
+      let nextY =
+        existingNextElements.length > 0
+          ? Math.max(
+              nextMargins.topPt,
+              ...existingNextElements.map((e) => e.transform.y + e.transform.height + 14)
+            )
+          : nextMargins.topPt;
+
+      const overflowingIds = new Set(overflowingElements.map((e) => e.id));
+      const updatedElements = { ...get().elements };
+
+      overflowingElements.forEach((el) => {
+        const width =
+          el.smartBlockData || el.category === "educational"
+            ? nextContentWidth
+            : Math.min(el.transform.width, nextContentWidth);
+        const updatedTransform = {
+          ...el.transform,
+          x: nextMargins.insidePt,
+          y: nextY,
+          width,
+        };
+        updatedElements[el.id] = {
+          ...el,
+          pageId: nextTargetPage.id,
+          transform: updatedTransform,
+          smartBlockData: el.smartBlockData
+            ? {
+                ...el.smartBlockData,
+                pageId: nextTargetPage.id,
+                transform: updatedTransform,
+              }
+            : undefined,
+        };
+        nextY += el.transform.height + 14;
+      });
+
+      const sourcePage = {
+        ...page,
+        elementIds: page.elementIds.filter((id) => !overflowingIds.has(id)),
+        overflowWarning: { hasOverflow: false },
+      };
+
+      const destPage = {
+        ...nextTargetPage,
+        elementIds: [
+          ...nextTargetPage.elementIds.filter((id) => !overflowingIds.has(id)),
+          ...overflowingElements.map((e) => e.id),
+        ],
+      };
+
+      pages = pages.map((p) =>
+        p.id === sourcePage.id ? sourcePage : p.id === destPage.id ? destPage : p
+      );
+
+      const updatedBook = {
+        ...book,
+        pages,
+        chapters: book.chapters.map((ch) =>
+          ch.id === page.chapterId
+            ? { ...ch, pageIds: pages.filter((p) => p.chapterId === ch.id).map((p) => p.id) }
+            : ch
+        ),
+      };
+
+      set((state) => ({
+        books: state.books.map((b) => (b.id === book.id ? updatedBook : b)),
+        elements: updatedElements,
+      }));
+
+      get().saveToStorage();
+      get().evaluateActivePageOverflow();
+      useUiStore.getState().showToast({
+        type: "success",
+        title: "Content flowed to next page",
+        message: `${overflowingElements.length} element${overflowingElements.length > 1 ? "s" : ""} moved to page ${destPage.displayNumber || pageIndex + 2}. Page overflow resolved.`,
+      });
+    },
+
     savePublicationPreset: (name, elementId) => {
       const el=get().elements[elementId];if(!el?.smartBlockData)return;
       const id=crypto.randomUUID();
@@ -3419,11 +3578,59 @@ export const useEditorStore = create<EditorState>((set, get) => {
     },
     fitRenderedBlockHeight: (id, height) => {
       const el = get().elements[id];
+      if (el?.smartBlockData?.styleOverrides.contentLayout?.enabled) return;
       if (!el?.smartBlockData || el.groupId || isElementLocked(id, get().elements) || !Number.isFinite(height) || height <= el.transform.height + 1) return;
+      
+      const deltaHeight = height - el.transform.height;
       const transform = { ...el.transform, height };
-      set(state => ({ elements: { ...state.elements, [id]: { ...el, transform, smartBlockData: { ...el.smartBlockData!, transform } } } }));
+      const book = get().getActiveBook();
+      const page = book?.pages.find((p) => p.id === el.pageId);
+
+      const nextElements: Record<string, PageElement> = {
+        ...get().elements,
+        [id]: { ...el, transform, smartBlockData: { ...el.smartBlockData!, transform } },
+      };
+
+      if (page) {
+        const targetBottom = el.transform.y + el.transform.height;
+        const pageElements = page.elementIds.map((eId) => nextElements[eId]).filter(Boolean);
+        pageElements.forEach((other) => {
+          if (other.id === id || other.locked || other.category === "decorative") return;
+          if (other.transform.y >= targetBottom - 10) {
+            const newY = Math.round((other.transform.y + deltaHeight) * 10) / 10;
+            const updatedOtherTransform = { ...other.transform, y: newY };
+            nextElements[other.id] = {
+              ...other,
+              transform: updatedOtherTransform,
+              smartBlockData: other.smartBlockData
+                ? { ...other.smartBlockData, transform: updatedOtherTransform }
+                : undefined,
+            };
+          }
+        });
+      }
+
+      set({ elements: nextElements });
       get().saveToStorage();
       get().evaluateActivePageOverflow();
+
+      if (book && book.autoPagination !== false && page) {
+        const margins = pageMarginsFor(book, page);
+        const safeBottom = book.dimensions.heightPt - margins.bottomPt;
+        const hasOverflow = page.elementIds.some((eId) => {
+          const item = nextElements[eId];
+          return (
+            item &&
+            !item.hidden &&
+            !item.locked &&
+            item.category !== "decorative" &&
+            item.transform.y + item.transform.height > safeBottom + 4
+          );
+        });
+        if (hasOverflow) {
+          get().flowPageOverflowToNextPage(page.id);
+        }
+      }
     },
 
     commitTransformGesture: (before) => {
@@ -3703,6 +3910,30 @@ export const useEditorStore = create<EditorState>((set, get) => {
     reSkinEducationalBlock: (elementId, subject) => {
       const el=get().elements[elementId];if(!el?.smartBlockData || isElementLocked(elementId, get().elements) || el.smartBlockData.isLockedDesign)return;
       get().updateElement(elementId,{smartBlockData:reSkinBlockSubject(el.smartBlockData,subject)});
+    },
+    updateBlockContentLayout: (elementId, layout) => {
+      const state = get();
+      const el = state.elements[elementId];
+      const block = el?.smartBlockData;
+      if (!block || isElementLocked(elementId, state.elements) || block.isLockedDesign) return;
+      if (block.isLockedContent && Object.entries(layout.items).some(([id, item]) => item.text !== block.styleOverrides.contentLayout?.items[id]?.text || item.src !== block.styleOverrides.contentLayout?.items[id]?.src)) return;
+      const meta = block.curriculum;
+      const sourceId = meta?.sourceBlockId || block.id;
+      const before = Object.values(state.elements).filter(item => item.id === elementId || (meta?.chapterId && item.smartBlockData?.curriculum?.chapterId === meta.chapterId && (item.smartBlockData.curriculum.sourceBlockId || item.smartBlockData.id) === sourceId));
+      const after = before.map(item => ({ ...item, smartBlockData: { ...item.smartBlockData!, styleOverrides: { ...item.smartBlockData!.styleOverrides, contentLayout: layout } } }));
+      const booksBefore = state.books;
+      // Mirror authored layout into the curriculum source without recomposing or moving pages.
+      const booksAfter = state.books.map(book => ({ ...book, chapters: book.chapters.map(chapter => {
+        const source = chapter.id === meta?.chapterId ? chapter.framework?.blocks[sourceId] : undefined;
+        if (!source || !chapter.framework) return chapter;
+        return { ...chapter, framework: { ...chapter.framework, blocks: { ...chapter.framework.blocks, [sourceId]: { ...source, styleOverrides: { ...source.styleOverrides, contentLayout: layout } } } } };
+      }) }));
+      const apply = (items: PageElement[], books: Book[]) => {
+        set(current => ({ books, elements: { ...current.elements, ...Object.fromEntries(items.map(item => [item.id, item])) } }));
+        get().saveToStorage();
+      };
+      apply(after, booksAfter);
+      useHistoryStore.getState().pushAction({ description: "Edit block contents", undo: () => apply(before, booksBefore), redo: () => apply(after, booksAfter) });
     },
     updateSmartBlockContent: (elementId, partialContent) => {
       const el=get().elements[elementId];if(!el?.smartBlockData || isElementLocked(elementId, get().elements) || el.smartBlockData.isLockedContent)return;

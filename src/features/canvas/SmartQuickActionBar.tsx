@@ -8,6 +8,7 @@ import React, { useState, useRef, useEffect } from "react";
 import { PageElement } from "../../domain/element/types";
 import { useEditorStore } from "../../editor/stores/editorStore";
 import { useUiStore } from "../../editor/stores/uiStore";
+import { beginBlockContentEditing } from "../../editor/educational/blockContentEditing";
 import { useLayoutPartnerStore } from "../../editor/layoutPartner/layoutPartnerStore";
 import {
   AlignLeft,
@@ -63,7 +64,6 @@ export const SmartQuickActionBar: React.FC<SmartQuickActionBarProps> = ({
     sendBackward,
     sendToBack,
     shuffleEducationalBlockStyle,
-    detachEducationalBlock,
     updateSmartBlockStyle,
   } = useEditorStore();
 
@@ -101,6 +101,7 @@ export const SmartQuickActionBar: React.FC<SmartQuickActionBarProps> = ({
   const width = maxX - minX;
   const isMulti = selectedElements.length > 1;
   const single = selectedElements.length === 1 ? selectedElements[0] : null;
+  if (single?.smartBlockData?.styleOverrides.contentLayout?.enabled) return null;
 
   // Flip position if near top of page (< 55pt) to avoid viewport clipping
   const isFlippedBelow = minY < 55;
@@ -566,12 +567,13 @@ export const SmartQuickActionBar: React.FC<SmartQuickActionBarProps> = ({
 
           {/* Detach Block into Individual Movable Elements */}
           <button
-            onClick={() => detachEducationalBlock(single.id)}
+            onClick={() => beginBlockContentEditing(single.id)}
+            disabled={single.smartBlockData?.styleOverrides.contentLayout?.enabled}
             className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-200 border border-amber-500/40 hover:border-amber-400 transition-all font-medium cursor-pointer shadow-sm active:scale-95"
-            title="Make every text and image in this block completely movable as independent canvas layers"
+            title="Move and edit text and images within a fixed block frame"
           >
             <Unlink2 className="w-3.5 h-3.5 text-amber-400" />
-            <span>Make Text & Images Movable</span>
+            <span>{single.smartBlockData?.styleOverrides.contentLayout?.enabled ? "Contents editable" : "Edit contents"}</span>
           </button>
         </>
       )}
@@ -829,4 +831,3 @@ export const SmartQuickActionBar: React.FC<SmartQuickActionBarProps> = ({
     </div>
   );
 };
-

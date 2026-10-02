@@ -393,15 +393,25 @@ export function detectPageOverflow(
   const safeRight = pageDim.widthPt - margins.outsidePt;
 
   let maxBottom = 0;
+  let maxRight = 0;
   const overflowingIds: string[] = [];
 
   elements.forEach((el) => {
     if (el.hidden) return;
+    // Skip full-bleed decorative backgrounds, paper shapes, and chapter frame decorations
+    const isFullBleedBg =
+      (el.category === "decorative" &&
+        (el.transform.width >= pageDim.widthPt - 2 || el.transform.height >= pageDim.heightPt - 2)) ||
+      Boolean(el.content?.curriculumDecoration) ||
+      Boolean(el.metadata?.tags?.includes("bleed-bg"));
+    if (isFullBleedBg) return;
+
     const bottom = el.transform.y + el.transform.height;
     const right = el.transform.x + el.transform.width;
     if (bottom > safeBottom + 4 || right > safeRight + 4) {
       overflowingIds.push(el.id);
-      maxBottom = Math.max(maxBottom, bottom);
+      if (bottom > safeBottom + 4) maxBottom = Math.max(maxBottom, bottom);
+      if (right > safeRight + 4) maxRight = Math.max(maxRight, right);
     }
   });
 
@@ -409,12 +419,18 @@ export function detectPageOverflow(
     return { hasOverflow: false };
   }
 
-  const exceededByPt = Math.round((maxBottom - safeBottom) * 10) / 10;
+  const verticalExceeded = maxBottom > safeBottom ? Math.round((maxBottom - safeBottom) * 10) / 10 : 0;
+  const horizontalExceeded = maxRight > safeRight ? Math.round((maxRight - safeRight) * 10) / 10 : 0;
+  const exceededByPt = Math.max(verticalExceeded, horizontalExceeded);
 
   return {
     hasOverflow: true,
-    message: `Content exceeds page bottom margin by ${exceededByPt} pt`,
+    message:
+      verticalExceeded > 0
+        ? `Content exceeds page bottom margin by ${verticalExceeded} pt`
+        : `Content exceeds page right margin by ${horizontalExceeded} pt`,
     exceededByPt,
+    overflowAmountPt: exceededByPt,
     overflowingElementIds: overflowingIds,
     suggestedActions: [
       "Create Next Page & flow overflow",

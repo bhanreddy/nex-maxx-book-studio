@@ -1,6 +1,6 @@
 import { withReferenceElements } from "./referenceElements";
 import { renumberBookPages, renumberPages } from "../core/pageNumbering";
-import { pageFrameFor, frameMargins } from "../pageFrame/pageFrame";
+import { pageFrameFor, frameMargins, pageMarginsFor } from "../pageFrame/pageFrame";
 import type { Chapter, Book, PageDefinition } from "../../domain/book/types";
 import type { SmartBlockInstance, EducationalBlockCategory } from "../../domain/educational/blockSchema";
 import type { PageElement } from "../../domain/element/types";
@@ -456,8 +456,11 @@ export function createUniversal5PageChapter(options: {
   const createdPages: PageDefinition[] = [];
   const createdElements: Record<string, PageElement> = { ...st.elements };
 
+  const dummyPage = { id: "temp", bookId: book.id, chapterId, pageIndex: book.pages.length, displayNumber: "1", elementIds: [], status: "Draft" } as PageDefinition;
+  const margins = pageMarginsFor(book, dummyPage);
   const pageWidth = book.dimensions.widthPt;
-  const contentWidth = pageWidth - book.margins.insidePt - book.margins.outsidePt;
+  const contentWidth = Math.floor((pageWidth - margins.insidePt - margins.outsidePt) * 10) / 10;
+  const safeBottom = Math.floor((book.dimensions.heightPt - margins.bottomPt) * 10) / 10;
 
   const domain = (
     /math/i.test(subject) ? "mathematics" :
@@ -477,7 +480,7 @@ export function createUniversal5PageChapter(options: {
       const pageIndex = book.pages.length + createdPages.length;
       createdPages.push({ id: pageId, bookId: book.id, chapterId, pageIndex, displayNumber: String(pageIndex + 1), elementIds: pageElementIds, status: "Draft" } as PageDefinition);
     };
-    let currentY = book.margins.topPt;
+    let currentY = margins.topPt;
 
     ap.blocks.forEach((blk, bIdx) => {
       const elementId = crypto.randomUUID();
@@ -497,7 +500,7 @@ export function createUniversal5PageChapter(options: {
         isLockedContent: false,
         isLockedDesign: false,
         transform: {
-          x: book.margins.insidePt,
+          x: margins.insidePt,
           y: currentY,
           width: contentWidth,
           height: blockHeight,
@@ -538,9 +541,21 @@ export function createUniversal5PageChapter(options: {
         },
       };
 
-      if (uType === "lesson-schema") smartBlock.transform.height = buildPublicationScene(smartBlock).height;
-      if (pageElementIds.length && currentY + smartBlock.transform.height > book.dimensions.heightPt - book.margins.bottomPt) {
-        finishPage(); pageId = crypto.randomUUID(); pageElementIds = []; currentY = book.margins.topPt;
+      let calculatedHeight = blockHeight;
+      try {
+        const sceneH = Math.ceil(buildPublicationScene(smartBlock).height);
+        if (Number.isFinite(sceneH) && sceneH > 0) calculatedHeight = Math.max(calculatedHeight, sceneH);
+      } catch (_) {}
+      if (uType === "chapter-hero") calculatedHeight = Math.max(calculatedHeight, 220);
+      else if (uType === "learning-outcomes") calculatedHeight = Math.max(calculatedHeight, 270);
+      else if (uType === "lesson-schema") calculatedHeight = Math.max(calculatedHeight, 280);
+
+      // Single block cannot exceed safe height on an empty page
+      calculatedHeight = Math.min(calculatedHeight, safeBottom - margins.topPt);
+      smartBlock.transform.height = calculatedHeight;
+
+      if (pageElementIds.length && currentY + smartBlock.transform.height > safeBottom) {
+        finishPage(); pageId = crypto.randomUUID(); pageElementIds = []; currentY = margins.topPt;
       }
       smartBlock.pageId = pageId;
       smartBlock.transform.y = currentY;
@@ -562,7 +577,7 @@ export function createUniversal5PageChapter(options: {
 
       createdElements[elementId] = element;
       pageElementIds.push(elementId);
-      currentY += smartBlock.transform.height + 12;
+      currentY += smartBlock.transform.height + 14;
     });
 
     finishPage();

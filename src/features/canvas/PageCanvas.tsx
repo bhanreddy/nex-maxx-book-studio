@@ -614,31 +614,32 @@ export const PageCanvas: React.FC<PageCanvasProps> = ({ book, activePage }) => {
 
             {/* Smart Overflow Warning Banner (Directive 17) */}
             {activePage.overflowWarning?.hasOverflow && (
-              <div className="absolute top-4 left-6 right-6 z-40 bg-amber-500/95 backdrop-blur-md text-white px-3 py-2 rounded-xl shadow-xl flex items-center justify-between text-[8pt] border border-amber-300/40 animate-in fade-in duration-150">
-                <div className="flex items-center gap-2">
-                  <span className="text-sm">⚠️</span>
+              <div className="absolute bottom-5 left-6 right-6 z-40 bg-amber-500/95 backdrop-blur-md text-white px-3.5 py-2.5 rounded-xl shadow-2xl flex items-center justify-between text-[8.5pt] border border-amber-300/40 animate-in fade-in duration-150">
+                <div className="flex items-center gap-2.5">
+                  <span className="text-base">⚠️</span>
                   <div>
                     <span className="font-semibold">Content exceeds page capacity</span>
-                    <span className="opacity-90 ml-1 font-mono text-[7.5pt]">
+                    <span className="opacity-90 ml-1.5 font-mono text-[8pt]">
                       (+{Math.round(activePage.overflowWarning.overflowAmountPt || activePage.overflowWarning.exceededByPt || 0)} pt)
                     </span>
                   </div>
                 </div>
-                <div className="flex items-center gap-1.5">
+                <div className="flex items-center gap-2">
                   <button
                     onClick={() => autoArrangeActivePage("balanced")}
-                    className="px-2 py-1 rounded bg-white/20 hover:bg-white/30 font-medium transition-colors"
+                    className="px-2.5 py-1 rounded bg-white/20 hover:bg-white/30 font-medium transition-colors shadow-xs"
                     title="Auto-adjust spacing and element sizing to fit page"
                   >
                     Auto Rebalance
                   </button>
                   <button
                     onClick={() => {
-                      useEditorStore.getState().addPage();
+                      useEditorStore.getState().flowPageOverflowToNextPage();
                     }}
-                    className="px-2 py-1 rounded bg-black/25 hover:bg-black/35 font-medium transition-colors"
+                    className="px-2.5 py-1 rounded bg-black/30 hover:bg-black/45 font-medium transition-colors shadow-xs"
+                    title="Move overflowing content to next page"
                   >
-                    Next Page →
+                    Flow to Next Page →
                   </button>
                 </div>
               </div>

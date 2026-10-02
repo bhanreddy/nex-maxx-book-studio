@@ -268,6 +268,11 @@ export interface SmartBlockInstance {
     decorationOpacity?: number;
     backgroundImage?: { src: string; alt: string; focalX: number; focalY: number; opacity: number; scale: number; rawWidthPx?: number; rawHeightPx?: number };
     motifs?: BlockMotif[];
+    /** Authored text/image positions stay inside the original block, without detaching it. */
+    contentLayout?: {
+      enabled: boolean;
+      items: Record<string, { base: string; dx: number; dy: number; text?: string; src?: string }>;
+    };
     layoutVariant?: string;
     /** Independent presentation treatment. Missing values preserve older books. */
     blockStyle?: import("./curriculum").BlockVisualStyle;

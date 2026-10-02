@@ -168,7 +168,7 @@ export function CurriculumBlockInspector({ element }: { element: PageElement }) 
             <span>On Page {page?.displayNumber || "1"}{chapter ? ` of “${chapter.title}”` : ""}</span>
           </div>
           <p className="text-[10.5px] text-amber-800/80 dark:text-amber-200/70 mt-0.5">
-            {source.isLockedDesign
+            {element.smartBlockData?.styleOverrides.contentLayout?.enabled ? "Fixed frame · drag text and images directly. Double-click text to edit." : source.isLockedDesign
               ? "Structured layout · text and questions flow safely across pages."
               : "Design mode · freely drag, resize and rotate on the page."}
           </p>

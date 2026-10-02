@@ -26,6 +26,7 @@ import { buildPublicationScene } from "../educational/publicationScene";
 import { detachedSceneForElement } from "../educational/detachScene";
 import { PublicationImage } from "./PublicationImage";
 import { PublicationSceneView } from "./PublicationSceneView";
+import { BlockContentEditor } from "./BlockContentEditor";
 import { artworkNodes, ArtworkKind } from "../educational/publicationScene";
 import { PUBLICATION_PALETTES } from "../../domain/educational/designTokens";
 import { SmartBlockRenderer } from "./SmartBlockRenderer";
@@ -1316,6 +1317,7 @@ export const ElementRenderer: React.FC<ElementRendererProps> = memo(function Ele
 
       case "smart-block":
         if (element.smartBlockData) {
+          if (element.smartBlockData.styleOverrides.contentLayout?.enabled) return <BlockContentEditor element={element} selected={isSelected && !locked && !grouped} zoom={zoom}/>;
           if (element.smartBlockData.styleOverrides.referenceElement) return <PublicationSceneView scene={buildPublicationScene({ ...element.smartBlockData, transform: element.transform })} label={element.smartBlockData.semanticContent.title}/>;
           if (element.smartBlockData.curriculum?.type === "lesson-schema") {
             return <LessonSchemaRenderer block={{ ...element.smartBlockData, transform: element.transform }} elementId={element.id} selected={isSelected} locked={element.locked}/>;

@@ -27,6 +27,7 @@ import {
 import { setFrameworkMode } from "../../editor/curriculum/actions";
 import { effectiveTextWrap } from "../../editor/layoutPartner/textWrapLayout";
 import type { TextWrapMode } from "../../domain/creative/types";
+import { beginBlockContentEditing } from "../../editor/educational/blockContentEditing";
 
 export const ContextToolbar: React.FC = () => {
   const {
@@ -147,6 +148,8 @@ export const ContextToolbar: React.FC = () => {
               <input
                 type="number"
                 value={Math.round(currentTransform.width)}
+                disabled={singleElement.smartBlockData?.styleOverrides.contentLayout?.enabled}
+                title={singleElement.smartBlockData?.styleOverrides.contentLayout?.enabled ? "Fixed block width" : "Block width"}
                 onChange={(e) => {
                   if (singleElement.smartBlockData?.curriculum?.chapterId && singleElement.smartBlockData.isLockedDesign) {
                     setFrameworkMode(singleElement.smartBlockData.curriculum.chapterId, "design");
@@ -163,6 +166,8 @@ export const ContextToolbar: React.FC = () => {
               <input
                 type="number"
                 value={Math.round(currentTransform.height)}
+                disabled={singleElement.smartBlockData?.styleOverrides.contentLayout?.enabled}
+                title={singleElement.smartBlockData?.styleOverrides.contentLayout?.enabled ? "Fixed block height" : "Block height"}
                 onChange={(e) => {
                   if (singleElement.smartBlockData?.curriculum?.chapterId && singleElement.smartBlockData.isLockedDesign) {
                     setFrameworkMode(singleElement.smartBlockData.curriculum.chapterId, "design");
@@ -539,12 +544,12 @@ export const ContextToolbar: React.FC = () => {
             </button>
 
             <button
-              disabled={singleElement.locked}
-              onClick={() => useEditorStore.getState().detachEducationalBlock(singleElement.id)}
+              disabled={singleElement.locked || singleElement.smartBlockData?.styleOverrides.contentLayout?.enabled}
+              onClick={() => beginBlockContentEditing(singleElement.id)}
               className="px-2.5 py-0.5 rounded bg-amber-500/20 hover:bg-amber-500/30 text-amber-200 border border-amber-500/30 text-[10.5px] font-medium transition-all cursor-pointer shadow-sm active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
-              title="Make every text and image in this block completely movable as independent canvas layers"
+              title="Move and edit text and images within a fixed block frame"
             >
-              🔓 Make Text & Images Movable
+              {singleElement.smartBlockData?.styleOverrides.contentLayout?.enabled ? "Contents editable · fixed frame" : "Edit block contents"}
             </button>
           </div>
         )}
