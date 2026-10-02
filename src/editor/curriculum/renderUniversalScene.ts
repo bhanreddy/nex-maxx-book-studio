@@ -8,6 +8,7 @@
 import type { SmartBlockInstance } from "../../domain/educational/blockSchema";
 import type { PublicationScene, SceneNode } from "../educational/publicationScene";
 import type { AtelierHelpers } from "../educational/atelier/render";
+import { chapterHeroLayout } from "./chapterHeroLayout";
 import { normalizeUniversalType, getSubjectFixture } from "./universalBlocks";
 import { NEX_MAXX_BRAND, NEX_MAXX_PRESETS, CLASS_TYPOGRAPHY } from "../../domain/educational/designTokens";
 import { renderLessonSchema } from "./renderLessonSchema";
@@ -40,7 +41,7 @@ export function renderUniversalBlockScene(
   const fixture = getSubjectFixture(m.subjectLabel || "mathematics");
 
   const w = Math.max(180, block.transform.width);
-  const pad = w < 280 ? 14 : 20;
+  const pad = uType === "chapter-hero" ? 18 : w < 280 ? 14 : 20;
   const inner = w - pad * 2;
 
   const g = CLASS_TYPOGRAPHY[m.grade] || CLASS_TYPOGRAPHY[4];
@@ -122,55 +123,33 @@ export function renderUniversalBlockScene(
 
   switch (uType) {
     case "chapter-hero": {
-      const chapterNum = c.chapterNumber || "1";
-      const badgeLabel = c.badgeLabel || "CHAPTER";
-      const bannerH = 170;
-
-      // Cream/parchment background with golden border
-      rect(pad, y, inner, bannerH, "#fcf9f2", "#e8d7b0", 18);
-
-      // Burgundy & Gold Badge (Left)
-      const badgeW = 76;
-      const badgeH = 86;
-      const badgeX = pad + 14;
-      const badgeY = y + (bannerH - badgeH) / 2;
-      rect(badgeX, badgeY, badgeW, badgeH, "#600b20", "#d49b28", 22);
-      nodes.push({ kind: "text", x: badgeX + badgeW / 2, y: badgeY + 22, text: badgeLabel, size: 8.5, fill: "#FFFFFF", bold: true, align: "middle" });
-      nodes.push({ kind: "text", x: badgeX + badgeW / 2, y: badgeY + 65, text: chapterNum, size: 36, fill: "#fff9ee", bold: true, align: "middle" });
-
-      // Title
-      const titleX = badgeX + badgeW + 18;
-      const visualW = 150;
-      const titleW = Math.max(100, inner - badgeW - visualW - 40);
-      tx(title, titleX, y + 42, titleW, g.display, true, "#881337", true);
-      if (subtitle) {
-        tx(subtitle, titleX, y + 84, titleW, fs, false, "#60523e");
-      }
-
-      // Right Illustration Image
-      const imgScale = c.imageScale || 1;
-      const baseW = 145;
-      const baseH = 145;
-      const imgW = baseW * imgScale;
-      const imgH = baseH * imgScale;
-      const offX = c.imageOffsetX || 0;
-      const offY = c.imageOffsetY || 0;
-      const imgX = pad + inner - baseW - 10 + offX - (imgW - baseW) / 2;
-      const imgY = y + (bannerH - baseH) / 2 + offY - (imgH - baseH) / 2;
-      nodes.push({
-        kind: "image",
-        x: imgX,
-        y: imgY,
-        w: imgW,
-        h: imgH,
-        src: c.illustrationUrl || "/assets/chapter-hero/student-original-clean.png",
-        alt: `${title} illustration`,
-        focalX: 0.5,
-        focalY: 0.5,
-        scale: imgScale,
-      });
-
-      y += bannerH + 16;
+      const design = chapterHeroLayout(w, g.display);
+      const titleSize = design.titleSize * Math.max(1, o.fontSizeScale || 1);
+      const titleLines = wrapText(title, design.titleWidth, titleSize, true);
+      const titleHeight = titleLines.length * titleSize * 1.05;
+      const subtitleHeight = subtitle ? wrapText(subtitle, design.titleWidth, fs).length * fs * 1.4 : 0;
+      const textHeight = titleHeight + (subtitle ? 8 + subtitleHeight : 0);
+      const bannerH = design.stacked ? 86 + design.gap + textHeight + design.gap + 145 : Math.max(170, textHeight + 16);
+      const cardHeight = Math.max(block.transform.height || 0, bannerH + pad * 2);
+      rect(0, 0, w, cardHeight, "#fcf9f2", "#e8d7b0", 18);
+      // Frame decoration follows the trimmed frame; reading content keeps its own scale.
+      nodes.push({kind:"path",d:`M 0 14 Q ${w*.22} 36 ${w*.5} 18 Q ${w*.8} 4 ${w} 18 L ${w} 0 L 0 0 Z`,fill:"#80122e"});
+      nodes.push({kind:"path",d:`M 0 ${cardHeight-12} Q ${w*.25} ${cardHeight-30} ${w*.5} ${cardHeight-12} Q ${w*.8} ${cardHeight+2} ${w} ${cardHeight-18} L ${w} ${cardHeight} L 0 ${cardHeight} Z`,fill:"#80122e",stroke:"#d49b28",strokeWidth:2});
+      const badgeX = design.stacked ? (w-design.badgeWidth)/2 : pad;
+      const badgeY = design.stacked ? pad : pad+(bannerH-86)/2;
+      rect(badgeX, badgeY, design.badgeWidth, 86, "#600b20", "#d49b28", 22);
+      nodes.push({kind:"text",x:badgeX+design.badgeWidth/2,y:badgeY+22,text:c.badgeLabel||"CHAPTER",size:8.5,fill:"#FFFFFF",bold:true,align:"middle"});
+      nodes.push({kind:"text",x:badgeX+design.badgeWidth/2,y:badgeY+65,text:c.chapterNumber||"1",size:36,fill:"#fff9ee",bold:true,align:"middle"});
+      const titleX = design.stacked ? pad : badgeX+design.badgeWidth+design.gap;
+      const titleY = design.stacked ? pad+86+design.gap : pad+(bannerH-textHeight)/2;
+      titleLines.forEach((text,i)=>nodes.push({kind:"text",x:titleX,y:titleY+titleSize+i*titleSize*1.05,text,size:titleSize,fill:i===0?"#f59e0b":"#881337",bold:true}));
+      tx(subtitle,titleX,titleY+titleHeight+8,design.titleWidth,fs,false,"#60523e");
+      const imageScale=c.imageScale||1,imgW=design.imageWidth*imageScale,imgH=145*imageScale;
+      const imageX=design.stacked?(w-design.imageWidth)/2:w-pad-design.imageWidth;
+      const imageY=design.stacked?titleY+textHeight+design.gap:pad+(bannerH-145)/2;
+      nodes.push({kind:"image",x:imageX+(c.imageOffsetX||0)*.75-(imgW-design.imageWidth)/2,y:imageY+(c.imageOffsetY||0)*.75-(imgH-145)/2,w:imgW,h:imgH,
+        src:c.illustrationUrl||"/assets/chapter-hero/student-original-clean.png",alt:`${title} illustration`,fit:"contain",scale:1,focalX:.5,focalY:.5,flipX:!!c.imageFlipX});
+      y=pad+bannerH;
       break;
     }
 

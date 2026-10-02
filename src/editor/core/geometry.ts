@@ -127,6 +127,17 @@ export function calculateResize(
     const nextWidth = width * factor, nextHeight = height * factor;
     return { x: west ? x + width - nextWidth : x, y: north ? y + height - nextHeight : y, width: nextWidth, height: nextHeight };
   }
+  if (lockAspectRatio && ["e", "w", "n", "s"].includes(handle)) {
+    const horizontal = handle === "e" || handle === "w";
+    const change = horizontal ? (handle === "w" ? -deltaX : deltaX) / width : (handle === "n" ? -deltaY : deltaY) / height;
+    const factor = Math.max(minWidth / width, minHeight / height, 1 + change);
+    const nextWidth = width * factor, nextHeight = height * factor;
+    return {
+      x: horizontal ? (handle === "w" ? x + width - nextWidth : x) : x + (width - nextWidth) / 2,
+      y: horizontal ? y + (height - nextHeight) / 2 : (handle === "n" ? y + height - nextHeight : y),
+      width: nextWidth, height: nextHeight,
+    };
+  }
 
   switch (handle) {
     case "se":

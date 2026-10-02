@@ -1,5 +1,5 @@
 import { cloneElementTree, elementTree, selectionRoot, isElementLocked, transformGroupChildren } from "../core/elementGroups";
-import { withBlockTransform } from "../core/blockResize";
+import { withBlockTransform, type BlockResizeMode } from "../core/blockResize";
 import { repaginateFromPage } from "../core/paginationEngine";
 import { solveElementConstraint } from "../core/snapping";
 import { synchronizeBookStructure } from "../structure/bookStructureEngine";
@@ -142,7 +142,7 @@ interface EditorState {
   upscaleImage: (elementId: string, factor: 2 | 4) => Promise<void>;
 
   updateElement: (id: string, updates: Partial<PageElement>) => void;
-  updateElementTransform: (id: string, transform: Partial<ElementTransform>, recordHistory?: boolean) => void;
+  updateElementTransform: (id: string, transform: Partial<ElementTransform>, recordHistory?: boolean, resizeMode?: BlockResizeMode) => void;
   updateElementStyle: (id: string, style: Partial<ElementStyle>) => void;
   updateElementContent: (id: string, content: ElementContent) => void;
   deleteSelectedElements: () => void;
@@ -2029,7 +2029,7 @@ export const useEditorStore = create<EditorState>((set, get) => {
       useHistoryStore.getState().pushAction({description: `Edit ${old.displayName}`, undo: () => apply(before), redo: () => apply(after)});
     },
 
-    updateElementTransform: (id, newTransform, recordHistory = false) => {
+    updateElementTransform: (id, newTransform, recordHistory = false, resizeMode = "auto") => {
       const current = get().elements[id];
       if (!current || isElementLocked(id, get().elements) || current.smartBlockData?.isLockedDesign || elementTree(current.childElementIds || [], get().elements).some(el => el.locked)) return;
 
@@ -2040,11 +2040,12 @@ export const useEditorStore = create<EditorState>((set, get) => {
         if (newTransform.height !== undefined) {
           updatedTransform.height = Math.max(30, updatedTransform.height);
         } else {
-          updatedTransform.height = Math.max(30, current.transform.height * updatedTransform.width / current.transform.width);
+          updatedTransform.width = Math.max(updatedTransform.width, 30 * current.transform.width / current.transform.height);
+          updatedTransform.height = current.transform.height * updatedTransform.width / current.transform.width;
         }
       }
 
-      const updated = withBlockTransform(current, updatedTransform);
+      const updated = withBlockTransform(current, updatedTransform, resizeMode);
       set((state) => ({
         elements: {
           ...state.elements,

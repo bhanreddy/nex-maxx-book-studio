@@ -294,7 +294,7 @@ export const ElementRenderer: React.FC<ElementRendererProps> = memo(function Ele
     if(primitive) return <div className="w-full h-full" onDoubleClick={e=>{if(type!=="body"||element.locked)return;e.stopPropagation();setIsEditingText(true);}}>{isEditingText?<textarea autoFocus aria-label="Edit detached text" defaultValue={content.text||""} className="w-full h-full bg-white text-slate-900 outline-2 outline-indigo-500" onBlur={e=>{updateElementContent(element.id,{text:e.target.value});setIsEditingText(false);}}/>:<PublicationSceneView scene={primitive} label={element.displayName}/>}</div>;
     if(content.artwork) {
       const palette=PUBLICATION_PALETTES[content.artwork.paletteId as keyof typeof PUBLICATION_PALETTES] || PUBLICATION_PALETTES.indigo;
-      return <PublicationSceneView scene={{width:transform.width,height:transform.height,variant:content.artwork.kind,warnings:[],nodes:artworkNodes(content.artwork.kind as ArtworkKind,0,0,transform.width,transform.height,palette)}} label={element.displayName}/>;
+      return <PublicationSceneView scene={{width:blockTransform.width,height:blockTransform.height,variant:content.artwork.kind,warnings:[],nodes:artworkNodes(content.artwork.kind as ArtworkKind,0,0,blockTransform.width,blockTransform.height,palette)}} label={element.displayName}/>;
     }
     const isImage = type === "image" || type === "picture-frame" || type === "pictureFrame" || type === "ai-image";
     if (isImage) return <PublicationImage element={element} />;
@@ -306,7 +306,7 @@ export const ElementRenderer: React.FC<ElementRendererProps> = memo(function Ele
           dsl={design.composition}
           tokens={design.tokens}
           content={content}
-          width={transform.width}
+          width={blockTransform.width}
           role={design.role}
           showNumber={design.showNumber}
           decoration={design.decoration}
@@ -1320,7 +1320,7 @@ export const ElementRenderer: React.FC<ElementRendererProps> = memo(function Ele
       case "smart-block":
         if (element.smartBlockData) {
           if (element.smartBlockData.styleOverrides.contentLayout?.enabled) return <BlockContentEditor element={element} selected={isSelected && !locked && !grouped} zoom={zoom}/>;
-          if (element.smartBlockData.styleOverrides.referenceElement) return <PublicationSceneView scene={buildPublicationScene({ ...element.smartBlockData, transform: blockTransform })} label={element.smartBlockData.semanticContent.title}/>;
+          if (element.smartBlockData.styleOverrides.referenceElement) return <PublicationSceneView scene={buildPublicationScene({ ...element.smartBlockData, transform: blockTransform })} viewBox={`0 0 ${blockTransform.width} ${blockTransform.height}`} preserveAspectRatio="none" overflow="visible" label={element.smartBlockData.semanticContent.title}/>;
           if (element.smartBlockData.curriculum?.type === "lesson-schema") {
             return <LessonSchemaRenderer block={{ ...element.smartBlockData, transform: blockTransform }} elementId={element.id} selected={isSelected} locked={element.locked}/>;
           }
@@ -1354,6 +1354,9 @@ export const ElementRenderer: React.FC<ElementRendererProps> = memo(function Ele
             return (
               <PublicationSceneView
                 scene={buildPublicationScene({ ...element.smartBlockData, transform: blockTransform })}
+                viewBox={`0 0 ${blockTransform.width} ${blockTransform.height}`}
+                preserveAspectRatio="none"
+                overflow="visible"
                 label={`${element.smartBlockData.semanticContent.title} educational block`}
               />
             );
@@ -1384,7 +1387,7 @@ export const ElementRenderer: React.FC<ElementRendererProps> = memo(function Ele
   };
 
   const renderedContent = renderContent();
-  const scaledContent = resizeFrame && !element.smartBlockData?.styleOverrides.contentLayout?.enabled
+  const scaledContent = resizeFrame
     ? <div style={{ width: `${resizeFrame.width}pt`, height: `${resizeFrame.height}pt`, transform: `scale(${transform.width / resizeFrame.width}, ${transform.height / resizeFrame.height})`, transformOrigin: "top left" }}>{renderedContent}</div>
     : renderedContent;
 

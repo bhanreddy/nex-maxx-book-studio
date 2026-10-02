@@ -2,13 +2,14 @@ import type { PageElement, ElementTransform } from "../../domain/element/types";
 import { buildPublicationScene } from "../educational/publicationScene";
 
 /** Corners scale the design; vertical edges change its available space without shrinking content. */
-export function withBlockTransform(element: PageElement, transform: ElementTransform, mode: "frame" | "scale" = "frame"): PageElement {
+export type BlockResizeMode = "auto" | "scale" | "trim-height";
+export function withBlockTransform(element: PageElement, transform: ElementTransform, mode: BlockResizeMode = "auto"): PageElement {
   const block = element.smartBlockData;
   if (!block) return { ...element, transform };
   const widthChanged = transform.width !== element.transform.width;
   const heightChanged = transform.height !== element.transform.height;
   let resizeFrame = block.styleOverrides.resizeFrame || (widthChanged || heightChanged ? { width: element.transform.width, height: element.transform.height } : undefined);
-  if (resizeFrame && mode === "frame" && heightChanged && !widthChanged) {
+  if (resizeFrame && heightChanged && (mode === "trim-height" || (mode === "auto" && !widthChanged))) {
     const scaleY = element.transform.height / resizeFrame.height;
     const natural = buildPublicationScene({ ...block, styleOverrides: { ...block.styleOverrides, resizeFrame: { ...resizeFrame, height: 0 } } });
     // Include manually moved text/images, so trimming whitespace never crops authored content.

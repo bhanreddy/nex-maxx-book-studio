@@ -5,7 +5,8 @@ import { createPortal } from "react-dom";
 import type { SmartBlockInstance } from "../../domain/educational/blockSchema";
 import type { UniversalBlockArchetype, UniversalLayoutPreset } from "../../domain/educational/curriculum";
 import { normalizeUniversalType, UNIVERSAL_BLOCK_MAP, getSubjectFixture } from "../curriculum/universalBlocks";
-import { NEX_MAXX_BRAND, NEX_MAXX_PRESETS, PUBLICATION_PALETTES } from "../../domain/educational/designTokens";
+import { NEX_MAXX_BRAND, NEX_MAXX_PRESETS, PUBLICATION_PALETTES, CLASS_TYPOGRAPHY } from "../../domain/educational/designTokens";
+import { chapterHeroLayout } from "../curriculum/chapterHeroLayout";
 import { useEditorStore } from "../stores/editorStore";
 import { useUiStore } from "../stores/uiStore";
 import { generateBackgroundRemovalMask } from "../pixel/selectionEngine";
@@ -159,8 +160,9 @@ const InlineText: React.FC<{
 /** 3D Chapter Title Display with instant 60fps in-place editor */
 const ChapterTitleDisplay: React.FC<{
   title: string;
+  fontSizePt: number;
   onChange: (next: string) => void;
-}> = ({ title, onChange }) => {
+}> = ({ title, fontSizePt, onChange }) => {
   const [isEditing, setIsEditing] = useState(false);
   const elementRef = useRef<HTMLTextAreaElement>(null);
   const textRef = useRef(title);
@@ -218,6 +220,7 @@ const ChapterTitleDisplay: React.FC<{
         onClick={(e) => e.stopPropagation()}
         className="m-0 block w-full resize-none overflow-hidden border-0 bg-transparent p-0 text-3xl font-black tracking-tight leading-[1.05] text-[#f59e0b] outline-2 outline-dashed outline-[#922a52] sm:text-4xl md:text-5xl"
         style={{
+          fontSize: `${fontSizePt}pt`,
           fontFamily: "system-ui, -apple-system, sans-serif",
           textShadow: "0 1px 0 #fef3c7, 0 2px 0 #d97706, 0 4px 0 #b45309, 0 6px 1px #78350f, 0 8px 14px rgba(120,53,15,0.3)",
           caretColor: "#78350f",
@@ -251,6 +254,7 @@ const ChapterTitleDisplay: React.FC<{
       <div
         className="text-3xl sm:text-4xl md:text-5xl font-black tracking-tight leading-[1.05]"
         style={{
+          fontSize: `${fontSizePt}pt`,
           fontFamily: "system-ui, -apple-system, sans-serif",
           color: "#f59e0b",
           textShadow: "0 1px 0 #fef3c7, 0 2px 0 #d97706, 0 4px 0 #b45309, 0 6px 1px #78350f, 0 8px 14px rgba(120,53,15,0.3)",
@@ -262,6 +266,7 @@ const ChapterTitleDisplay: React.FC<{
         <div
           className="text-3xl sm:text-4xl md:text-5xl font-black tracking-tight leading-[1.05] mt-0.5"
           style={{
+            fontSize: `${fontSizePt}pt`,
             fontFamily: "system-ui, -apple-system, sans-serif",
             color: "#881337",
             textShadow: "0 1px 0 #fecdd3, 0 2px 0 #be123c, 0 4px 0 #4c0519, 0 6px 1px #2a030e, 0 8px 16px rgba(76,5,25,0.35)",
@@ -316,6 +321,9 @@ const ChapterHeroHeader: React.FC<{
   const pickerRef = useRef<HTMLDivElement>(null);
 
   const chapterNum = content.chapterNumber || "1";
+  const typography = CLASS_TYPOGRAPHY[block.curriculum?.grade || 3] || CLASS_TYPOGRAPHY[3];
+  const design = chapterHeroLayout(block.transform.width, typography.display);
+  const fontScale = block.styleOverrides.fontSizeScale || 1;
   const badgeLabel = content.badgeLabel || "CHAPTER";
   const illustrationUrl = content.illustrationUrl || "/assets/chapter-hero/student-original-clean.png";
 
@@ -332,6 +340,8 @@ const ChapterHeroHeader: React.FC<{
     startY: number;
     initialX: number;
     initialY: number;
+    scaleX: number;
+    scaleY: number;
   } | null>(null);
 
   // Sync external changes when not actively dragging
@@ -354,12 +364,18 @@ const ChapterHeroHeader: React.FC<{
     } catch (_) {}
 
     setIsDraggingImage(true);
+    // Translation is outside the illustration's own zoom/flip transform.
+    // Measure its untransformed frame so those settings do not change drag speed.
+    const frame = e.currentTarget.parentElement || e.currentTarget;
+    const bounds = frame.getBoundingClientRect();
     dragStartRef.current = {
       pointerId,
       startX: e.clientX,
       startY: e.clientY,
       initialX: liveOffset.x,
       initialY: liveOffset.y,
+      scaleX: bounds.width / frame.offsetWidth || zoom || 1,
+      scaleY: bounds.height / frame.offsetHeight || zoom || 1,
     };
   };
 
@@ -370,10 +386,8 @@ const ChapterHeroHeader: React.FC<{
 
     const deltaScreenX = e.clientX - dragStartRef.current.startX;
     const deltaScreenY = e.clientY - dragStartRef.current.startY;
-    const effectiveZoom = zoom > 0 ? zoom : 1;
-
-    const nextX = Math.round(dragStartRef.current.initialX + deltaScreenX / effectiveZoom);
-    const nextY = Math.round(dragStartRef.current.initialY + deltaScreenY / effectiveZoom);
+    const nextX = Math.round(dragStartRef.current.initialX + deltaScreenX / dragStartRef.current.scaleX);
+    const nextY = Math.round(dragStartRef.current.initialY + deltaScreenY / dragStartRef.current.scaleY);
 
     setLiveOffset({ x: nextX, y: nextY });
   };
@@ -389,10 +403,8 @@ const ChapterHeroHeader: React.FC<{
 
     const deltaScreenX = e.clientX - dragStartRef.current.startX;
     const deltaScreenY = e.clientY - dragStartRef.current.startY;
-    const effectiveZoom = zoom > 0 ? zoom : 1;
-
-    const finalX = Math.round(dragStartRef.current.initialX + deltaScreenX / effectiveZoom);
-    const finalY = Math.round(dragStartRef.current.initialY + deltaScreenY / effectiveZoom);
+    const finalX = Math.round(dragStartRef.current.initialX + deltaScreenX / dragStartRef.current.scaleX);
+    const finalY = Math.round(dragStartRef.current.initialY + deltaScreenY / dragStartRef.current.scaleY);
 
     dragStartRef.current = null;
     setIsDraggingImage(false);
@@ -509,7 +521,7 @@ const ChapterHeroHeader: React.FC<{
   }, [showImagePicker]);
 
   return (
-    <div className="relative w-full overflow-hidden rounded-3xl bg-gradient-to-r from-[#faf5ea] via-[#fffefb] to-[#f8f3e8] border border-[#e8d7b0] shadow-xl p-4 sm:p-6 group select-none transition-all">
+    <div className="relative w-full overflow-hidden rounded-3xl bg-gradient-to-r from-[#faf5ea] via-[#fffefb] to-[#f8f3e8] border border-[#e8d7b0] shadow-xl group select-none" style={{padding:`${design.padding}pt`}}>
       {/* Hidden File Input */}
       <input
         ref={fileInputRef}
@@ -610,7 +622,7 @@ const ChapterHeroHeader: React.FC<{
       <span className="absolute left-[72%] bottom-5 text-[#ffd54f] text-[10px] pointer-events-none select-none">✦</span>
 
       {/* Main Content Layout */}
-      <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-4 md:gap-6 min-h-[200px]">
+      <div className="relative z-10 grid items-center" style={{gridTemplateColumns:design.stacked ? "minmax(0, 1fr)" : `${design.badgeWidth}pt minmax(0, 1fr) ${design.imageWidth}pt`,gap:`${design.gap}pt`,minHeight:"170pt"}}>
         
         {/* LEFT: 3D Golden-Framed Burgundy Badge */}
         <div className="relative shrink-0 flex items-center justify-center">
@@ -659,6 +671,7 @@ const ChapterHeroHeader: React.FC<{
             className="relative w-28 h-28 sm:w-32 sm:h-32 flex flex-col items-center justify-center text-center transition-transform hover:scale-[1.03]"
             style={{
               borderRadius: "44% 56% 54% 46% / 48% 46% 54% 52%",
+              width: `${design.badgeWidth}pt`, height: "86pt",
               background: "radial-gradient(ellipse at 35% 28%, #8e1937 0%, #5e0b1f 60%, #3a0411 100%)",
               border: "5px solid #d49b28",
               boxShadow: "0 0 0 1px #fef08a, 0 10px 25px -4px rgba(74, 11, 27, 0.5), inset 0 2px 4px rgba(255,255,255,0.7), inset 0 -5px 10px rgba(0,0,0,0.6)",
@@ -666,7 +679,7 @@ const ChapterHeroHeader: React.FC<{
           >
             {/* Top Label (CHAPTER / UNIT / LESSON) */}
             <div className="mb-0.5 px-2">
-              <span className="text-[10px] sm:text-[11px] font-black uppercase tracking-[0.22em] text-white drop-shadow-[0_1px_3px_rgba(0,0,0,0.85)]">
+              <span className="font-black uppercase tracking-[0.22em] text-white drop-shadow-[0_1px_3px_rgba(0,0,0,0.85)]" style={{fontSize:"8.5pt"}}>
                 <InlineText
                   value={badgeLabel}
                   onChange={(val) => updateContent({ badgeLabel: val })}
@@ -680,6 +693,7 @@ const ChapterHeroHeader: React.FC<{
               className="text-4xl sm:text-5xl font-black tracking-tight leading-none text-[#fff9ee] select-text"
               style={{
                 fontFamily: "system-ui, -apple-system, BlinkMacSystemFont, sans-serif",
+                fontSize: "36pt",
                 textShadow: "0 1px 0 #ffffff, 0 2px 0 #eeddc2, 0 4px 0 #caa976, 0 6px 0 #8b6832, 0 8px 16px rgba(0,0,0,0.5)",
               }}
             >
@@ -693,7 +707,7 @@ const ChapterHeroHeader: React.FC<{
         </div>
 
         {/* CENTER: Wavy Parchment Banner with 3D Playful Typography & Doodles */}
-        <div className="relative flex-1 min-w-0 flex flex-col justify-center px-2 sm:px-4 py-1">
+        <div className="relative min-w-0 flex flex-col justify-center py-1" style={{overflowWrap:"break-word"}}>
           {/* Flying Origami Airplane & Dashed Flight Arc */}
           <div className="absolute -top-3 left-4 w-48 h-16 pointer-events-none">
             <svg viewBox="0 0 200 60" className="w-full h-full overflow-visible">
@@ -730,11 +744,12 @@ const ChapterHeroHeader: React.FC<{
           <div className="relative z-10 flex flex-col justify-center">
             <ChapterTitleDisplay
               title={title}
+              fontSizePt={design.titleSize * fontScale}
               onChange={(val) => updateContent({ title: val })}
             />
 
             {/* Subtitle / Teaser */}
-            <div className="mt-2 text-xs sm:text-sm font-medium text-[#60523e] max-w-[480px] leading-relaxed">
+            <div className="mt-2 font-medium text-[#60523e] leading-relaxed" style={{fontSize:`${typography.body * fontScale}pt`}}>
               <InlineText
                 value={subtitle}
                 onChange={(val) => updateContent({ subtitle: val, introText: val })}
@@ -746,7 +761,7 @@ const ChapterHeroHeader: React.FC<{
         </div>
 
         {/* RIGHT: 3D Character & Artwork Container — FREELY MOVEABLE, SCALABLE & REPLACEABLE */}
-        <div className="relative shrink-0 w-48 sm:w-60 md:w-72 h-52 sm:h-60 flex items-end justify-center group/artwork select-none">
+        <div className="relative shrink-0 flex items-end justify-center group/artwork select-none" style={{width:`${design.imageWidth}pt`,height:"145pt",justifySelf:"center"}}>
           {/* Draggable & Scalable Illustration Image Wrapper */}
           <div
             onPointerDown={handleImagePointerDown}
@@ -757,8 +772,9 @@ const ChapterHeroHeader: React.FC<{
               transform: `translate3d(${liveOffset.x}px, ${liveOffset.y}px, 0) scale(${imgScale}) scaleX(${imgFlipX ? -1 : 1})`,
               cursor: isDraggingImage ? "grabbing" : "grab",
               touchAction: "none",
+              willChange: isDraggingImage ? "transform" : undefined,
             }}
-            className="relative w-full h-full flex items-end justify-center transition-transform will-change-transform"
+            className="relative w-full h-full flex items-end justify-center"
             title="Click and drag to move image inside header"
           >
             {/* The Illustration Image */}
@@ -781,8 +797,8 @@ const ChapterHeroHeader: React.FC<{
 
           {/* Image actions sit inside the artwork so the page frame cannot clip them. */}
           <div
-            className={`absolute bottom-1 inset-x-1 z-30 flex flex-col gap-1 rounded-xl border border-white/15 bg-slate-950 p-1 text-white shadow-lg ${
-              isSelected || isDraggingImage || showImagePicker || cutting
+            className={`absolute bottom-1 inset-x-1 z-30 flex flex-wrap items-center justify-center gap-1 rounded-xl border border-white/15 bg-slate-950 p-1 text-white shadow-lg ${
+              showImagePicker || cutting
                 ? "opacity-100 pointer-events-auto"
                 : "opacity-0 pointer-events-none group-hover/artwork:opacity-100 group-hover/artwork:pointer-events-auto focus-within:opacity-100 focus-within:pointer-events-auto"
             }`}
@@ -792,21 +808,21 @@ const ChapterHeroHeader: React.FC<{
             <button
               type="button"
               onClick={() => setShowImagePicker(true)}
-              className="flex min-h-9 w-full items-center justify-center gap-1.5 rounded-lg bg-amber-400 px-2 text-[12px] font-bold text-slate-950 hover:bg-amber-300"
+              className="flex h-7 w-7 items-center justify-center rounded-md bg-amber-400 text-slate-950 hover:bg-amber-300"
               title="Choose a different illustration or upload your own"
             >
               <ImageIcon className="h-3.5 w-3.5 shrink-0" />
-              Replace image
+              <span className="sr-only">Replace image</span>
             </button>
             <button
               type="button"
               disabled={cutting}
               onClick={() => void removeBackground()}
-              className="flex min-h-9 w-full items-center justify-center gap-1.5 rounded-lg bg-white px-2 text-[12px] font-bold text-slate-950 hover:bg-slate-100 disabled:opacity-50"
+              className="flex h-7 w-7 items-center justify-center rounded-md bg-white text-slate-950 hover:bg-slate-100 disabled:opacity-50"
               title="Remove the background from the photo already on this chapter"
             >
               <Eraser className="h-3.5 w-3.5 shrink-0" />
-              {cutting ? "Removing…" : "Remove background"}
+              <span className="sr-only">{cutting ? "Removing…" : "Remove background"}</span>
             </button>
             <div className="flex items-center gap-0.5">
               <span className="flex items-center gap-1 px-1 text-[10px] font-semibold text-amber-200" title="Drag the illustration to move it inside the header">
@@ -866,11 +882,11 @@ const ChapterHeroHeader: React.FC<{
               <button
                 type="button"
                 onClick={onDetach}
-                className="flex min-h-8 w-full items-center justify-center gap-1.5 rounded-lg bg-amber-500/20 px-2 text-[11px] font-bold text-amber-200 hover:bg-amber-500/30 border border-amber-400/30 transition-all"
+                className="flex h-7 w-7 items-center justify-center rounded-md bg-amber-500/20 text-amber-200 hover:bg-amber-500/30 border border-amber-400/30"
                 title="Detach image and text into separate movable canvas layers"
               >
                 <Unlink2 className="h-3.5 w-3.5 shrink-0" />
-                Make Text & Images Movable
+                <span className="sr-only">Make Text & Images Movable</span>
               </button>
             )}
           </div>

@@ -71,6 +71,59 @@ test('height trimming after corner scaling retains the scaled reading size and m
   assert.ok((moved.y + moved.size * .35) * .5 <= trimmed.transform.height);
 });
 
+test('rounded corner updates never turn into height trimming during a gesture', () => {
+  const { element } = fixture();
+  element.transform.height += 200;
+  element.smartBlockData.transform = element.transform;
+  const first = withBlockTransform(element, { ...element.transform, width: element.transform.width * .7, height: element.transform.height * .7 }, 'scale');
+  const frame = structuredClone(first.smartBlockData.styleOverrides.resizeFrame);
+  // Subpixel pointer events can round to the same width while height changes.
+  const next = withBlockTransform(first, { ...first.transform, height: first.transform.height - .1 }, 'scale');
+  assert.deepEqual(next.smartBlockData.styleOverrides.resizeFrame, frame);
+  assert.deepEqual(buildPublicationScene(next.smartBlockData), buildPublicationScene(first.smartBlockData));
+});
+
+test('aspect-locked side handles keep proportions and their opposite edge anchored', () => {
+  const initial = { x: 40, y: 60, width: 400, height: 200 };
+  for (const handle of ['e','w','n','s']) {
+    const next = calculateResize(initial, handle, handle==='w'?100:-100, handle==='n'?50:-50, true);
+    assert.equal(next.width, 300); assert.equal(next.height, 150);
+    if(handle==='w') assert.equal(next.x+next.width, initial.x+initial.width);
+    if(handle==='e') assert.equal(next.x, initial.x);
+    if(handle==='n') assert.equal(next.y+next.height, initial.y+initial.height);
+    if(handle==='s') assert.equal(next.y, initial.y);
+  }
+});
+
+test('width input preserves the original aspect even when an intermediate value reaches the size limit', () => {
+  const el = store.getState().addEducationalBlock('studio-quick-check-1', 40, 40);
+  store.getState().updateElementTransform(el.id, { width: 500, height: 100 }, false, 'scale');
+  store.getState().updateElementTransform(el.id, { width: 10 }, false, 'scale');
+  let current = store.getState().elements[el.id];
+  assert.equal(current.transform.width / current.transform.height, 5);
+  store.getState().updateElementTransform(el.id, { width: 400 }, false, 'scale');
+  current = store.getState().elements[el.id];
+  assert.equal(current.transform.height, 80);
+});
+
+test('chapter titles and subtitles keep separate reading space across narrow layouts and larger typography', () => {
+  for (const width of [300, 464, 600]) {
+    const block = makeCurriculumBlock('chapter-hero', DEFAULT_CHAPTER_CONFIG);
+    block.transform = { ...block.transform, width, height: 0 };
+    block.semanticContent.title = 'Discover the wonderful world of plants and the places where they grow';
+    block.semanticContent.subtitle = 'Observe carefully and record the changes you notice every day.';
+    block.styleOverrides.fontSizeScale = 1.5;
+    const scene = buildPublicationScene(block);
+    const title = scene.nodes.filter(n => n.kind === 'text' && ['#f59e0b', '#881337'].includes(n.fill));
+    const subtitle = scene.nodes.filter(n => n.kind === 'text' && n.fill === '#60523e');
+    const lastTitle = title.at(-1), firstSubtitle = subtitle[0];
+    assert.ok(firstSubtitle.y - firstSubtitle.size >= lastTitle.y + lastTitle.size * .05);
+    for (const node of scene.nodes.filter(n => n.kind === 'text' || n.kind === 'image')) {
+      assert.ok(node.y + (node.kind === 'image' ? node.h : node.size * .35) <= scene.height, `${width}: ${node.kind}`);
+    }
+  }
+});
+
 function fixture() {
   const book = structuredClone(store.getState().getActiveBook());
   const page = book.pages[0];

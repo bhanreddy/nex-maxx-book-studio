@@ -311,7 +311,8 @@ export const TransformOverlay: React.FC<TransformOverlayProps> = ({
       } else if (singleElement) {
         // Standard Resize
         const corner = ["nw", "ne", "sw", "se"].includes(handle);
-        const lockAspect = moveEvent.shiftKey || singleElement.type === "image" || (corner && (Boolean(singleElement.smartBlockData) || singleElement.type === "group"));
+        const verticalEdge = ["n", "s"].includes(handle);
+        const lockAspect = moveEvent.shiftKey || singleElement.type === "image" || (Boolean(singleElement.smartBlockData) && !verticalEdge) || (corner && singleElement.type === "group");
         const newRect = calculateResize(initialRect, handle, deltaX, deltaY, lockAspect, singleElement.smartBlockData ? 60 : 20, singleElement.smartBlockData ? 30 : 20);
 
         updateElementTransform(
@@ -322,7 +323,8 @@ export const TransformOverlay: React.FC<TransformOverlayProps> = ({
             width: newRect.width === initialRect.width ? initialRect.width : Math.round(newRect.width * 10) / 10,
             height: newRect.height === initialRect.height ? initialRect.height : Math.round(newRect.height * 10) / 10,
           },
-          false
+          false,
+          verticalEdge && !moveEvent.shiftKey ? "trim-height" : "scale"
         );
       }
     };
