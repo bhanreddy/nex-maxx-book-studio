@@ -24,7 +24,7 @@ export function renderTeachingLayout(block: SmartBlockInstance, layout: Teaching
   const text = (value: string | undefined, x: number, y: number, width = inner, size = fs, bold = false, fill = t.ink) => {
     if (!value) return y;
     const lines = h.wrapText(String(value), Math.max(16, width), size, bold, font === "serif");
-    lines.forEach((label, i) => nodes.push({ kind: "text", text: label, x, y: y + size + i * size * 1.42, size, bold, fill, font, ...(o.fontFamily ? { fontFamily: o.fontFamily } : {}) }));
+    lines.forEach((label, i) => nodes.push({ kind: "text", text: label, x, y: y + size + i * size * 1.42, size, bold, fill, font, wrapWidth: Math.max(16, width), lineHeight: size * 1.42, ...(o.fontFamily ? { fontFamily: o.fontFamily } : {}) }));
     return y + lines.length * size * 1.42;
   };
   const rect = (x: number, y: number, width: number, height: number, fill = t.white, stroke?: string, radius = t.radius) => {

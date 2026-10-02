@@ -133,6 +133,10 @@ const InlineText: React.FC<{
         className={`outline-2 outline-dashed outline-[#922a52] bg-white/40 dark:bg-black/40 rounded px-1 min-w-[1ch] max-w-full inline-block cursor-text select-text ${className}`}
         style={{
           ...style,
+          minWidth: 0,
+          maxWidth: "100%",
+          overflowWrap: "anywhere",
+          whiteSpace: multiline ? "pre-wrap" : "normal",
           color: style.color || "inherit",
           caretColor: "currentColor",
         }}
@@ -150,7 +154,7 @@ const InlineText: React.FC<{
       }}
       title="Click to edit"
       className={`cursor-text hover:outline-dashed hover:outline-1 hover:outline-[#922a52]/60 rounded transition-all inline-block ${className}`}
-      style={style}
+      style={{ ...style, minWidth: 0, maxWidth: "100%", overflowWrap: "anywhere", whiteSpace: multiline ? "pre-wrap" : "normal" }}
     >
       {value || <span className="opacity-40 italic">{placeholder}</span>}
     </Tag>

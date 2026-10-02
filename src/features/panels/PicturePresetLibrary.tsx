@@ -84,7 +84,13 @@ export function PicturePresetLibrary() {
     event.preventDefault(); if (busy) return;
     setBusy(true); setError(""); setLoginError("");
     try {
-      const response = await fetch("/api/platform-auth/login", { method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email, password }), signal: AbortSignal.timeout(20000) });
+      const response = await fetch("/api/platform-auth/login", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ identifier: email.trim(), email: email.trim(), password }),
+        signal: AbortSignal.timeout(45000),
+      });
       const result = await response.json(); if (!response.ok) throw new Error(result.error || "Sign in failed.");
       setPassword(""); setNeedsLogin(false); await load();
     } catch (cause) { reportError(cause); setNeedsLogin(true); setLoginError(cause instanceof Error ? cause.message : "Sign in failed. Try again."); }
@@ -106,7 +112,7 @@ export function PicturePresetLibrary() {
       <form className="flex gap-2" onSubmit={event => { event.preventDefault(); void load(0, false); }}><input aria-label="Search cloud pictures" placeholder="Search cloud pictures" maxLength={200} value={search} onChange={event => setSearch(event.target.value)} className={field}/><button disabled={busy} aria-label="Search pictures" className="min-w-10 rounded-lg bg-slate-100 dark:bg-white/10 flex items-center justify-center"><Search size={15}/></button></form>
       {message && <p role="status" aria-live="polite" className="text-xs text-indigo-600 dark:text-indigo-300">{message}</p>}
       {error && !needsLogin && <p role="alert" className="text-xs text-rose-600 dark:text-rose-300">{error}</p>}
-      {needsLogin && <details><summary className="cursor-pointer text-xs font-semibold text-indigo-600 dark:text-indigo-300 py-1">Sign in to save and sync pictures</summary><form onSubmit={signIn} className="space-y-2">{loginError && <p role="alert" className="text-xs text-rose-600 dark:text-rose-300">{loginError}</p>}<label className="text-xs block">Platform email<input autoComplete="username" type="email" required value={email} onChange={event => setEmail(event.target.value)} className={field}/></label><label className="text-xs block">Password<input autoComplete="current-password" type="password" required value={password} onChange={event => setPassword(event.target.value)} className={field}/></label><button disabled={busy} className="min-h-10 w-full border border-indigo-300 rounded-lg text-xs font-semibold text-indigo-600 dark:text-indigo-300">Sign in and save presets</button></form></details>}
+      {needsLogin && <details open className="bg-slate-50 dark:bg-white/5 p-2 rounded-lg border border-indigo-200 dark:border-indigo-900/40"><summary className="cursor-pointer text-xs font-semibold text-indigo-600 dark:text-indigo-300 py-1">Sign in with SuperAdmin Founder credentials</summary><form onSubmit={signIn} className="space-y-2 mt-2">{loginError && <p role="alert" className="text-xs text-rose-600 dark:text-rose-300 bg-rose-50 dark:bg-rose-950/40 p-1.5 rounded">{loginError}</p>}<label className="text-xs block text-slate-700 dark:text-slate-200">Platform email or Founder ID<input autoComplete="username" type="text" required value={email} onChange={event => setEmail(event.target.value)} placeholder="e.g. 25e001.nexsyrus@gmail.com or FOUNDER-001" className={field}/></label><label className="text-xs block text-slate-700 dark:text-slate-200">Password<input autoComplete="current-password" type="password" required value={password} onChange={event => setPassword(event.target.value)} placeholder="Founder password" className={field}/></label><button disabled={busy} className="min-h-10 w-full bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white rounded-lg text-xs font-semibold">{busy ? "Signing in to SuperAdmin…" : "Sign in and save presets"}</button></form></details>}
     </div>
     <div className="flex-1 min-h-0 overflow-y-auto p-3 space-y-4">
       <div><h4 className="text-xs font-semibold mb-2 text-slate-700 dark:text-slate-200">Starter pictures · {STARTER_PICTURES.length}</h4><div className="grid grid-cols-2 gap-2">{STARTER_PICTURES.filter(p => !search || `${p.name} ${p.tags}`.toLowerCase().includes(search.toLowerCase())).map(picture => {

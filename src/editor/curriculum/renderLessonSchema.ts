@@ -17,7 +17,7 @@ export function renderLessonSchema(block: SmartBlockInstance, h: Pick<AtelierHel
   const lines = (value: string, width: number, size = fs) => h.wrapText(value, Math.max(16, width), size, true);
   const text = (value: string, x: number, y: number, width: number, size = fs, fill: string = ink, align: "start" | "middle" = "start") => {
     const wrapped = value ? lines(value, width, size) : [];
-    wrapped.forEach((line, i) => nodes.push({ kind: "text", x, y: y + size + i * size * 1.35, text: line, size, fill, bold: true, align, fontFamily: o.fontFamily }));
+    wrapped.forEach((line, i) => nodes.push({ kind: "text", x, y: y + size + i * size * 1.35, text: line, size, fill, bold: true, align, fontFamily: o.fontFamily, wrapWidth: Math.max(16, width), lineHeight: size * 1.35 }));
   };
   const rect = (x: number, y: number, rw: number, rh: number, fill: string, radius: number, stroke?: string, opacity?: number) => nodes.push({ kind: "rect", x, y, w: rw, h: rh, fill, radius, stroke, strokeWidth: stroke ? 1 : 0, opacity });
   const circle = (x: number, y: number, r: number, fill: string, stroke?: string) => nodes.push({ kind: "ellipse", x, y, rx: r, ry: r, fill, stroke, strokeWidth: stroke ? 1.2 : 0 });

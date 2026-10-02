@@ -40,7 +40,7 @@ export function write(ctx: SkinContext, value: string | undefined, x: number, y:
     x: align === "middle" ? x + tw / 2 : align === "end" ? x + tw : x,
     y: y + fs + i * fs * 1.4,
     text: t, size: fs, fill: colour, bold, font: serif ? "serif" : "sans",
-    align,
+    align, wrapWidth: Math.max(12, tw), lineHeight: fs * 1.4,
   }));
   return y + lines.length * fs * 1.4;
 }

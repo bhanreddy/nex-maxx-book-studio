@@ -1,6 +1,6 @@
 import type { PageElement } from "../../domain/element/types";
 import type { SmartBlockInstance } from "../../domain/educational/blockSchema";
-import { buildPublicationScene, textWidth, wrapText, type SceneNode, type PublicationScene } from "./publicationScene";
+import { buildPublicationScene, expandSceneText, textWidth, wrapText, type SceneNode, type PublicationScene } from "./publicationScene";
 import { transformSceneNode } from "./sceneGeometry";
 
 function shiftNode(node: SceneNode, x: number, y: number): SceneNode {
@@ -14,7 +14,7 @@ export function detachPublicationScene(block: SmartBlockInstance, baseZIndex: nu
     nodes: sourceScene.nodes.map(node => transformSceneNode(node, block.transform.width / frame.width, block.transform.height / frame.height)) } : sourceScene;
   const angle = (block.transform.rotation * Math.PI) / 180;
 
-  return scene.nodes.flatMap((node, index): PageElement[] => {
+  return scene.nodes.flatMap(expandSceneText).flatMap((node, index): PageElement[] => {
     if (node.kind === "gradient" || node.kind === "clip") return [];
     let x = 0, y = 0, w = scene.width, h = scene.height;
 

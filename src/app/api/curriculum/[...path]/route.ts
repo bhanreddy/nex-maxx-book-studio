@@ -17,22 +17,43 @@ async function proxy(request: NextRequest, path: string[]) {
   if (!token) {
     return NextResponse.json({ success: false, error: "Unauthorized", code: "PLATFORM_AUTH_REQUIRED" }, { status: 401 });
   }
-  const base = process.env.SCHOOLIMS_API_URL;
+  const DEFAULT_SCHOOLIMS_API_URL = "https://simsapi.nexsyrus.com/api/v1/";
+  const base = process.env.SCHOOLIMS_API_URL || DEFAULT_SCHOOLIMS_API_URL;
   if (!base) {
     return NextResponse.json({ success: false, error: "Curriculum API is not configured", code: "CURRICULUM_API_UNCONFIGURED" }, { status: 503 });
   }
-  const renderAsset=request.method==='GET'&&path.length===5&&path[0]==='assets'&&path[2]==='revisions'&&path[4]==='render';
-  const upstreamPath=renderAsset?[...path.slice(0,4),'download']:path;
-  const target = `${platformApiUrl(base, `api/v1/curriculum/authoring/${upstreamPath.map(encodeURIComponent).join("/")}`)}${request.nextUrl.search}`;
+  const DEFAULT_SCHOOL_ID = "1";
+  const schoolId = request.headers.get("x-school-id") || request.nextUrl.searchParams.get("school_id") || process.env.SCHOOL_ID || DEFAULT_SCHOOL_ID;
+  const renderAsset = request.method === 'GET' && path.length === 5 && path[0] === 'assets' && path[2] === 'revisions' && path[4] === 'render';
+  const upstreamPath = renderAsset ? [...path.slice(0, 4), 'download'] : path;
+  const searchParams = new URLSearchParams(request.nextUrl.searchParams);
+  if (!renderAsset && !searchParams.has("school_id")) {
+    searchParams.set("school_id", schoolId);
+  }
+  const queryString = searchParams.toString() ? `?${searchParams.toString()}` : "";
+  const target = `${platformApiUrl(base, `api/v1/curriculum/authoring/${upstreamPath.map(encodeURIComponent).join("/")}`)}${queryString}`;
   const headers = new Headers();
   headers.set("authorization", `Bearer ${token}`);
   headers.set("content-type", "application/json");
+  headers.set("x-school-id", schoolId);
   headers.set("x-request-id", request.headers.get("x-request-id") || crypto.randomUUID());
   const idempotencyKey = request.headers.get('idempotency-key');
   if (idempotencyKey) headers.set('idempotency-key', idempotencyKey);
   const init: RequestInit = { method: request.method, headers, cache: 'no-store', signal: AbortSignal.timeout(25000), redirect:'error' };
   if (request.method !== "GET" && request.method !== "HEAD") {
-    init.body = await request.text();
+    let bodyText = await request.text();
+    if (bodyText && (request.headers.get("content-type") || "").includes("application/json")) {
+      try {
+        const parsed = JSON.parse(bodyText);
+        if (parsed && typeof parsed === "object" && !Array.isArray(parsed) && parsed.school_id === undefined) {
+          parsed.school_id = Number(schoolId);
+          bodyText = JSON.stringify(parsed);
+        }
+      } catch {
+        // preserve body text as is
+      }
+    }
+    init.body = bodyText;
     if (new TextEncoder().encode(init.body).byteLength > 4 * 1024 * 1024) {
       return NextResponse.json({success:false,error:'Chapter payload exceeds 4 MB. Move images to the asset library.',code:'CONTENT_TOO_LARGE'},{status:413});
     }

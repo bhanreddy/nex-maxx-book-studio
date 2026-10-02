@@ -50,3 +50,37 @@ test('picture delivery rejects an unexpected storage host and active document MI
   let calls=0;t.mock.method(globalThis,'fetch',async()=>++calls===1?Response.json({success:true,data:{url:'https://account.r2.cloudflarestorage.com/image',checksum}}):new Response('<script/>',{headers:{'Content-Type':'text/html'}}));
   assert.equal((await GET(request(),context)).status,502);
 });
+
+test('curriculum authoring proxy automatically enables school_id === 1 in query, headers, and payload', async t => {
+  setApi(t, 'https://central.example/api/v1/');
+  const calls = [];
+  t.mock.method(globalThis, 'fetch', async (url, init) => {
+    calls.push({ url: String(url), init });
+    return Response.json({ success: true, data: { items: [], next_offset: null } });
+  });
+
+  const getReq = new NextRequest('https://studio.example/api/curriculum/assets?search=tree', {
+    headers: { cookie: 'nex_platform_access=test-only-token' },
+  });
+  const getRes = await GET(getReq, { params: Promise.resolve({ path: ['assets'] }) });
+  assert.equal(getRes.status, 200);
+  assert.equal(calls[0].url, 'https://central.example/api/v1/curriculum/authoring/assets?search=tree&school_id=1');
+  assert.equal(calls[0].init.headers.get('x-school-id'), '1');
+  assert.equal(calls[0].init.headers.get('authorization'), 'Bearer test-only-token');
+
+  const postReq = new NextRequest('https://studio.example/api/curriculum/assets/uploads', {
+    method: 'POST',
+    headers: {
+      origin: 'https://studio.example',
+      cookie: 'nex_platform_access=test-only-token',
+      'content-type': 'application/json',
+    },
+    body: JSON.stringify({ title: 'New Image', size: 1024 }),
+  });
+  const postRes = await POST(postReq, { params: Promise.resolve({ path: ['assets', 'uploads'] }) });
+  assert.equal(postRes.status, 200);
+  assert.equal(calls[1].init.headers.get('x-school-id'), '1');
+  const bodyParsed = JSON.parse(calls[1].init.body);
+  assert.equal(bodyParsed.school_id, 1);
+  assert.equal(bodyParsed.title, 'New Image');
+});

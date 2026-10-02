@@ -14,7 +14,7 @@ import { NEX_MAXX_BRAND, NEX_MAXX_PRESETS, CLASS_TYPOGRAPHY } from "../../domain
 import { renderLessonSchema } from "./renderLessonSchema";
 import { renderStudySkills } from "./renderStudySkills";
 import { renderLearningOutcomes } from "./renderLearningOutcomes";
-import { gradientBands, wrapText as publicationWrapText } from "../educational/publicationScene";
+import { gradientBands, wrapText as publicationWrapText, textWidth as publicationTextWidth } from "../educational/publicationScene";
 
 export function renderUniversalBlockScene(
   block: SmartBlockInstance,
@@ -62,28 +62,11 @@ export function renderUniversalBlockScene(
 
   const wrapText = (typeof h === "object" && h && typeof h.wrapText === "function")
     ? h.wrapText.bind(h)
-    : (text: string, width: number, size: number, _bold = false, _fontSerif = false): string[] => {
-        const approxCharsPerLine = Math.max(10, Math.floor(width / (size * 0.55)));
-        const words = String(text).split(" ");
-        const lines: string[] = [];
-        let cur = "";
-        for (const word of words) {
-          if ((cur + " " + word).trim().length <= approxCharsPerLine) {
-            cur = (cur + " " + word).trim();
-          } else {
-            if (cur) lines.push(cur);
-            cur = word;
-          }
-        }
-        if (cur) lines.push(cur);
-        return lines.length ? lines : [text];
-      };
+    : publicationWrapText;
 
   const textWidth = (typeof h === "object" && h && typeof h.textWidth === "function")
     ? h.textWidth.bind(h)
-    : (text: string, size: number, bold = false): number => {
-        return text.length * size * (bold ? 0.62 : 0.55);
-      };
+    : publicationTextWidth;
 
   const rect = (x: number, y: number, rw: number, rh: number, fill: string, stroke?: string, radius: number = activePreset.radiusPt) => {
     nodes.push({ kind: "rect", x, y, w: rw, h: rh, fill, stroke, radius, strokeWidth: stroke ? 0.8 : 0 });
@@ -110,6 +93,8 @@ export function renderUniversalBlockScene(
         fill: color,
         bold,
         font: fontSerif ? "serif" : "sans",
+        wrapWidth: Math.max(12, width),
+        lineHeight: size * 1.4,
       });
     });
     return y + lines.length * size * 1.4;

@@ -29,7 +29,7 @@ export function renderReferenceElement(block: SmartBlockInstance, h: AtelierHelp
     if (!value) return y;
     const lines = h.wrapText(value, Math.max(12, width), size, bold, serif);
     lines.forEach((txt, i) => nodes.push({ kind: "text", x, y: y + size + i * size * 1.42, text: txt, size, bold, fill,
-      font: serif ? "serif" : "sans", fontFamily: o.fontFamily }));
+      font: serif ? "serif" : "sans", fontFamily: o.fontFamily, wrapWidth: Math.max(12, width), lineHeight: size * 1.42 }));
     return y + lines.length * size * 1.42;
   };
   const icon = (kind: ReferenceIcon, x: number, y: number, size: number) => {

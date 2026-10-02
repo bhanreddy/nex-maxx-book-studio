@@ -1,9 +1,10 @@
-import type { PublicationScene, SceneNode } from "../educational/publicationScene";
+import { expandSceneText, type PublicationScene, type SceneNode } from "../educational/publicationScene";
 
 /** Break between text baselines, never through a glyph. Shapes/images may span a page break. */
 export function sceneWindows(scene: PublicationScene, available: number, firstAvailable = available): { from: number; to: number }[] {
   if (available < 64) throw new Error("Page margins leave too little reading space. Use a larger page or smaller margins.");
   const result: { from: number; to: number }[] = [];
+  const readingNodes = scene.nodes.flatMap(expandSceneText);
   let from = 0;
   while (from < scene.height - .1) {
     const capacity = from === 0 ? firstAvailable : available;
@@ -15,7 +16,7 @@ export function sceneWindows(scene: PublicationScene, available: number, firstAv
       if (panel && panel.h <= capacity && panel.y > from) to = panel.y;
 
       // Move a crossing line to the continuation, leaving its ascenders intact.
-      for (const node of scene.nodes) if (node.kind === "text" && node.y > to && node.y - node.size * 1.15 < to) to = Math.min(to, node.y - node.size * 1.15 - 2);
+      for (const node of readingNodes) if (node.kind === "text" && node.y > to && node.y - node.size * 1.15 < to) to = Math.min(to, node.y - node.size * 1.15 - 2);
       if (to - from < 40) throw new Error("A text style is too large for this page. Increase the page size.");
     }
     result.push({ from, to }); from = to;
@@ -23,7 +24,7 @@ export function sceneWindows(scene: PublicationScene, available: number, firstAv
   return result;
 }
 export function sliceScene(scene: PublicationScene, window: { from: number; to: number }): PublicationScene {
-  const nodes = scene.nodes.flatMap((node): SceneNode[] => {
+  const nodes = scene.nodes.flatMap(expandSceneText).flatMap((node): SceneNode[] => {
     if (node.kind === "text" && (node.y <= window.from || node.y > window.to)) return [];
     const n = { ...node };
     if ("y" in n) n.y -= window.from;

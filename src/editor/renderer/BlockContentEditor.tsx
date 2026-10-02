@@ -14,8 +14,8 @@ type ContentNode = Extract<SceneNode, { kind: "text" | "image" }>;
 
 export function contentNodeBounds(node: ContentNode) {
   if (node.kind === "image") return { x: node.x, y: node.y, width: node.w, height: node.h };
-  const width = Math.max(node.size, node.textLength ?? textWidth(node.text, node.size, node.bold, node.font === "serif"));
-  return { x: node.x - (node.align === "middle" ? width / 2 : node.align === "end" ? width : 0), y: node.y - node.size, width, height: node.size * 1.35 };
+  const width = Math.max(node.size, node.textLength ?? Math.max(...(node.lines || [node.text]).map(line => textWidth(line, node.size, node.bold, node.font === "serif", node.fontFamily, node.letterSpacing))));
+  return { x: node.x - (node.align === "middle" ? width / 2 : node.align === "end" ? width : 0), y: node.y - node.size, width, height: node.size * 1.35 + Math.max(0, (node.lines?.length || 1) - 1) * (node.lineHeight || node.size * 1.4) };
 }
 
 /** Pointer coordinates use the SVG matrix, including page zoom and block rotation. */
@@ -146,10 +146,10 @@ export function BlockContentEditor({ element, selected = false, zoom = 1 }: { el
         <title>Drag to move · Shift locks direction · Arrow keys nudge{node.kind === "text" ? " · Double-click to edit" : ""}</title>
         {painted}
         <rect {...{ x: bounds.x - 2, y: bounds.y - 2, width: bounds.width + 4, height: bounds.height + 4 }} className="block-content-hitbox" vectorEffect="non-scaling-stroke" />
-        {chosen && editing && node.kind === "text" && <foreignObject x={bounds.x - 2} y={bounds.y - 3} width={Math.max(bounds.width + 12, 120)} height={Math.max(bounds.height + 8, 32)}>
-          <input autoFocus aria-label="Edit selected text" value={draft} className="block-content-text-input" style={{ fontSize: node.size, fontFamily: node.fontFamily, fontWeight: node.bold ? 700 : 400 }}
+        {chosen && editing && node.kind === "text" && <foreignObject x={bounds.x - 2} y={bounds.y - 3} width={Math.max(1, Math.min(node.wrapWidth ?? scene.width - bounds.x, Math.max(bounds.width + 12, 120)))} height={Math.max(bounds.height + 8, 32)}>
+          <textarea autoFocus aria-label="Edit selected text" value={draft} className="block-content-text-input" style={{ fontSize: node.size, fontFamily: node.fontFamily, fontWeight: node.bold ? 700 : 400, resize: "none", overflowWrap: "anywhere" }}
             onChange={event => setDraft(event.target.value)} onBlur={commitText} onPointerDown={event => event.stopPropagation()}
-            onKeyDown={event => { event.stopPropagation(); if (event.key === "Enter") { event.preventDefault(); commitText(); } if (event.key === "Escape") { event.preventDefault(); setEditing(false); } }} />
+            onKeyDown={event => { event.stopPropagation(); if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); commitText(); } if (event.key === "Escape") { event.preventDefault(); setEditing(false); } }} />
         </foreignObject>}
       </g>;
     } : undefined} />

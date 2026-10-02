@@ -59,7 +59,7 @@ export function renderCurriculum(block: SmartBlockInstance, h: AtelierHelpers, o
   const tx = (value: string | undefined, x: number, y: number, width = inner, size = fs, bold = false, color = t.textPrimary, display = false) => {
     if (!value) return y;
     const lines = h.wrapText(String(value), Math.max(12, width), size, bold, display && serif);
-    lines.forEach((text, i) => nodes.push({ kind: "text", x, y: y + size + i * size * 1.42, text, size, fill: color, bold, font: display && serif ? "serif" : "sans" }));
+    lines.forEach((text, i) => nodes.push({ kind: "text", x, y: y + size + i * size * 1.42, text, size, fill: color, bold, font: display && serif ? "serif" : "sans", wrapWidth: Math.max(12, width), lineHeight: size * 1.42 }));
     return y + lines.length * size * 1.42;
   };
   const rect = (x: number, y: number, width: number, height: number, fill: string, radius = 0, opacity = 1) => nodes.push({ kind: "rect", x, y, w: width, h: height, fill, radius, opacity });

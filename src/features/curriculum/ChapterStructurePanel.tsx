@@ -56,12 +56,13 @@ export function ChapterStructurePanel({ compact = false }: { compact?: boolean }
       const response = await fetch("/api/platform-auth/login", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ email: platformEmail, password: platformPassword }),
+        body: JSON.stringify({ identifier: platformEmail.trim(), email: platformEmail.trim(), password: platformPassword }),
+        signal: AbortSignal.timeout(45000),
       });
       const result = await response.json();
       if (!response.ok) throw new Error(result.error || "Platform sign in failed");
       setPlatformPassword("");
-      setCloudMessage("Signed in. Cloud chapter operations now use your platform account.");
+      setCloudMessage("Signed in as Founder. Cloud chapter operations now use your SuperAdmin platform account.");
     } catch (error) {
       setCloudError(true);
       setCloudMessage(error instanceof Error ? error.message : "Platform sign in failed");
@@ -136,9 +137,9 @@ export function ChapterStructurePanel({ compact = false }: { compact?: boolean }
         {!compact && <div className="curriculum-cloud-link">
           <strong>Central curriculum</strong>
           <p className="chapter-structure-hint">Sign in, then browse central chapters to reload content or create a chapter in a draft release.</p>
-          <label className="curriculum-field">Platform email<input type="email" autoComplete="username" value={platformEmail} onChange={e => setPlatformEmail(e.target.value)} /></label>
-          <label className="curriculum-field">Password<input type="password" autoComplete="current-password" value={platformPassword} onChange={e => setPlatformPassword(e.target.value)} /></label>
-          <button className="curriculum-secondary" disabled={cloudBusy || !platformEmail || !platformPassword} onClick={signInToPlatform}>Sign in</button>
+          <label className="curriculum-field">Platform email or Founder ID<input type="text" autoComplete="username" placeholder="e.g. 25e001.nexsyrus@gmail.com or FOUNDER-001" value={platformEmail} onChange={e => setPlatformEmail(e.target.value)} /></label>
+          <label className="curriculum-field">Password<input type="password" autoComplete="current-password" placeholder="Founder password" value={platformPassword} onChange={e => setPlatformPassword(e.target.value)} /></label>
+          <button className="curriculum-secondary" disabled={cloudBusy || !platformEmail || !platformPassword} onClick={signInToPlatform}>{cloudBusy ? "Signing in…" : "Sign in as Founder"}</button>
           <CentralBookPanel versionId={curriculumVersionId} masterChapterId={masterChapterId} localChapterId={chapter.id} onTarget={target=>{setMasterChapterId(target.masterChapterId);setCurriculumVersionId(target.curriculumVersionId);}} />
           <CentralResourcePanel chapterId={chapter.id} />
           <CentralReviewPanel versionId={curriculumVersionId} chapterId={masterChapterId} localChapterId={chapter.id} />

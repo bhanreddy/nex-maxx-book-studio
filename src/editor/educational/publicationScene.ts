@@ -14,7 +14,7 @@ export type SceneNode =
   | ({ kind: "ellipse"; x: number; y: number; rx: number; ry: number; fill: string; stroke?: string; strokeWidth?: number } & SceneMark)
   | ({ kind: "line"; x: number; y: number; x2: number; y2: number; stroke: string; strokeWidth?: number } & SceneMark)
   | ({ kind: "polygon"; points: number[][]; fill: string; stroke?: string; strokeWidth?: number } & SceneMark)
-  | ({ kind: "text"; x: number; y: number; text: string; size: number; fill: string; bold?: boolean; italic?: boolean; underline?: boolean; strike?: boolean; letterSpacing?: number; textLength?: number; font?: "sans" | "serif"; fontFamily?: string; align?: "start" | "middle" | "end" } & SceneMark)
+  | ({ kind: "text"; x: number; y: number; text: string; size: number; fill: string; bold?: boolean; italic?: boolean; underline?: boolean; strike?: boolean; letterSpacing?: number; textLength?: number; font?: "sans" | "serif"; fontFamily?: string; align?: "start" | "middle" | "end"; wrapWidth?: number; lineHeight?: number; lines?: string[] } & SceneMark)
   | ({ kind: "image"; x: number; y: number; w: number; h: number; src: string; alt: string; focalX: number; focalY: number; scale: number; sourceWidth?: number; sourceHeight?: number } & SceneMark & ImageTreatment)
   | ({ kind: "path"; d: string; fill: string; stroke?: string; strokeWidth?: number } & SceneMark)
   | { kind: "gradient"; id: string; x1: number; y1: number; x2: number; y2: number; from: string; to: string }
@@ -52,31 +52,52 @@ export function resolvePublicationPalette(block: SmartBlockInstance): Publicatio
 }
 let context: CanvasRenderingContext2D | null | undefined;
 const widths = new Map<string, number>();
-export function textWidth(text: string, size: number, bold = false, serif = false): number {
-  const key = `${size}/${bold}/${serif}/${text}`;
+export function textWidth(text: string, size: number, bold = false, serif = false, fontFamily?: string, letterSpacing = 0): number {
+  const key = `${size}/${bold}/${serif}/${fontFamily || ""}/${letterSpacing}/${text}`;
   const cached = widths.get(key); if (cached !== undefined) return cached;
   if (context === undefined && typeof document !== "undefined") context = document.createElement("canvas").getContext("2d");
   let result: number;
-  if (context) { context.font = `${bold ? "bold " : ""}${size}px ${serif ? "Times New Roman" : "Arial"}`; result = context.measureText(text).width; }
+  if (context) { context.font = `${bold ? "bold " : ""}${size}px ${fontFamily || (serif ? "Times New Roman" : "Arial")}`; result = context.measureText(text).width; }
   else result = Array.from(text).reduce((sum, c) => sum + (" ilI.,:;!'".includes(c) ? .27 : "MW@%".includes(c) ? .85 : .55), 0) * size * (bold ? 1.04 : 1);
+  result += Math.max(0, Array.from(text).length - 1) * letterSpacing;
   if (widths.size > 6000) widths.clear(); widths.set(key, result); return result;
 }
-export function wrapText(text: string, max: number, size: number, bold = false, serif = false): string[] {
+export function wrapText(text: string, max: number, size: number, bold = false, serif = false, fontFamily?: string, letterSpacing = 0): string[] {
   const result: string[] = [];
   for (const paragraph of String(text).split("\n")) {
     if (!paragraph.trim()) { result.push(""); continue; }
     let line = "";
     for (const word of paragraph.split(/\s+/)) {
-      if (textWidth(line ? `${line} ${word}` : word, size, bold, serif) <= max) { line = line ? `${line} ${word}` : word; continue; }
+      if (textWidth(line ? `${line} ${word}` : word, size, bold, serif, fontFamily, letterSpacing) <= max) { line = line ? `${line} ${word}` : word; continue; }
       if (line) result.push(line); line = "";
       // Long URLs and unbroken script runs must also stay within the available measure.
       for (const char of Array.from(word)) {
-        if (line && textWidth(line + char, size, bold, serif) > max) { result.push(line); line = char; } else line += char;
+        if (line && textWidth(line + char, size, bold, serif, fontFamily, letterSpacing) > max) { result.push(line); line = char; } else line += char;
       }
     }
     if (line) result.push(line);
   }
   return result;
+}
+
+/** Flatten derived reading lines for print, pagination and detached native layers. */
+export function expandSceneText(node: SceneNode): SceneNode[] {
+  if (node.kind !== "text" || !node.lines) return [node];
+  return node.lines.map((text, index) => ({ ...node, text, lines: undefined,
+    y: node.y + index * (node.lineHeight || node.size * 1.4) }));
+}
+
+function editedTextWidth(node: Extract<SceneNode, { kind: "text" }>, scene: PublicationScene): number {
+  if (node.wrapWidth !== undefined) return Math.max(1, node.wrapWidth);
+  // Older templates have no text measure. Use the smallest enclosing reading panel.
+  const panels = scene.nodes.filter((n): n is Extract<SceneNode, { kind: "rect" }> => n.kind === "rect"
+    && n.w > node.size * 2 && n.h > node.size * 2
+    && node.x >= n.x && node.x <= n.x + n.w && node.y >= n.y && node.y <= n.y + n.h);
+  const panel = panels.sort((a, b) => a.w - b.w)[0];
+  const left = panel?.x || 0, right = panel ? panel.x + panel.w : scene.width;
+  if (node.align === "middle") return Math.max(1, 2 * Math.min(node.x - left, right - node.x) - 8);
+  if (node.align === "end") return Math.max(1, node.x - left - 8);
+  return Math.max(1, right - node.x - Math.min(20, Math.max(8, node.x - left)));
 }
 export function artworkNodes(kind: ArtworkKind, x: number, y: number, w: number, h: number, p: PublicationPalette, opacity = 1): SceneNode[] {
   const nodes: SceneNode[] = [];
@@ -158,7 +179,13 @@ export function buildPublicationScene(block: SmartBlockInstance, options: { teac
     if (!edit || edit.base !== base) return next;
     next.x += Number.isFinite(edit.dx) ? edit.dx : 0;
     next.y += Number.isFinite(edit.dy) ? edit.dy : 0;
-    if (next.kind === 'text' && edit.text !== undefined) next.text = edit.text;
+    if (next.kind === 'text' && edit.text !== undefined) {
+      next.text = edit.text;
+      next.wrapWidth = editedTextWidth(node as Extract<SceneNode, { kind: "text" }>, scene);
+      next.lines = wrapText(next.text, next.wrapWidth, next.size, next.bold, next.font === "serif", next.fontFamily, next.letterSpacing);
+      // A former one-line textLength must not compress the replacement paragraph.
+      next.textLength = undefined;
+    }
     if (next.kind === 'image' && edit.src !== undefined) next.src = edit.src;
     // A moved image keeps its own mask, but leaves its former template clipping frame.
     next.clipId = undefined;
@@ -198,7 +225,7 @@ function buildScene(block: SmartBlockInstance, options: { teacher?: boolean } = 
   const text=(value:string|undefined,x:number,y:number,tw:number,fs=size,bold=false,fill=p.text,fontSerif=false):number=> {
     if(!value) return y;
     const lines=wrapText(value, Math.max(12,tw), fs,bold,fontSerif);
-    lines.forEach((t,i)=>nodes.push({kind:"text",x,y:y+fs+i*fs*1.4,text:t,size:fs,fill,bold,font:fontSerif?"serif":"sans"}));
+    lines.forEach((t,i)=>nodes.push({kind:"text",x,y:y+fs+i*fs*1.4,text:t,size:fs,fill,bold,font:fontSerif?"serif":"sans",wrapWidth:Math.max(12,tw),lineHeight:fs*1.4}));
     return y+lines.length*fs*1.4;
   };
   const badge=(label:string,x:number,y:number,fill=p.primary)=> {rect(x,y,24,24,fill,undefined,8); text(label,x+6,y+4,20,10,true,"#FFFFFF");};

@@ -36,6 +36,8 @@ export function transformSceneNode(node: SceneNode, sx: number, sy: number, dx =
     case "line": return { ...node, ...mark, x: node.x * sx + dx, y: node.y * sy + dy, x2: node.x2 * sx + dx, y2: node.y2 * sy + dy };
     case "ellipse": return { ...node, ...mark, x: node.x * sx + dx, y: node.y * sy + dy, rx: node.rx * sx, ry: node.ry * sy };
     case "text": return { ...node, x: node.x * sx + dx, y: node.y * sy + dy, size: node.size * sy,
+      wrapWidth: node.wrapWidth === undefined ? undefined : node.wrapWidth * sx,
+      lineHeight: node.lineHeight === undefined ? undefined : node.lineHeight * sy,
       textLength: node.textLength === undefined ? undefined : node.textLength * sx,
       letterSpacing: node.letterSpacing === undefined ? undefined : node.letterSpacing * sx };
     default: return { ...node, ...mark, x: node.x * sx + dx, y: node.y * sy + dy, w: node.w * sx, h: node.h * sy,

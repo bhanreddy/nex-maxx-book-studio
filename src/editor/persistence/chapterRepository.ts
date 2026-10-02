@@ -57,7 +57,7 @@ export interface CloudChapterRepository<TDocument = SemanticDocument> extends Ch
 export function cloudChapterRepository(fetchImpl: typeof fetch = fetch): CloudChapterRepository {
   const read = async (masterChapterId: string, revision?: number): Promise<ChapterSnapshot> => {
     const query = revision ? `?revision=${revision}` : "";
-    const response = await fetchImpl(`/api/curriculum/chapters/${masterChapterId}/document${query}`, { cache: "no-store" });
+    const response = await fetchImpl(`/api/curriculum/chapters/${masterChapterId}/document${query}`, { cache: "no-store", headers: { "x-school-id": "1" } });
     const json = await response.json().catch(() => ({}));
     if (!response.ok) throw new ChapterRepositoryError(json.error || "Cloud chapter load failed", json.code || "CLOUD_LOAD_FAILED", response.status, json.current);
     if (!json.data?.document || typeof json.data.document !== "object" || !Number.isSafeInteger(json.data.revision)
@@ -71,8 +71,8 @@ export function cloudChapterRepository(fetchImpl: typeof fetch = fetch): CloudCh
     async save(document, target, options = {}) {
       const response = await fetchImpl(`/api/curriculum/chapters/${target.masterChapterId}/document`, {
         method: "PUT",
-        headers: { "content-type": "application/json", ...(options.idempotencyKey ? { "idempotency-key": options.idempotencyKey } : {}) },
-        body: JSON.stringify({ curriculum_version_id: target.curriculumVersionId, document: upgradeSemanticDocument(document), base: options.base }),
+        headers: { "content-type": "application/json", "x-school-id": "1", ...(options.idempotencyKey ? { "idempotency-key": options.idempotencyKey } : {}) },
+        body: JSON.stringify({ school_id: 1, curriculum_version_id: target.curriculumVersionId, document: upgradeSemanticDocument(document), base: options.base }),
       });
       const json = await response.json().catch(() => ({}));
       if (!response.ok) throw new ChapterRepositoryError(json.error || "Cloud chapter save failed", json.code || "CLOUD_SAVE_FAILED", response.status, json.current);

@@ -5,7 +5,7 @@ import { imagePlacement } from "./publicationScene";
 import type jsPDF from "jspdf";
 import type { PageElement } from "../../domain/element/types";
 import type { PublicationScene, SceneNode } from "./publicationScene";
-import { artworkNodes, buildPublicationScene, textWidth } from "./publicationScene";
+import { artworkNodes, buildPublicationScene, expandSceneText, textWidth } from "./publicationScene";
 import { PUBLICATION_PALETTES } from "../../domain/educational/designTokens";
 import { toGrayHex } from "../design/contrast";
 import { textFlowScene } from "../layoutPartner/textWrapLayout";
@@ -138,10 +138,13 @@ export async function renderPublicationPdf(doc:jsPDF,scene:PublicationScene,el:P
       else if(n.kind==="path"){const commands=svgPathToPdf(n.d);if(commands.length){doc.path(commands);const filled=paintable(n.fill),stroked=paintable(n.stroke);if(filled&&stroked)doc.fillStroke();else if(filled)doc.fill();else doc.stroke();}}
       else if(n.kind==="text") {
         doc.setTextColor(...color(n.fill));doc.setFont(n.font==="serif"?"times":"helvetica",n.bold?(n.italic?"bolditalic":"bold"):(n.italic?"italic":"normal"));doc.setFontSize(n.size);
-        const width=n.textLength??textWidth(n.text,n.size,!!n.bold,n.font==="serif"),shift=n.align==="middle"?width/2:n.align==="end"?width:0;
-        const text=n.text.replaceAll("−","-"),charSpace=n.textLength!==undefined&&text.length>1?(n.textLength-doc.getTextWidth(text))/(text.length-1):(n.letterSpacing||0);
-        doc.text(text,n.x-shift,n.y,{charSpace});
-        if(n.underline||n.strike){doc.setDrawColor(...color(n.fill));doc.setLineWidth(n.size*.045);if(n.underline)doc.line(n.x-shift,n.y+n.size*.12,n.x-shift+width,n.y+n.size*.12);if(n.strike)doc.line(n.x-shift,n.y-n.size*.3,n.x-shift+width,n.y-n.size*.3);}
+        for (const line of expandSceneText(n)) {
+          if (line.kind !== "text") continue;
+          const width=line.textLength??textWidth(line.text,line.size,!!line.bold,line.font==="serif"),shift=line.align==="middle"?width/2:line.align==="end"?width:0;
+          const text=line.text.replaceAll("−","-"),charSpace=line.textLength!==undefined&&text.length>1?(line.textLength-doc.getTextWidth(text))/(text.length-1):(line.letterSpacing||0);
+          doc.text(text,line.x-shift,line.y,{charSpace});
+          if(line.underline||line.strike){doc.setDrawColor(...color(line.fill));doc.setLineWidth(line.size*.045);if(line.underline)doc.line(line.x-shift,line.y+line.size*.12,line.x-shift+width,line.y+line.size*.12);if(line.strike)doc.line(line.x-shift,line.y-line.size*.3,line.x-shift+width,line.y-line.size*.3);}
+        }
       }
       else if(n.kind==="image")doc.addImage(images.get(i)!,"PNG",n.x,n.y,n.w,n.h);
       doc.restoreGraphicsState();

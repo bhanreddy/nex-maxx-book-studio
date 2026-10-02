@@ -3,7 +3,17 @@ import {ChapterRepositoryError} from './chapterRepository';
 import {upgradeSemanticDocument} from './semanticDocument';
 import type {BookDocument,BookSnapshotDocument,ChapterLayoutDocument} from './bookSnapshots';
 export async function curriculumRequest<T>(path:string,method='GET',body?:unknown,key?:string):Promise<T>{
-  const response=await fetch(`/api/curriculum/${path}`,{method,cache:'no-store',credentials:'same-origin',headers:{'Content-Type':'application/json',...(key?{'Idempotency-Key':key}:{})},...(body?{body:JSON.stringify(body)}:{})});
+  let payload = body;
+  if (payload && typeof payload === 'object' && !Array.isArray(payload) && !('school_id' in payload)) {
+    payload = { ...(payload as Record<string, unknown>), school_id: 1 };
+  }
+  const response=await fetch(`/api/curriculum/${path}`,{
+    method,
+    cache:'no-store',
+    credentials:'same-origin',
+    headers:{'Content-Type':'application/json','x-school-id':'1',...(key?{'Idempotency-Key':key}:{})},
+    ...(payload !== undefined ? {body:JSON.stringify(payload)}:{})
+  });
   const json=await response.json().catch(()=>({}));if(!response.ok)throw new ChapterRepositoryError(json.error||'Central request failed',json.code||'CENTRAL_REQUEST_FAILED',response.status,json.current);
   if(!json.success||!json.data)throw new Error('Central request returned an invalid response');return json.data;
 }

@@ -842,6 +842,14 @@ fieldset { min-width: 0; }
 @media(prefers-reduced-motion:reduce) { .block-layout-dialog button,.curriculum-card-layouts { transition:none; } }
 
 /* Keep the existing block artwork while letting its reading area fill the frame. */
+.studio-block-content {
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+.studio-block-content :where(div, p, h1, h2, h3, h4, span, strong, small, b) {
+  min-width: 0;
+}
 .studio-block-content > :first-child {
   min-height: 100%;
   box-sizing: border-box;
