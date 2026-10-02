@@ -33,7 +33,11 @@ export type EducationalBlockCategory =
   | "concept-explanation" | "vocabulary" | "guided-practice" | "partner-activity"
   | "investigation" | "visual-reasoning" | "extension" | "self-assessment"
   | "exit-ticket" | "cross-subject" | "home-learning" | "diagram-study"
-  | "data-interpretation" | "reading-response" | "place-value" | "abacus";
+  | "data-interpretation" | "reading-response" | "place-value" | "abacus"
+  | "chapter-hero" | "mission-banner" | "curiosity-spark" | "concept-discovery" | "infographic-feature"
+  | "activity-card" | "smart-table" | "vocabulary-bank" | "fact-burst" | "concept-comparison"
+  | "mastery-rubric" | "exam-trainer" | "reflection-connect" | "writing-prompt" | "speaking-corner"
+  | "stem-challenge" | "case-study" | "grammar-guide" | "map-study" | "lab-report";
 
 export type DesignFamily =
   | "nex-future"      // Modern geometric, tech-oriented, clean grids (Math / Computing / Physics)
@@ -57,6 +61,19 @@ export type GradeBand =
   | "primary-upper"   // Grades 3 - 5
   | "middle-school"   // Grades 6 - 8
   | "secondary-plus"; // Grades 9+
+
+export type ReferenceElementKind = "exercise" | "mental" | "quick-check" | "activity" | "example" | "puzzle" | "hots" | "refresh" | "dive-in" | "example-arrow";
+export type ReferenceIcon = "check" | "book" | "target" | "bulb" | "puzzle" | "leaf" | "flask" | "globe" | "computer" | "none";
+export interface ReferenceElementStyle {
+  kind: ReferenceElementKind;
+  icon?: ReferenceIcon;
+  skillLabel?: string;
+  number?: string;
+  hint?: string;
+  answerLabel?: string;
+  answerLines?: number;
+  showBody?: boolean;
+}
 
 export interface BlockBackgroundSpec {
   type: "solid" | "gradient" | "mesh" | "card" | "bordered" | "subtle-tint" | "none";
@@ -162,6 +179,30 @@ export interface BlockMotif extends ImageTreatment {
   rawHeightPx?: number;
 }
 
+export interface LessonSchemaTopic {
+  id: string;
+  label: string;
+  icon: "number" | "book" | "leaf" | "globe" | "flask" | "computer" | "shapes" | "music" | "star";
+  color: string;
+}
+
+export interface LearningOutcomeTopic {
+  id: string;
+  verb: string;
+  text: string;
+  icon: string;
+  color: string;
+  isEmpty?: boolean;
+}
+
+export interface StudySkillTopic {
+  id: string;
+  text: string;
+  isEmpty?: boolean;
+  prefix?: string;
+  note?: string;
+}
+
 export interface SmartBlockInstance {
   id: string;                     // Unique instance UUID
   curriculum?: import("./curriculum").CurriculumMetadata;
@@ -184,6 +225,12 @@ export interface SmartBlockInstance {
     subtitle?: string;
     introText?: string;
     items?: string[];
+    /** Stable topic IDs retain empty boxes, colour and icon choices when reordered. */
+    lessonSchemaTopics?: LessonSchemaTopic[];
+    /** Stable learning outcome topics with action verb, description, custom icon and empty space support. */
+    learningOutcomeTopics?: LearningOutcomeTopic[];
+    /** Fully editable study skill rules/facts with custom empty spaces. */
+    studySkillTopics?: StudySkillTopic[];
     steps?: Array<{ stepNumber: number; title: string; body: string; tag?: string }>;
     questions?: Array<{ prompt: string; options?: string[]; answer?: string; points?: number }>;
     calloutText?: string;
@@ -194,6 +241,14 @@ export interface SmartBlockInstance {
     qrUrl?: string;
     metadata?: Record<string, unknown>;
     chapterNumber?: string;
+    badgeLabel?: string;
+    illustrationUrl?: string;
+    /** Photo kept so a chapter illustration can be restored after background removal. */
+    illustrationOriginalUrl?: string;
+    imageOffsetX?: number;
+    imageOffsetY?: number;
+    imageScale?: number;
+    imageFlipX?: boolean;
     materials?: string[];
     numberValue?: number;
     numberSystem?: "indian" | "international";
@@ -204,6 +259,7 @@ export interface SmartBlockInstance {
   styleOverrides: {
     /** Presentation-only continuation window. Canonical curriculum content stays complete. */
     sceneSlice?: { from: number; to: number };
+    referenceElement?: ReferenceElementStyle;
     themeId?: string;
     paletteId?: string;
     printMode?: "colour" | "reduced-ink" | "grayscale";
@@ -223,6 +279,9 @@ export interface SmartBlockInstance {
       border?: string;
     };
     cornerRadiusPt?: number;
+    paddingPt?: number;
+    spacingPt?: number;
+    borderWidthPt?: number;
     backgroundSpec?: Partial<BlockBackgroundSpec>;
     fontFamily?: string;
     fontSizeScale?: number; // multiplier, default 1.0

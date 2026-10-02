@@ -1,6 +1,8 @@
 "use client";
+import { selectionRoot, isElementLocked } from "../core/elementGroups";
+import {SmartQrRenderer} from "../../features/media/SmartQrRenderer";
 
-import React, { useRef, useEffect } from "react";
+import React, { useRef, useEffect, memo } from "react";
 import { useUiStore } from "../stores/uiStore";
 import { DesignBinding, PageElement } from "../../domain/element/types";
 import { LayoutView } from "../design/LayoutView";
@@ -27,6 +29,16 @@ import { PublicationSceneView } from "./PublicationSceneView";
 import { artworkNodes, ArtworkKind } from "../educational/publicationScene";
 import { PUBLICATION_PALETTES } from "../../domain/educational/designTokens";
 import { SmartBlockRenderer } from "./SmartBlockRenderer";
+import { LessonSchemaRenderer } from "./LessonSchemaRenderer";
+import { StudySkillsRenderer } from "./StudySkillsRenderer";
+import { LearningOutcomesRenderer } from "./LearningOutcomesRenderer";
+import { FactZoneRenderer } from "./FactZoneRenderer";
+import { TopicBannerRenderer } from "./TopicBannerRenderer";
+import { LifeConnectRenderer } from "./LifeConnectRenderer";
+import { UniversalBlockRenderer } from "./UniversalBlockRenderer";
+import { RichTextInlineEditor } from "./RichTextInlineEditor";
+import { FlowText } from "./FlowText";
+import { FLOW_FONT_FAMILY, isFlowText } from "../layoutPartner/textWrapLayout";
 
 interface ElementRendererProps {
   element: PageElement;
@@ -50,17 +62,164 @@ function borderStyle(style: PageElement["style"]): React.CSSProperties {
   return { borderTop: edge, borderRight: edge, borderBottom: edge, borderLeft: edge };
 }
 
-export const ElementRenderer: React.FC<ElementRendererProps> = ({
+const EditableTableCell: React.FC<{
+  initialText: string;
+  onCommit: (text: string) => void;
+}> = ({ initialText, onCommit }) => {
+  const [editing, setEditing] = React.useState(false);
+  const [val, setVal] = React.useState(initialText);
+  React.useEffect(() => setVal(initialText), [initialText]);
+
+  if (editing) {
+    return (
+      <input
+        autoFocus
+        value={val}
+        onChange={(e) => setVal(e.target.value)}
+        onBlur={() => {
+          setEditing(false);
+          if (val !== initialText) onCommit(val);
+        }}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") {
+            setEditing(false);
+            if (val !== initialText) onCommit(val);
+          }
+          if (e.key === "Escape") {
+            setVal(initialText);
+            setEditing(false);
+          }
+        }}
+        onClick={(e) => e.stopPropagation()}
+        className="w-full bg-white text-slate-900 border border-indigo-500 rounded px-1 py-0.5 text-[8pt] outline-none"
+      />
+    );
+  }
+
+  return (
+    <span
+      className="block w-full h-full cursor-text hover:bg-indigo-50/60 rounded px-0.5"
+      onDoubleClick={(e) => {
+        e.stopPropagation();
+        setEditing(true);
+      }}
+      title="Double-click to edit cell"
+    >
+      {val}
+    </span>
+  );
+};
+
+const InlineEditable: React.FC<{
+  value: string;
+  onCommit: (val: string) => void;
+  className?: string;
+  style?: React.CSSProperties;
+  placeholder?: string;
+  multiline?: boolean;
+  tag?: "span" | "div" | "p" | "strong" | "small" | "h1" | "h2" | "h3" | "h4";
+}> = ({
+  value,
+  onCommit,
+  className = "",
+  style = {},
+  placeholder = "Click to edit...",
+  multiline = false,
+  tag: Tag = "span",
+}) => {
+  const [editing, setEditing] = React.useState(false);
+  const [val, setVal] = React.useState(value || "");
+  const inputRef = React.useRef<HTMLInputElement | HTMLTextAreaElement>(null);
+
+  React.useEffect(() => {
+    setVal(value || "");
+  }, [value]);
+
+  React.useEffect(() => {
+    if (editing && inputRef.current) {
+      inputRef.current.focus();
+      inputRef.current.select();
+    }
+  }, [editing]);
+
+  const commit = () => {
+    setEditing(false);
+    if (val !== value) onCommit(val);
+  };
+
+  if (editing) {
+    if (multiline) {
+      return (
+        <textarea
+          ref={inputRef as React.RefObject<HTMLTextAreaElement>}
+          rows={Math.max(2, val.split("\n").length)}
+          value={val}
+          onChange={(e) => setVal(e.target.value)}
+          onBlur={commit}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && !e.shiftKey) {
+              e.preventDefault();
+              commit();
+            }
+            if (e.key === "Escape") {
+              setVal(value || "");
+              setEditing(false);
+            }
+          }}
+          onClick={(e) => e.stopPropagation()}
+          className={`w-full bg-white text-slate-900 border-2 border-indigo-500 rounded px-1.5 py-0.5 text-inherit font-inherit outline-none shadow-md z-30 resize-y ${className}`}
+          style={style}
+        />
+      );
+    }
+    return (
+      <input
+        ref={inputRef as React.RefObject<HTMLInputElement>}
+        type="text"
+        value={val}
+        onChange={(e) => setVal(e.target.value)}
+        onBlur={commit}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            commit();
+          }
+          if (e.key === "Escape") {
+            setVal(value || "");
+            setEditing(false);
+          }
+        }}
+        onClick={(e) => e.stopPropagation()}
+        className={`bg-white text-slate-900 border-2 border-indigo-500 rounded px-1.5 py-0.5 text-inherit font-inherit outline-none shadow-md z-30 ${className}`}
+        style={style}
+      />
+    );
+  }
+
+  return (
+    <Tag
+      className={`cursor-text hover:outline-dashed hover:outline-1 hover:outline-indigo-500/70 rounded transition-all inline-block ${className}`}
+      style={style}
+      onClick={(e) => {
+        e.stopPropagation();
+        setEditing(true);
+      }}
+      title="Click to edit"
+    >
+      {val || <span className="opacity-40 italic">{placeholder}</span>}
+    </Tag>
+  );
+};
+
+export const ElementRenderer: React.FC<ElementRendererProps> = memo(function ElementRenderer({
   element,
   isSelected = false,
   zoom = 1,
-}) => {
-  const {
-    updateElementContent,
-    addPage,
-    shuffleEducationalBlockStyle,
-    detachEducationalBlock,
-  } = useEditorStore();
+}) {
+  const updateElementContent = useEditorStore(s => s.updateElementContent);
+  const addPage = useEditorStore(s => s.addPage);
+  const shuffleEducationalBlockStyle = useEditorStore(s => s.shuffleEducationalBlockStyle);
+  const detachEducationalBlock = useEditorStore(s => s.detachEducationalBlock);
   const editingTextElementId = useUiStore(s => s.editingTextElementId);
   const setEditingTextElementId = useUiStore(s => s.setEditingTextElementId);
   const isEditingText = editingTextElementId === element.id;
@@ -74,6 +233,13 @@ export const ElementRenderer: React.FC<ElementRendererProps> = ({
   }, [isEditingText]);
 
   const { transform, style, content, type } = element;
+  const grouped = Boolean(element.groupId);
+  const locked = isElementLocked(element.id, useEditorStore.getState().elements);
+  const selectGroup = (e: React.SyntheticEvent) => {
+    if (!grouped) return;
+    e.stopPropagation();
+    useEditorStore.getState().selectElement(selectionRoot(element.id, useEditorStore.getState().elements), "shiftKey" in e && Boolean(e.shiftKey));
+  };
 
   // Base element style mapping
   const filterParts: string[] = [];
@@ -89,6 +255,7 @@ export const ElementRenderer: React.FC<ElementRendererProps> = ({
 
   const containerStyle: React.CSSProperties = {
     position: "absolute",
+    pointerEvents: type === "group" || (isFlowText(element) && !isEditingText) ? "none" : undefined,
     left: `${transform.x}pt`,
     top: `${transform.y}pt`,
     width: `${transform.width}pt`,
@@ -99,19 +266,21 @@ export const ElementRenderer: React.FC<ElementRendererProps> = ({
     borderRadius: style.borderRadius ? `${style.borderRadius}pt` : undefined,
     ...(type === "smart-block" || content.publicationPrimitive ? {} : borderStyle(style)),
     opacity: style.opacity ?? 1,
-    padding: style.padding
+    boxShadow: style.boxShadow,
+    padding: !isFlowText(element) && style.padding
       ? `${style.padding.top}pt ${style.padding.right}pt ${style.padding.bottom}pt ${style.padding.left}pt`
       : undefined,
     color: style.color || "#0f172a",
     fontSize: style.fontSize ? `${style.fontSize}pt` : undefined,
     fontWeight: style.fontWeight,
-    fontFamily: style.fontFamily,
+    fontStyle: style.fontStyle,
+    fontFamily: style.fontFamily || (isFlowText(element) ? FLOW_FONT_FAMILY : undefined),
     lineHeight: style.lineHeight,
     textAlign: style.textAlign,
     textTransform: style.textTransform,
     textDecoration: style.textDecoration,
     letterSpacing: style.letterSpacing ? `${style.letterSpacing}pt` : undefined,
-    columnCount: style.columns,
+    columnCount: isFlowText(element) ? undefined : style.columns,
     columnGap: style.columnGap ? `${style.columnGap}pt` : undefined,
     filter: cssFilter,
   };
@@ -156,23 +325,21 @@ export const ElementRenderer: React.FC<ElementRendererProps> = ({
       case "lesson-title":
       case "header":
       case "footer":
+      case "pageNumber":
+      case "page-number":
       case "sidebar":
       case "callout":
         return isEditingText ? (
-          <div
-            ref={textEditRef}
-            contentEditable
-            suppressContentEditableWarning
-            className="w-full h-full outline-none bg-white/40 rounded p-1 select-text"
-            onBlur={(e) => {
-              setIsEditingText(false);
-              updateElementContent(element.id, { text: e.currentTarget.innerText });
-            }}
-            dangerouslySetInnerHTML={{ __html: content.text || "" }}
+          <RichTextInlineEditor
+            element={element}
+            initialText={content.text || ""}
+            multiline={type === "body" || type === "body-text" || type === "quote" || type === "callout"}
+            onCommit={(text) => updateElementContent(element.id, { text })}
+            onClose={() => setIsEditingText(false)}
           />
         ) : (
           <div
-            className="w-full h-full select-none cursor-pointer overflow-hidden flex flex-col justify-center"
+            className={`w-full h-full select-none cursor-pointer ${isFlowText(element) ? "" : "overflow-hidden flex flex-col justify-center"}`}
             onDoubleClick={(e) => {
               e.stopPropagation();
               setIsEditingText(true);
@@ -183,7 +350,10 @@ export const ElementRenderer: React.FC<ElementRendererProps> = ({
                 {content.numberLabel || "CHAPTER"} {content.number}
               </span>
             )}
-            <div className="font-[inherit] leading-[inherit]">{content.text || ""}</div>
+            {isFlowText(element) ? <FlowText element={element} /> : <div
+              className="font-[inherit] leading-[inherit] break-words"
+              dangerouslySetInnerHTML={{ __html: content.text || "" }}
+            />}
             {content.subtitle && (
               <div className="text-[10pt] font-normal opacity-75 mt-0.5 leading-snug">
                 {content.subtitle}
@@ -320,16 +490,14 @@ export const ElementRenderer: React.FC<ElementRendererProps> = ({
                     {row.map((cell, cIdx) => (
                       <td
                         key={cIdx}
-                        className="p-1.5 text-slate-700 border-r border-slate-200 last:border-r-0 hover:bg-indigo-50/40 cursor-text"
-                        onDoubleClick={(e) => {
-                          e.stopPropagation();
-                          const newText = prompt("Edit cell text:", cell);
-                          if (newText !== null) {
-                            useEditorStore.getState().updateTableCell(element.id, rIdx, cIdx, newText);
-                          }
-                        }}
+                        className="p-1 text-slate-700 border-r border-slate-200 last:border-r-0 hover:bg-indigo-50/40 cursor-text"
                       >
-                        {cell}
+                        <EditableTableCell
+                          initialText={cell}
+                          onCommit={(newText) => {
+                            useEditorStore.getState().updateTableCell(element.id, rIdx, cIdx, newText);
+                          }}
+                        />
                       </td>
                     ))}
                   </tr>
@@ -411,31 +579,54 @@ export const ElementRenderer: React.FC<ElementRendererProps> = ({
       case "badge":
         return (
           <div className="w-full h-full flex items-center justify-center font-bold text-[8.5pt] tracking-wider rounded-[inherit] shadow-sm">
-            {content.text || element.displayName}
+            <InlineEditable
+              value={content.text || element.displayName}
+              onCommit={(val) => updateElementContent(element.id, { text: val })}
+              placeholder="Badge Text..."
+            />
           </div>
         );
 
       case "learningObjectives":
       case "learning-objective":
+        const loItems = content.items || ["Understand foundational principles", "Analyze key mechanisms", "Apply concepts to real-world problems"];
         return (
           <div className="w-full h-full flex flex-col justify-between rounded-[inherit] overflow-hidden">
             <div className="flex items-center justify-between pb-1 mb-1 border-b border-sky-200/80">
               <div className="flex items-center gap-1.5 text-sky-800 font-bold tracking-wider text-[8.5pt]">
                 <Target className="w-4 h-4 text-sky-600 shrink-0" />
-                <span>{content.title || "LEARNING OBJECTIVES"}</span>
+                <InlineEditable
+                  value={content.title || "LEARNING OBJECTIVES"}
+                  onCommit={(val) => updateElementContent(element.id, { title: val })}
+                  placeholder="Learning Objectives..."
+                />
               </div>
               <span className="text-[7pt] text-sky-600 font-medium bg-sky-100/70 px-1.5 py-0.5 rounded-full">
                 Outcome Checklist
               </span>
             </div>
-            <p className="text-[7.5pt] text-sky-700 italic mb-1">
-              {content.introText || "By the end of this lesson, you will be able to:"}
-            </p>
+            <div className="text-[7.5pt] text-sky-700 italic mb-1">
+              <InlineEditable
+                value={content.introText || "By the end of this lesson, you will be able to:"}
+                multiline
+                onCommit={(val) => updateElementContent(element.id, { introText: val })}
+                placeholder="Introductory text..."
+              />
+            </div>
             <ul className="space-y-1 list-none text-[8pt] text-sky-950 leading-snug flex-1">
-              {(content.items || ["Understand foundational principles", "Analyze key mechanisms", "Apply concepts to real-world problems"]).map((item: string, idx: number) => (
-                <li key={idx} className="flex items-start gap-1.5">
+              {loItems.map((item: string, idx: number) => (
+                <li key={idx} className="flex items-start gap-1.5 group/item">
                   <span className="text-emerald-600 font-bold text-[9pt] leading-none shrink-0">✓</span>
-                  <span>{item}</span>
+                  <InlineEditable
+                    value={item}
+                    onCommit={(val) => {
+                      const next = [...loItems];
+                      next[idx] = val;
+                      updateElementContent(element.id, { items: next });
+                    }}
+                    className="flex-1"
+                    placeholder="Outcome item..."
+                  />
                 </li>
               ))}
             </ul>
@@ -452,18 +643,33 @@ export const ElementRenderer: React.FC<ElementRendererProps> = ({
             <div className="flex items-center justify-between gap-1 mb-1">
               <div className="flex items-center gap-1.5 font-bold text-amber-900 text-[8.5pt]">
                 <Lightbulb className="w-4 h-4 text-amber-600 shrink-0" />
-                <span>{content.title || (type === "tip" ? "PRO TIP" : "DID YOU KNOW?")}</span>
+                <InlineEditable
+                  value={content.title || (type === "tip" ? "PRO TIP" : "DID YOU KNOW?")}
+                  onCommit={(val) => updateElementContent(element.id, { title: val })}
+                  placeholder="Callout Title..."
+                />
               </div>
               <span className="text-[6.5pt] font-mono uppercase bg-amber-200/70 text-amber-900 px-1.5 py-0.2 rounded">
                 Curiosity Spark
               </span>
             </div>
-            <p className="text-[8pt] text-amber-950 leading-relaxed font-serif italic relative z-10">
-              &ldquo;{content.body || content.text || "Fascinating curriculum insight and real-world connection."}&rdquo;
-            </p>
-            {content.footnote && (
+            <div className="text-[8pt] text-amber-950 leading-relaxed font-serif italic relative z-10">
+              &ldquo;
+              <InlineEditable
+                value={content.body || content.text || "Fascinating curriculum insight and real-world connection."}
+                multiline
+                onCommit={(val) => updateElementContent(element.id, { body: val, text: val })}
+                placeholder="Curious insight..."
+              />
+              &rdquo;
+            </div>
+            {(content.footnote || isSelected) && (
               <span className="text-[6.5pt] text-amber-700 opacity-80 mt-1 block">
-                {content.footnote}
+                <InlineEditable
+                  value={content.footnote || ""}
+                  onCommit={(val) => updateElementContent(element.id, { footnote: val })}
+                  placeholder="Footnote / source..."
+                />
               </span>
             )}
           </div>
@@ -477,26 +683,48 @@ export const ElementRenderer: React.FC<ElementRendererProps> = ({
             <div className="flex items-center justify-between gap-2 border-b border-fuchsia-200/70 pb-1 mb-1">
               <div className="flex items-center gap-1.5">
                 <Key className="w-3.5 h-3.5 text-fuchsia-600 shrink-0" />
-                <span className="font-bold text-fuchsia-900 text-[9pt] tracking-tight">
-                  {content.term || content.title || "KEY TERM"}
-                </span>
-                {content.phonetic && (
+                <InlineEditable
+                  value={content.term || content.title || "KEY TERM"}
+                  onCommit={(val) => updateElementContent(element.id, { term: val, title: val })}
+                  className="font-bold text-fuchsia-900 text-[9pt] tracking-tight"
+                  placeholder="Key term..."
+                />
+                {(content.phonetic || isSelected) && (
                   <span className="text-[7pt] font-mono text-fuchsia-600 opacity-80">
-                    /{content.phonetic}/
+                    /
+                    <InlineEditable
+                      value={content.phonetic || ""}
+                      onCommit={(val) => updateElementContent(element.id, { phonetic: val })}
+                      placeholder="phonetic"
+                    />
+                    /
                   </span>
                 )}
               </div>
               <span className="text-[6.5pt] font-semibold uppercase bg-fuchsia-100 text-fuchsia-800 px-1 rounded">
-                {content.partOfSpeech || "Vocabulary"}
+                <InlineEditable
+                  value={content.partOfSpeech || "Vocabulary"}
+                  onCommit={(val) => updateElementContent(element.id, { partOfSpeech: val })}
+                  placeholder="noun"
+                />
               </span>
             </div>
-            <p className="text-[8pt] text-fuchsia-950 leading-snug font-medium mb-1 flex-1">
-              {content.definition || content.body || "Definition of key academic term."}
-            </p>
-            {content.exampleSentence && (
+            <div className="text-[8pt] text-fuchsia-950 leading-snug font-medium mb-1 flex-1">
+              <InlineEditable
+                value={content.definition || content.body || "Definition of key academic term."}
+                multiline
+                onCommit={(val) => updateElementContent(element.id, { definition: val, body: val })}
+                placeholder="Definition of term..."
+              />
+            </div>
+            {(content.exampleSentence || isSelected) && (
               <div className="text-[7pt] text-fuchsia-800 bg-fuchsia-50/80 p-1 rounded italic">
                 <span className="font-semibold not-italic">Example: </span>
-                {content.exampleSentence}
+                <InlineEditable
+                  value={content.exampleSentence || ""}
+                  onCommit={(val) => updateElementContent(element.id, { exampleSentence: val })}
+                  placeholder="Example sentence..."
+                />
               </div>
             )}
           </div>
@@ -506,35 +734,64 @@ export const ElementRenderer: React.FC<ElementRendererProps> = ({
       case "worked-example":
       case "example":
       case "formula":
+        const weSteps = content.steps || ["1. Identify known quantities.", "2. Substitute into equation.", "3. Evaluate final numerical value."];
         return (
           <div className="w-full h-full flex flex-col justify-between rounded-[inherit] overflow-hidden">
             <div className="flex items-center justify-between border-b border-cyan-200/80 pb-1 mb-1.5">
               <div className="flex items-center gap-1.5 text-cyan-900 font-bold text-[8.5pt]">
                 <BookOpen className="w-3.5 h-3.5 text-cyan-600 shrink-0" />
-                <span>{content.title || "WORKED EXAMPLE"}</span>
+                <InlineEditable
+                  value={content.title || "WORKED EXAMPLE"}
+                  onCommit={(val) => updateElementContent(element.id, { title: val })}
+                  placeholder="Worked example title..."
+                />
               </div>
               <span className="text-[7pt] font-mono font-bold bg-cyan-100 text-cyan-800 px-1.5 py-0.5 rounded">
                 Step-by-Step
               </span>
             </div>
-            {content.problem && (
-              <p className="text-[8pt] text-cyan-950 font-semibold mb-1 leading-snug">
-                {content.problem}
-              </p>
+            {(content.problem || isSelected) && (
+              <div className="text-[8pt] text-cyan-950 font-semibold mb-1 leading-snug">
+                <InlineEditable
+                  value={content.problem || ""}
+                  multiline
+                  onCommit={(val) => updateElementContent(element.id, { problem: val })}
+                  placeholder="Problem statement..."
+                />
+              </div>
             )}
-            {content.formula && (
+            {(content.formula || isSelected) && (
               <div className="bg-cyan-100/60 text-cyan-900 font-mono text-[8pt] px-2 py-1 rounded border border-cyan-200 text-center my-0.5 font-bold">
-                {content.formula}
+                <InlineEditable
+                  value={content.formula || ""}
+                  onCommit={(val) => updateElementContent(element.id, { formula: val })}
+                  placeholder="e.g. E = mc²"
+                />
               </div>
             )}
             <div className="space-y-0.5 text-[7.5pt] text-cyan-950 mt-1">
-              {(content.steps || ["1. Identify known quantities.", "2. Substitute into equation.", "3. Evaluate final numerical value."]).map((s: string, i: number) => (
-                <div key={i} className="leading-tight">{s}</div>
+              {weSteps.map((s: string, i: number) => (
+                <div key={i} className="leading-tight">
+                  <InlineEditable
+                    value={s}
+                    onCommit={(val) => {
+                      const next = [...weSteps];
+                      next[i] = val;
+                      updateElementContent(element.id, { steps: next });
+                    }}
+                    placeholder={`Step ${i + 1}...`}
+                  />
+                </div>
               ))}
             </div>
-            {content.solution && (
+            {(content.solution || isSelected) && (
               <div className="mt-1 pt-1 border-t border-cyan-200/60 font-semibold text-[8pt] text-cyan-900">
-                Answer: {content.solution}
+                <span className="opacity-70">Answer: </span>
+                <InlineEditable
+                  value={content.solution || ""}
+                  onCommit={(val) => updateElementContent(element.id, { solution: val })}
+                  placeholder="Final solution..."
+                />
               </div>
             )}
           </div>
@@ -547,67 +804,103 @@ export const ElementRenderer: React.FC<ElementRendererProps> = ({
           <div className="w-full h-full flex flex-col justify-between rounded-[inherit]">
             <div className="flex items-center gap-1.5 font-bold text-rose-900 text-[8.5pt] mb-1">
               <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
-              <span>{content.title || (type === "warning" ? "CAUTION / WARNING" : "TEACHER NOTE")}</span>
+              <InlineEditable
+                value={content.title || (type === "warning" ? "CAUTION / WARNING" : "TEACHER NOTE")}
+                onCommit={(val) => updateElementContent(element.id, { title: val })}
+                placeholder="Callout title..."
+              />
             </div>
-            <p className="text-[8pt] text-rose-950 leading-relaxed">
-              {content.body || content.text || "Critical safety reminder, common misconception, or instructor note."}
-            </p>
+            <div className="text-[8pt] text-rose-950 leading-relaxed">
+              <InlineEditable
+                value={content.body || content.text || "Critical safety reminder, common misconception, or instructor note."}
+                multiline
+                onCommit={(val) => updateElementContent(element.id, { body: val, text: val })}
+                placeholder="Guidance text..."
+              />
+            </div>
           </div>
         );
 
       case "activity":
       case "experiment":
+        const actSteps = content.steps || [
+          "1. Gather the required experimental materials.",
+          "2. Record initial baseline observations in notebook.",
+          "3. Follow procedure carefully and draw final conclusions."
+        ];
         return (
           <div className="w-full h-full flex flex-col justify-between rounded-[inherit] overflow-hidden relative">
-            {/* Top gradient decorative bar */}
             <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-emerald-500 via-teal-400 to-emerald-600" />
-
-            {/* Header & Badges Row (Part 19) */}
             <div>
               <div className="flex items-center justify-between mb-1.5 pt-0.5">
                 <div className="flex items-center gap-1.5 font-bold text-emerald-950 text-[9pt]">
                   <Beaker className="w-4 h-4 text-emerald-600 shrink-0" />
-                  <span>{content.title || "HANDS-ON ACTIVITY"}</span>
+                  <InlineEditable
+                    value={content.title || "HANDS-ON ACTIVITY"}
+                    onCommit={(val) => updateElementContent(element.id, { title: val })}
+                    placeholder="Activity title..."
+                  />
                 </div>
-                {content.numberBadge && (
+                {(content.numberBadge || isSelected) && (
                   <span className="text-[7pt] font-mono font-bold bg-emerald-600 text-white px-1.5 py-0.5 rounded">
-                    {content.numberBadge}
+                    <InlineEditable
+                      value={content.numberBadge || "LAB 01"}
+                      onCommit={(val) => updateElementContent(element.id, { numberBadge: val })}
+                      placeholder="LAB 01"
+                    />
                   </span>
                 )}
               </div>
-
-              {/* Metadata Badges Row */}
               <div className="flex flex-wrap items-center gap-1 mb-1.5 text-[6.5pt] font-medium text-emerald-800">
                 <span className="inline-flex items-center gap-0.5 bg-emerald-100/80 px-1.5 py-0.5 rounded">
                   <Clock className="w-2.5 h-2.5" />
-                  <span>{content.duration || "15 min"}</span>
+                  <InlineEditable
+                    value={content.duration || "15 min"}
+                    onCommit={(val) => updateElementContent(element.id, { duration: val })}
+                    placeholder="15 min"
+                  />
                 </span>
                 <span className="inline-flex items-center gap-0.5 bg-emerald-100/80 px-1.5 py-0.5 rounded">
                   <Award className="w-2.5 h-2.5" />
-                  <span>{content.difficulty || "Easy"}</span>
+                  <InlineEditable
+                    value={content.difficulty || "Easy"}
+                    onCommit={(val) => updateElementContent(element.id, { difficulty: val })}
+                    placeholder="Easy"
+                  />
                 </span>
                 <span className="inline-flex items-center gap-0.5 bg-emerald-100/80 px-1.5 py-0.5 rounded">
                   <Users className="w-2.5 h-2.5" />
-                  <span>{content.groupType || "Individual"}</span>
+                  <InlineEditable
+                    value={content.groupType || "Individual"}
+                    onCommit={(val) => updateElementContent(element.id, { groupType: val })}
+                    placeholder="Pairs"
+                  />
                 </span>
               </div>
-
-              {content.materials && (
+              {(content.materials || isSelected) && (
                 <div className="text-[7.5pt] text-emerald-900 bg-emerald-50/70 p-1 rounded border border-emerald-200/50 mb-1">
                   <span className="font-semibold">Materials: </span>
-                  {content.materials}
+                  <InlineEditable
+                    value={content.materials || ""}
+                    onCommit={(val) => updateElementContent(element.id, { materials: val })}
+                    placeholder="List required materials..."
+                  />
                 </div>
               )}
             </div>
-
-            {/* Step-by-step instructions */}
             <div className="space-y-0.5 text-[8pt] text-emerald-950 flex-1 overflow-hidden">
-              {(content.steps || [
-                "1. Gather the required experimental materials.",
-                "2. Record initial baseline observations in notebook.",
-                "3. Follow procedure carefully and draw final conclusions."
-              ]).map((step: string, i: number) => (
-                <div key={i} className="leading-snug">{step}</div>
+              {actSteps.map((step: string, i: number) => (
+                <div key={i} className="leading-snug">
+                  <InlineEditable
+                    value={step}
+                    onCommit={(val) => {
+                      const next = [...actSteps];
+                      next[i] = val;
+                      updateElementContent(element.id, { steps: next });
+                    }}
+                    placeholder={`Step ${i + 1}...`}
+                  />
+                </div>
               ))}
             </div>
           </div>
@@ -615,26 +908,39 @@ export const ElementRenderer: React.FC<ElementRendererProps> = ({
 
       case "summary":
       case "revision":
+        const sumItems = content.items || [
+          "Fundamental concept successfully established.",
+          "Key equations and variables defined.",
+          "Real-world application validated."
+        ];
         return (
           <div className="w-full h-full flex flex-col justify-between rounded-[inherit]">
             <div className="flex items-center justify-between gap-2 border-b border-emerald-200 pb-1 mb-1.5 text-slate-900 font-bold text-[9pt]">
               <div className="flex items-center gap-1.5">
                 <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                <span>{content.title || (type === "revision" ? "CHAPTER REVISION" : "LESSON SUMMARY")}</span>
+                <InlineEditable
+                  value={content.title || (type === "revision" ? "CHAPTER REVISION" : "LESSON SUMMARY")}
+                  onCommit={(val) => updateElementContent(element.id, { title: val })}
+                  placeholder="Summary title..."
+                />
               </div>
               <span className="text-[7pt] font-mono text-emerald-700 bg-emerald-100 px-1.5 py-0.2 rounded font-semibold">
                 Core Takeaways
               </span>
             </div>
             <div className="space-y-1 text-[8pt] text-slate-700 flex-1">
-              {(content.items || [
-                "Fundamental concept successfully established.",
-                "Key equations and variables defined.",
-                "Real-world application validated."
-              ]).map((item: string, i: number) => (
+              {sumItems.map((item: string, i: number) => (
                 <div key={i} className="flex items-start gap-1.5">
                   <span className="text-emerald-500 font-bold shrink-0">✓</span>
-                  <span>{item}</span>
+                  <InlineEditable
+                    value={item}
+                    onCommit={(val) => {
+                      const next = [...sumItems];
+                      next[i] = val;
+                      updateElementContent(element.id, { items: next });
+                    }}
+                    placeholder={`Takeaway ${i + 1}...`}
+                  />
                 </div>
               ))}
             </div>
@@ -642,16 +948,28 @@ export const ElementRenderer: React.FC<ElementRendererProps> = ({
         );
 
       case "mcq":
+        const mcqOptions = content.options || ["Option A", "Option B", "Option C", "Option D"];
         return (
           <div className="w-full h-full flex flex-col justify-between text-slate-800">
             <div className="font-semibold text-[8.5pt] mb-1.5 flex items-start gap-1.5">
               <span className="px-1.5 py-0.5 rounded bg-indigo-100 text-indigo-700 text-[7.5pt] font-bold">
-                {content.questionNumber || "Q"}
+                <InlineEditable
+                  value={content.questionNumber || "Q"}
+                  onCommit={(val) => updateElementContent(element.id, { questionNumber: val })}
+                  placeholder="Q1"
+                />
               </span>
-              <span>{content.questionText}</span>
+              <div className="flex-1">
+                <InlineEditable
+                  value={content.questionText || "Multiple choice question prompt..."}
+                  multiline
+                  onCommit={(val) => updateElementContent(element.id, { questionText: val })}
+                  placeholder="Question prompt..."
+                />
+              </div>
             </div>
             <div className="grid grid-cols-2 gap-1 text-[8pt]">
-              {(content.options || []).map((opt: string, i: number) => (
+              {mcqOptions.map((opt: string, i: number) => (
                 <div
                   key={i}
                   className={`p-1.5 rounded border ${
@@ -660,7 +978,15 @@ export const ElementRenderer: React.FC<ElementRendererProps> = ({
                       : "border-slate-200 bg-slate-50 text-slate-700"
                   }`}
                 >
-                  {opt}
+                  <InlineEditable
+                    value={opt}
+                    onCommit={(val) => {
+                      const next = [...mcqOptions];
+                      next[i] = val;
+                      updateElementContent(element.id, { options: next });
+                    }}
+                    placeholder={`Option ${i + 1}...`}
+                  />
                 </div>
               ))}
             </div>
@@ -676,20 +1002,31 @@ export const ElementRenderer: React.FC<ElementRendererProps> = ({
         return (
           <div className="w-full h-full flex flex-col justify-between rounded-[inherit] overflow-hidden">
             <div>
-              {/* Question Header: Number, Marks, Bloom */}
               <div className="flex items-center justify-between gap-1 mb-1">
                 <div className="flex items-center gap-1.5">
                   <span className="px-1.5 py-0.5 rounded bg-amber-500 text-white text-[7.5pt] font-mono font-bold">
-                    {content.questionNumber || "Q1"}
+                    <InlineEditable
+                      value={content.questionNumber || "Q1"}
+                      onCommit={(val) => updateElementContent(element.id, { questionNumber: val })}
+                      placeholder="Q1"
+                    />
                   </span>
                   <span className="text-[7pt] font-semibold text-slate-500 uppercase tracking-wide">
-                    {content.category || "Subjective"}
+                    <InlineEditable
+                      value={content.category || "Subjective"}
+                      onCommit={(val) => updateElementContent(element.id, { category: val })}
+                      placeholder="Subjective"
+                    />
                   </span>
                 </div>
                 <div className="flex items-center gap-1">
-                  {content.bloomLevel && (
+                  {(content.bloomLevel || isSelected) && (
                     <span className="text-[6.5pt] font-medium bg-purple-100 text-purple-800 px-1.5 py-0.5 rounded">
-                      {content.bloomLevel}
+                      <InlineEditable
+                        value={content.bloomLevel || "Apply"}
+                        onCommit={(val) => updateElementContent(element.id, { bloomLevel: val })}
+                        placeholder="Apply"
+                      />
                     </span>
                   )}
                   <span className="text-[7pt] font-bold text-amber-700 bg-amber-100 px-1.5 py-0.5 rounded">
@@ -698,23 +1035,30 @@ export const ElementRenderer: React.FC<ElementRendererProps> = ({
                 </div>
               </div>
 
-              {/* Question Text */}
-              <p className="text-[8.5pt] text-slate-900 font-semibold leading-snug mb-1.5">
-                {content.questionText || content.text || "Explain the significance of this concept and justify with evidence."}
-              </p>
+              <div className="text-[8.5pt] text-slate-900 font-semibold leading-snug mb-1.5">
+                <InlineEditable
+                  value={content.questionText || content.text || "Explain the significance of this concept and justify with evidence."}
+                  multiline
+                  onCommit={(val) => updateElementContent(element.id, { questionText: val, text: val })}
+                  placeholder="Question text..."
+                />
+              </div>
 
-              {content.hint && (
+              {(content.hint || isSelected) && (
                 <div className="text-[7pt] text-amber-800 bg-amber-50/80 p-1 rounded border border-amber-200/50 mb-1 italic">
                   <span className="font-semibold not-italic">💡 Hint: </span>
-                  {content.hint}
+                  <InlineEditable
+                    value={content.hint || ""}
+                    onCommit={(val) => updateElementContent(element.id, { hint: val })}
+                    placeholder="Add a helpful hint..."
+                  />
                 </div>
               )}
             </div>
 
-            {/* Structured Answer Space */}
             <div className="flex-1 flex flex-col justify-around my-1 pt-1 border-t border-slate-200/80">
               {Array.from({ length: lineCount }).map((_, idx) => (
-                <div key={idx} className="w-full border-b border-slate-300 border-dashed h-4" />
+                <div key={idx} className="w-full flex-1 min-h-[14px] flex items-end border-b border-slate-300 border-dashed" />
               ))}
             </div>
 
@@ -725,16 +1069,26 @@ export const ElementRenderer: React.FC<ElementRendererProps> = ({
         );
 
       case "answer-area":
-        const answerLines = content.lineCount || 6;
+        const ansLines = content.lineCount || 6;
         return (
           <div className="w-full h-full flex flex-col justify-between rounded-[inherit] border border-slate-300/80 bg-slate-50/40 p-2">
             <div className="flex items-center justify-between text-[7pt] font-semibold text-slate-500 uppercase tracking-wider mb-1">
-              <span>{content.title || "STUDENT ANSWER SPACE"}</span>
-              <span className="font-mono text-[6.5pt]">{content.rubric || "Write clearly within this boundary"}</span>
+              <InlineEditable
+                value={content.title || "STUDENT ANSWER SPACE"}
+                onCommit={(val) => updateElementContent(element.id, { title: val })}
+                placeholder="Workspace title..."
+              />
+              <span className="font-mono text-[6.5pt]">
+                <InlineEditable
+                  value={content.rubric || "Write clearly within this boundary"}
+                  onCommit={(val) => updateElementContent(element.id, { rubric: val })}
+                  placeholder="Instructions..."
+                />
+              </span>
             </div>
             <div className="flex-1 flex flex-col justify-around py-0.5">
-              {Array.from({ length: answerLines }).map((_, idx) => (
-                <div key={idx} className="w-full border-b border-slate-300/80 h-4" />
+              {Array.from({ length: ansLines }).map((_, idx) => (
+                <div key={idx} className="w-full flex-1 min-h-[14px] flex items-end border-b border-slate-300/80" />
               ))}
             </div>
           </div>
@@ -749,21 +1103,49 @@ export const ElementRenderer: React.FC<ElementRendererProps> = ({
         return (
           <div className="w-full h-full flex flex-col justify-between rounded-[inherit] p-2 bg-white">
             <div className="font-bold text-[8.5pt] text-slate-800 mb-1 border-b border-slate-200 pb-0.5 flex items-center gap-1.5">
-              <span>{content.title || "CHRONOLOGICAL TIMELINE"}</span>
+              <InlineEditable
+                value={content.title || "CHRONOLOGICAL TIMELINE"}
+                onCommit={(val) => updateElementContent(element.id, { title: val })}
+                placeholder="Timeline title..."
+              />
             </div>
             <div className="flex-1 flex items-center justify-between relative px-2">
               <div className="absolute left-4 right-4 top-1/2 -translate-y-1/2 h-0.5 bg-indigo-200" />
               {timelineEvents.map((evt: { year?: string; title?: string; desc?: string }, idx: number) => (
                 <div key={idx} className="relative z-10 flex flex-col items-center text-center max-w-[30%]">
                   <span className="text-[7pt] font-mono font-bold bg-indigo-600 text-white px-1.5 py-0.5 rounded-full mb-1">
-                    {evt.year}
+                    <InlineEditable
+                      value={evt.year || ""}
+                      onCommit={(val) => {
+                        const next = [...timelineEvents];
+                        next[idx] = { ...next[idx], year: val };
+                        updateElementContent(element.id, { events: next });
+                      }}
+                      placeholder={`Y${idx + 1}`}
+                    />
                   </span>
-                  <span className="text-[7.5pt] font-bold text-slate-900 leading-tight">
-                    {evt.title}
-                  </span>
-                  <span className="text-[6.5pt] text-slate-500 leading-tight mt-0.5">
-                    {evt.desc}
-                  </span>
+                  <div className="text-[7.5pt] font-bold text-slate-900 leading-tight">
+                    <InlineEditable
+                      value={evt.title || ""}
+                      onCommit={(val) => {
+                        const next = [...timelineEvents];
+                        next[idx] = { ...next[idx], title: val };
+                        updateElementContent(element.id, { events: next });
+                      }}
+                      placeholder="Event title..."
+                    />
+                  </div>
+                  <div className="text-[6.5pt] text-slate-500 leading-tight mt-0.5">
+                    <InlineEditable
+                      value={evt.desc || ""}
+                      onCommit={(val) => {
+                        const next = [...timelineEvents];
+                        next[idx] = { ...next[idx], desc: val };
+                        updateElementContent(element.id, { events: next });
+                      }}
+                      placeholder="Event description..."
+                    />
+                  </div>
                 </div>
               ))}
             </div>
@@ -773,9 +1155,17 @@ export const ElementRenderer: React.FC<ElementRendererProps> = ({
       case "page-number":
         return (
           <div className="w-full h-full flex items-center justify-between text-slate-500 text-[8pt] font-mono select-none px-2">
-            <span>{content.chapterTitle || "NEX MAXX Book Studio"}</span>
+            <InlineEditable
+              value={content.chapterTitle || "NEX MAXX Book Studio"}
+              onCommit={(val) => updateElementContent(element.id, { chapterTitle: val })}
+              placeholder="Header title..."
+            />
             <span className="font-bold text-slate-800 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
-              {content.pageNumber || 1}
+              <InlineEditable
+                value={String(content.pageNumber || 1)}
+                onCommit={(val) => updateElementContent(element.id, { pageNumber: Number(val) || 1 })}
+                placeholder="1"
+              />
             </span>
           </div>
         );
@@ -785,25 +1175,39 @@ export const ElementRenderer: React.FC<ElementRendererProps> = ({
           <div className="w-full h-full flex items-center justify-between text-[8.5pt]">
             <div className="flex items-center gap-2 w-full">
               <span className="px-1.5 py-0.5 rounded bg-indigo-100 text-indigo-700 text-[7.5pt] font-bold">
-                {content.questionNumber || "Q"}
+                <InlineEditable
+                  value={content.questionNumber || "Q"}
+                  onCommit={(val) => updateElementContent(element.id, { questionNumber: val })}
+                  placeholder="Q"
+                />
               </span>
-              <span className="text-slate-800 font-medium">{content.sentence}</span>
+              <div className="text-slate-800 font-medium flex-1">
+                <InlineEditable
+                  value={content.sentence || "Fill in the blank sentence..."}
+                  onCommit={(val) => updateElementContent(element.id, { sentence: val })}
+                  placeholder="Sentence with ___ blanks..."
+                />
+              </div>
             </div>
           </div>
         );
 
       case "writingLines":
-        const lines = Array.from({ length: content.lineCount || 4 });
+        const wlLines = Array.from({ length: content.lineCount || 4 });
         return (
           <div className="w-full h-full flex flex-col justify-between py-1">
-            {content.samplePrompt && (
+            {(content.samplePrompt || isSelected) && (
               <p className="text-[7.5pt] text-slate-600 mb-1 font-medium italic">
-                {content.samplePrompt}
+                <InlineEditable
+                  value={content.samplePrompt || ""}
+                  onCommit={(val) => updateElementContent(element.id, { samplePrompt: val })}
+                  placeholder="Handwriting prompt..."
+                />
               </p>
             )}
-            <div className="flex-1 flex flex-col justify-around">
-              {lines.map((_, i) => (
-                <div key={i} className="relative w-full h-[18pt] flex flex-col justify-between">
+            <div className="flex-1 flex flex-col justify-around gap-1">
+              {wlLines.map((_, i) => (
+                <div key={i} className="relative w-full flex-1 min-h-[18pt] flex flex-col justify-between">
                   <div className="w-full border-t border-sky-300 border-dashed" />
                   <div className="w-full border-t border-rose-300" />
                   <div className="w-full border-t border-sky-400" />
@@ -817,14 +1221,25 @@ export const ElementRenderer: React.FC<ElementRendererProps> = ({
         return (
           <div className="w-full h-full flex flex-col items-center justify-center text-center p-2">
             <Square className="w-6 h-6 text-stone-400 mb-1 stroke-1" />
-            <span className="font-semibold text-stone-700 text-[8pt]">{content.title}</span>
-            <p className="text-[7pt] text-stone-500 mt-1 max-w-[90%] leading-tight">
-              {content.prompt}
-            </p>
+            <InlineEditable
+              value={content.title || "DRAWING BOX"}
+              onCommit={(val) => updateElementContent(element.id, { title: val })}
+              className="font-semibold text-stone-700 text-[8pt]"
+              placeholder="Drawing Box Title..."
+            />
+            <div className="text-[7pt] text-stone-500 mt-1 max-w-[90%] leading-tight">
+              <InlineEditable
+                value={content.prompt || "Draw your observation here..."}
+                multiline
+                onCommit={(val) => updateElementContent(element.id, { prompt: val })}
+                placeholder="Sketch prompt..."
+              />
+            </div>
           </div>
         );
 
-
+      case "smart-media-qr":
+        return <SmartQrRenderer element={element}/>;
       case "qrCode":
         return (
           <div className="w-full h-full flex flex-col items-center justify-center p-1.5 text-center">
@@ -832,26 +1247,40 @@ export const ElementRenderer: React.FC<ElementRendererProps> = ({
               <QrIcon className="w-10 h-10 text-sky-800" />
             </div>
             <span className="text-[6pt] font-bold text-sky-900 leading-tight">
-              {content.label || "SCAN FOR MEDIA"}
+              <InlineEditable
+                value={content.label || "SCAN FOR MEDIA"}
+                onCommit={(val) => updateElementContent(element.id, { label: val })}
+                placeholder="Scan prompt..."
+              />
             </span>
           </div>
         );
 
       case "comparison":
+        const compHeaders: string[] = content.headers || ["Criteria", "Concept A", "Concept B"];
+        const compRows: string[][] = content.rows || [["Feature 1", "Detail A", "Detail B"]];
         return (
           <div className="w-full h-full flex flex-col overflow-hidden">
             <table className="w-full h-full border-collapse text-[7.5pt]">
               <thead>
                 <tr className="bg-slate-100 text-slate-800 font-semibold border-b border-slate-300">
-                  {(content.headers || []).map((h: string, idx: number) => (
+                  {compHeaders.map((h: string, idx: number) => (
                     <th key={idx} className="p-1 text-left">
-                      {h}
+                      <InlineEditable
+                        value={h}
+                        onCommit={(val) => {
+                          const next = [...compHeaders];
+                          next[idx] = val;
+                          updateElementContent(element.id, { headers: next });
+                        }}
+                        placeholder={`Header ${idx + 1}`}
+                      />
                     </th>
                   ))}
                 </tr>
               </thead>
               <tbody>
-                {(content.rows || []).map((row: string[], rIdx: number) => (
+                {compRows.map((row: string[], rIdx: number) => (
                   <tr
                     key={rIdx}
                     className={`border-b border-slate-200 ${
@@ -860,7 +1289,16 @@ export const ElementRenderer: React.FC<ElementRendererProps> = ({
                   >
                     {row.map((cell: string, cIdx: number) => (
                       <td key={cIdx} className="p-1 text-slate-700">
-                        {cell}
+                        <InlineEditable
+                          value={cell}
+                          onCommit={(val) => {
+                            const next = compRows.map((r, ri) =>
+                              ri === rIdx ? r.map((c, ci) => (ci === cIdx ? val : c)) : r
+                            );
+                            updateElementContent(element.id, { rows: next });
+                          }}
+                          placeholder={`Cell (${rIdx + 1}, ${cIdx + 1})`}
+                        />
                       </td>
                     ))}
                   </tr>
@@ -870,15 +1308,55 @@ export const ElementRenderer: React.FC<ElementRendererProps> = ({
           </div>
         );
 
+      case "group":
+        return null;
+
       case "divider":
         return <div className="w-full h-full rounded-[inherit] bg-emerald-600" />;
 
       case "smart-block":
         if (element.smartBlockData) {
-          if(element.smartBlockData.curriculum || element.smartBlockData.presetId.startsWith("atelier-") || element.smartBlockData.presetId.startsWith("studio-")) return <PublicationSceneView scene={buildPublicationScene({...element.smartBlockData,transform:element.transform})} label={`${element.smartBlockData.semanticContent.title} educational block`}/>;
+          if (element.smartBlockData.styleOverrides.referenceElement) return <PublicationSceneView scene={buildPublicationScene({ ...element.smartBlockData, transform: element.transform })} label={element.smartBlockData.semanticContent.title}/>;
+          if (element.smartBlockData.curriculum?.type === "lesson-schema") {
+            return <LessonSchemaRenderer block={{ ...element.smartBlockData, transform: element.transform }} elementId={element.id} selected={isSelected} locked={element.locked}/>;
+          }
+          if (element.smartBlockData.curriculum?.type === "study-skills") {
+            return <StudySkillsRenderer block={{ ...element.smartBlockData, transform: element.transform }} elementId={element.id} selected={isSelected} locked={element.locked}/>;
+          }
+          if (element.smartBlockData.curriculum?.type === "learning-outcomes" || element.smartBlockData.curriculum?.type === "learning-mission") {
+            return <LearningOutcomesRenderer block={{ ...element.smartBlockData, transform: element.transform }} elementId={element.id} selected={isSelected} locked={element.locked}/>;
+          }
+          if (element.smartBlockData.curriculum?.type === "fact-zone") {
+            return <FactZoneRenderer block={{ ...element.smartBlockData, transform: element.transform }} elementId={element.id} selected={isSelected} locked={element.locked}/>;
+          }
+          if (element.smartBlockData.curriculum?.type === "topic-banner") {
+            return <TopicBannerRenderer block={{ ...element.smartBlockData, transform: element.transform }} elementId={element.id} selected={isSelected} locked={element.locked}/>;
+          }
+          if (element.smartBlockData.curriculum?.type === "life-connect") {
+            return <LifeConnectRenderer block={{ ...element.smartBlockData, transform: element.transform }} elementId={element.id} selected={isSelected} locked={element.locked}/>;
+          }
+          if (element.smartBlockData.curriculum) {
+            return (
+              <UniversalBlockRenderer
+                block={{ ...element.smartBlockData, transform: element.transform }}
+                isSelected={isSelected}
+                zoom={zoom}
+                onExploreStyles={() => shuffleEducationalBlockStyle(element.id)}
+                onDetach={() => detachEducationalBlock(element.id)}
+              />
+            );
+          }
+          if (element.smartBlockData.presetId.startsWith("atelier-") || element.smartBlockData.presetId.startsWith("studio-")) {
+            return (
+              <PublicationSceneView
+                scene={buildPublicationScene({ ...element.smartBlockData, transform: element.transform })}
+                label={`${element.smartBlockData.semanticContent.title} educational block`}
+              />
+            );
+          }
           return (
             <SmartBlockRenderer
-              block={{...element.smartBlockData, transform: element.transform}}
+              block={{ ...element.smartBlockData, transform: element.transform }}
               isSelected={isSelected}
               zoom={zoom}
               onExploreStyles={() => shuffleEducationalBlockStyle(element.id)}
@@ -917,10 +1395,12 @@ export const ElementRenderer: React.FC<ElementRendererProps> = ({
       }}
       style={containerStyle}
       className={`group select-none transition-shadow ${
-        element.locked ? "pointer-events-none" : ""
+        ""
       }`}
     >
-      {renderContent()}
+      {grouped ? <div className="w-full h-full relative" onClickCapture={selectGroup} onDoubleClickCapture={selectGroup} onMouseDownCapture={selectGroup}>
+        <div className="w-full h-full pointer-events-none">{renderContent()}</div>
+      </div> : <div className={`w-full h-full ${locked ? "pointer-events-none" : ""}`}>{renderContent()}</div>}
 
       {/* Review Comments Badge Indicator */}
       {element.comments && element.comments.length > 0 && (
@@ -955,4 +1435,4 @@ export const ElementRenderer: React.FC<ElementRendererProps> = ({
       )}
     </div>
   );
-};
+});

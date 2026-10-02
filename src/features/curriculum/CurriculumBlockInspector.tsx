@@ -33,6 +33,7 @@ import {
   splitCurriculumBlock,
   unlockCurriculumLayers,
   editFramework,
+  setFrameworkMode,
 } from "../../editor/curriculum/actions";
 import { PUBLICATION_PALETTES } from "../../domain/educational/designTokens";
 import { buildPublicationScene } from "../../editor/educational/publicationScene";
@@ -44,6 +45,15 @@ import { CurriculumAiAssist } from "./CurriculumAiAssist";
 import { BlockLayoutDialog } from "./BlockLayoutDialog";
 import { BLOCK_STYLES } from "../../editor/curriculum/layoutSystem";
 import type { CurriculumLayout } from "../../domain/educational/curriculum";
+import { LessonSchemaTopicEditor } from "./LessonSchemaTopicEditor";
+import { schemaTopics } from "../../editor/curriculum/lessonSchema";
+import { StudySkillsTopicEditor } from "./StudySkillsTopicEditor";
+import { studySkillTopics } from "../../editor/curriculum/studySkills";
+import { LearningOutcomesTopicEditor } from "./LearningOutcomesTopicEditor";
+import { learningOutcomeTopics } from "../../editor/curriculum/learningOutcomes";
+import { SIGNATURE_SUBJECT_PRESETS } from "../../editor/curriculum/signatureElements";
+import { applySignatureElementsToChapter } from "../../editor/curriculum/applySignatureElements";
+import { ReferenceElementControls } from "./ReferenceElementControls";
 import { stageName } from "../../editor/curriculum/frameworkPlan";
 
 function ContentField({
@@ -71,9 +81,9 @@ function ContentField({
 
   return (
     <label className="curriculum-field">
-      <div className="flex justify-between items-center text-[11px] font-semibold text-slate-200">
+      <div className="flex justify-between items-center text-[11px] font-semibold text-slate-700 dark:text-slate-200">
         <span>{label}</span>
-        {helper && <span className="text-[10px] text-slate-400 font-normal">{helper}</span>}
+        {helper && <span className="text-[10px] text-slate-500 dark:text-slate-400 font-normal">{helper}</span>}
       </div>
       {multiline ? (
         <textarea
@@ -105,6 +115,13 @@ export function CurriculumBlockInspector({ element }: { element: PageElement }) 
   const source = curriculumSource(element) || element.smartBlockData!;
   const def = CURRICULUM_BLOCK_MAP[source.curriculum!.type];
   const c = source.semanticContent;
+  const isSchema = source.curriculum?.type === "lesson-schema";
+  const isStudySkills = source.curriculum?.type === "study-skills";
+  const isLearningOutcomes = source.curriculum?.type === "learning-outcomes";
+  const isTopicBanner = source.curriculum?.type === "topic-banner";
+  const isFactZone = source.curriculum?.type === "fact-zone";
+  const isLifeConnect = source.curriculum?.type === "life-connect";
+  const isSignature = isTopicBanner || isFactZone || isLifeConnect;
   const o = source.styleOverrides;
   const [tab, setTab] = useState<"content" | "layout" | "design">("content");
   const [previewLayout, setPreviewLayout] = useState<CurriculumLayout | null>(null);
@@ -113,7 +130,7 @@ export function CurriculumBlockInspector({ element }: { element: PageElement }) 
   const [convertSearch, setConvertSearch] = useState("");
 
   const book = useEditorStore(s => s.getActiveBook());
-  const chapter = book?.chapters.find(ch => ch.id === source.curriculum?.chapterId);
+  const chapter = book?.chapters.find(ch => ch.id === source.curriculum?.chapterId || ch.id === book.pages.find(p => p.id === element.pageId)?.chapterId || ch.pageIds.includes(element.pageId));
 
   const edit = (description: string, fn: (block: SmartBlockInstance) => SmartBlockInstance) =>
     editCurriculumBlock(element, description, fn);
@@ -138,7 +155,7 @@ export function CurriculumBlockInspector({ element }: { element: PageElement }) 
           <span className="curriculum-stage-tag is-inspector">
             {stage.toUpperCase()} · CLASS {source.curriculum!.grade} · {source.curriculum!.subjectLabel}
           </span>
-          <span className="text-[10px] text-slate-400 font-mono">
+          <span className="text-[10px] text-slate-500 dark:text-slate-400 font-mono">
             Pg {page?.displayNumber || "1"}
           </span>
         </div>
@@ -146,11 +163,11 @@ export function CurriculumBlockInspector({ element }: { element: PageElement }) 
         <p className="curriculum-inspector-lead">{def.purpose}</p>
 
         <div className="curriculum-location-banner" role="status">
-          <div className="flex items-center gap-1.5 text-slate-300 text-[11px] font-medium">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+          <div className="flex items-center gap-1.5 text-amber-900 dark:text-amber-200 text-[11px] font-medium">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
             <span>On Page {page?.displayNumber || "1"}{chapter ? ` of “${chapter.title}”` : ""}</span>
           </div>
-          <p className="text-[10.5px] text-slate-400 mt-0.5">
+          <p className="text-[10.5px] text-amber-800/80 dark:text-amber-200/70 mt-0.5">
             {source.isLockedDesign
               ? "Structured layout · text and questions flow safely across pages."
               : "Design mode · freely drag, resize and rotate on the page."}
@@ -173,11 +190,11 @@ export function CurriculumBlockInspector({ element }: { element: PageElement }) 
           <span>Shuffle look</span>
         </button>
         <button onClick={() => duplicateCurriculumBlock(element)} title="Duplicate this block">
-          <Copy size={13} className="text-slate-300" />
+          <Copy size={13} className="text-slate-500 dark:text-slate-300" />
           <span>Duplicate</span>
         </button>
         <button disabled={!canEdit} onClick={() => setConvertOpen(!convertOpen)} aria-expanded={convertOpen} title="Change element type">
-          <ArrowRight size={13} className="text-slate-300" />
+          <ArrowRight size={13} className="text-slate-500 dark:text-slate-300" />
           <span>Convert</span>
           <ChevronDown size={11} className="opacity-60 ml-auto" />
         </button>
@@ -186,7 +203,7 @@ export function CurriculumBlockInspector({ element }: { element: PageElement }) 
           <span>✦ AI Draft</span>
         </button>
         <button onClick={() => useEditorStore.getState().toggleLockElement(element.id)} title={element.locked ? "Unlock element" : "Lock element"}>
-          {element.locked ? <Unlock size={13} className="text-amber-400" /> : <Lock size={13} className="text-slate-400" />}
+          {element.locked ? <Unlock size={13} className="text-amber-500" /> : <Lock size={13} className="text-slate-500 dark:text-slate-400" />}
           <span>{element.locked ? "Unlock" : "Lock"}</span>
         </button>
         <button
@@ -207,10 +224,10 @@ export function CurriculumBlockInspector({ element }: { element: PageElement }) 
       {/* Convert Element Modal / Dropdown */}
       {convertOpen && (
         <div className="curriculum-convert animate-fadeIn">
-          <div className="text-[11px] font-semibold text-white mb-1.5 flex justify-between items-center">
+          <div className="text-[11px] font-semibold text-slate-800 dark:text-white mb-1.5 flex justify-between items-center">
             <span>Change to another element</span>
             <button
-              className="text-slate-400 hover:text-white"
+              className="text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white"
               onClick={() => setConvertOpen(false)}
               aria-label="Close convert options"
             >
@@ -292,45 +309,299 @@ export function CurriculumBlockInspector({ element }: { element: PageElement }) 
       {tab === "content" ? (
         <fieldset disabled={!canEdit} className="space-y-3.5">
           <ContentField label="Title" value={c.title} onSave={title => content({ title })} />
-          <ContentField label="Section badge" value={c.unitBadge} onSave={unitBadge => content({ unitBadge })} />
-          <ContentField
-            label="Subtitle / Prompt"
-            value={c.subtitle}
-            multiline
-            onSave={subtitle => content({ subtitle })}
-            placeholder="Add an encouraging subtitle or question..."
-          />
-          <ContentField
-            label="Concept / Teaching explanation"
-            value={c.introText}
-            multiline
-            onSave={introText => content({ introText })}
-            placeholder="Write the concept in simple, clear teaching language..."
-          />
-          <ContentField
-            label="Key takeaway / Remember"
-            value={c.calloutText}
-            multiline
-            onSave={calloutText => content({ calloutText })}
-            placeholder="Highlight the key learning rule or takeaway..."
-          />
-          {c.chapterNumber !== undefined && (
-            <ContentField label="Chapter number" value={c.chapterNumber} onSave={chapterNumber => content({ chapterNumber })} />
-          )}
+          {isStudySkills ? (
+            <>
+              <ContentField
+                label="Badge Title"
+                value={c.badgeLabel || c.title || "STUDY SKILLS"}
+                onSave={badgeLabel => content({ badgeLabel, title: badgeLabel })}
+                placeholder="STUDY SKILLS"
+              />
+              <StudySkillsTopicEditor
+                topics={studySkillTopics(source)}
+                headerPrompt={c.calloutText || c.subtitle || "Face value of:"}
+                subject={source.curriculum!.subjectLabel}
+                onChangeHeader={header => content({ calloutText: header, subtitle: header })}
+                onChangeTopics={studySkillTopics =>
+                  content({
+                    studySkillTopics,
+                    items: studySkillTopics.map(t => t.text),
+                  })
+                }
+              />
+            </>
+          ) : isLearningOutcomes ? (
+            <>
+              <ContentField
+                label="Subtitle / Prompt"
+                value={c.subtitle}
+                multiline
+                onSave={subtitle => content({ subtitle })}
+                placeholder="After studying this chapter, the students will be able to:"
+              />
+              <LearningOutcomesTopicEditor
+                topics={learningOutcomeTopics(source)}
+                subject={source.curriculum!.subjectLabel}
+                onChange={learningOutcomeTopics =>
+                  content({
+                    learningOutcomeTopics,
+                    items: learningOutcomeTopics.map(t =>
+                      t.isEmpty ? "" : `${t.verb ? `${t.verb} ` : ""}${t.text}`.trim()
+                    ),
+                  })
+                }
+              />
+            </>
+          ) : isTopicBanner ? (
+            <div className="space-y-3">
+              <ContentField label="Word 1 (Primary Topic)" value={c.title} onSave={title => content({ title })} placeholder="SUCCESSOR" />
+              <ContentField label="Connector Badge" value={c.badgeLabel || "AND"} onSave={badgeLabel => content({ badgeLabel })} placeholder="AND" />
+              <ContentField label="Word 2 (Secondary Topic)" value={c.subtitle} onSave={subtitle => content({ subtitle })} placeholder="PREDECESSOR" />
+              <ContentField label="Concept Explanation / Bridge" value={c.introText} multiline onSave={introText => content({ introText })} placeholder="Explain the big concept..." />
 
-          {/* Dynamic Rows / Items */}
-          <ContentField
-            label={
-              o.layoutVariant === "comparison-table"
-                ? "Table rows (one per line, separate columns with |)"
-                : o.layoutVariant === "sorting-board"
-                ? "Items to sort (one per line)"
-                : "Learning points (one per line)"
-            }
-            value={(c.items || []).join("\n")}
-            multiline
-            onSave={v => content({ items: v.split("\n").filter(Boolean) })}
-          />
+              {/* Subject Presets */}
+              <div className="pt-2">
+                <label className="text-[10px] font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider block mb-1.5">Load Subject Preset</label>
+                <div className="grid grid-cols-2 gap-1.5">
+                  {Object.keys(SIGNATURE_SUBJECT_PRESETS).slice(0, 8).map(subKey => (
+                    <button
+                      key={subKey}
+                      type="button"
+                      onClick={() => {
+                        const p = SIGNATURE_SUBJECT_PRESETS[subKey].topicBanner;
+                        content({
+                          title: p.word1,
+                          badgeLabel: p.connector,
+                          subtitle: p.word2,
+                          introText: p.subtitle,
+                        });
+                      }}
+                      className="px-2 py-1 text-[11px] rounded bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-200 dark:border-white/10 text-left font-medium truncate"
+                    >
+                      {subKey}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Apply to Chapter Pages */}
+              <button
+                type="button"
+                onClick={() => {
+                  const targetChapterId = source.curriculum?.chapterId || chapter?.id;
+                  if (targetChapterId) {
+                    applySignatureElementsToChapter(targetChapterId, source.curriculum!.subjectLabel);
+                  }
+                }}
+                className="w-full mt-3 py-2 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-md flex items-center justify-center gap-1.5"
+              >
+                <span>⚡ Apply to Every Page of Chapter</span>
+              </button>
+            </div>
+          ) : isFactZone ? (
+            <div className="space-y-3">
+              <ContentField label="Badge Title" value={c.badgeLabel || c.title || "FACT ZONE"} onSave={b => content({ badgeLabel: b, title: b })} placeholder="FACT ZONE" />
+              <ContentField label="Fact Statement / Takeaway" value={c.calloutText || c.introText} multiline onSave={t => content({ calloutText: t, introText: t })} placeholder="Fact text..." />
+
+              {/* Right Illustration Icon */}
+              <div>
+                <label className="text-[10px] font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider block mb-1">Right Badge Illustration</label>
+                <div className="grid grid-cols-3 gap-1.5">
+                  {[
+                    { id: "books", label: "3D Books" },
+                    { id: "flask", label: "Flask" },
+                    { id: "plant", label: "Plant" },
+                    { id: "globe", label: "Globe" },
+                    { id: "abacus", label: "Abacus" },
+                    { id: "laptop", label: "Laptop" },
+                  ].map(item => (
+                    <button
+                      key={item.id}
+                      type="button"
+                      onClick={() => content({ iconName: item.id })}
+                      className={`px-2 py-1 text-[11px] rounded border font-medium ${
+                        c.iconName === item.id
+                          ? "bg-cyan-500/20 border-cyan-400 text-cyan-600 dark:text-cyan-300"
+                          : "bg-slate-100 border-slate-200 text-slate-700 hover:bg-slate-200 dark:bg-slate-800 dark:border-white/10 dark:text-slate-300 dark:hover:bg-slate-700"
+                      }`}
+                    >
+                      {item.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Subject Presets */}
+              <div className="pt-2">
+                <label className="text-[10px] font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider block mb-1.5">Load Subject Preset</label>
+                <div className="grid grid-cols-2 gap-1.5">
+                  {Object.keys(SIGNATURE_SUBJECT_PRESETS).slice(0, 8).map(subKey => (
+                    <button
+                      key={subKey}
+                      type="button"
+                      onClick={() => {
+                        const p = SIGNATURE_SUBJECT_PRESETS[subKey].factZone;
+                        content({
+                          badgeLabel: p.badgeTitle,
+                          title: p.badgeTitle,
+                          calloutText: p.factText,
+                          introText: p.factText,
+                          items: p.bullets,
+                          iconName: p.rightIllustration,
+                        });
+                      }}
+                      className="px-2 py-1 text-[11px] rounded bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-200 dark:border-white/10 text-left font-medium truncate"
+                    >
+                      {subKey}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Apply to Chapter Pages */}
+              <button
+                type="button"
+                onClick={() => {
+                  const targetChapterId = source.curriculum?.chapterId || chapter?.id;
+                  if (targetChapterId) {
+                    applySignatureElementsToChapter(targetChapterId, source.curriculum!.subjectLabel);
+                  }
+                }}
+                className="w-full mt-3 py-2 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-md flex items-center justify-center gap-1.5"
+              >
+                <span>⚡ Apply to Every Page of Chapter</span>
+              </button>
+            </div>
+          ) : isLifeConnect ? (
+            <div className="space-y-3">
+              <ContentField label="Word 1" value={c.badgeLabel || "LIFE"} onSave={b => content({ badgeLabel: b })} placeholder="LIFE" />
+              <ContentField label="Word 2" value={c.title || "CONNECT"} onSave={t => content({ title: t })} placeholder="CONNECT" />
+              <ContentField label="Subtitle" value={c.subtitle} onSave={s => content({ subtitle: s })} placeholder="Maths Around Us" />
+              <ContentField label="Real-World Connection Prompt" value={c.calloutText || c.introText} multiline onSave={p => content({ calloutText: p, introText: p })} placeholder="Connection prompt..." />
+
+              {/* Character Illustration */}
+              <div>
+                <label className="text-[10px] font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider block mb-1">Character Illustration</label>
+                <div className="grid grid-cols-2 gap-1.5">
+                  {[
+                    { id: "planting-boy", label: "Planting Boy" },
+                    { id: "measuring-girl", label: "Reading Girl" },
+                    { id: "market-shopping", label: "Market Shopping" },
+                    { id: "nature-explorer", label: "Nature Explorer" },
+                    { id: "digital-coder", label: "Digital Coder" },
+                  ].map(item => (
+                    <button
+                      key={item.id}
+                      type="button"
+                      onClick={() => content({ iconName: item.id })}
+                      className={`px-2 py-1 text-[11px] rounded border font-medium ${
+                        c.iconName === item.id
+                          ? "bg-emerald-500/20 border-emerald-400 text-emerald-600 dark:text-emerald-300"
+                          : "bg-slate-100 border-slate-200 text-slate-700 hover:bg-slate-200 dark:bg-slate-800 dark:border-white/10 dark:text-slate-300 dark:hover:bg-slate-700"
+                      }`}
+                    >
+                      {item.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Subject Presets */}
+              <div className="pt-2">
+                <label className="text-[10px] font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider block mb-1.5">Load Subject Preset</label>
+                <div className="grid grid-cols-2 gap-1.5">
+                  {Object.keys(SIGNATURE_SUBJECT_PRESETS).slice(0, 8).map(subKey => (
+                    <button
+                      key={subKey}
+                      type="button"
+                      onClick={() => {
+                        const p = SIGNATURE_SUBJECT_PRESETS[subKey].lifeConnect;
+                        content({
+                          badgeLabel: p.word1,
+                          title: p.word2,
+                          subtitle: p.subtitle,
+                          calloutText: p.prompt,
+                          introText: p.prompt,
+                          iconName: p.illustration,
+                        });
+                      }}
+                      className="px-2 py-1 text-[11px] rounded bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-200 dark:border-white/10 text-left font-medium truncate"
+                    >
+                      {subKey}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Apply to Chapter Pages */}
+              <button
+                type="button"
+                onClick={() => {
+                  const targetChapterId = source.curriculum?.chapterId || chapter?.id;
+                  if (targetChapterId) {
+                    applySignatureElementsToChapter(targetChapterId, source.curriculum!.subjectLabel);
+                  }
+                }}
+                className="w-full mt-3 py-2 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-md flex items-center justify-center gap-1.5"
+              >
+                <span>⚡ Apply to Every Page of Chapter</span>
+              </button>
+            </div>
+          ) : (
+            <>
+              {!isSchema && (
+                <>
+                  <ContentField label="Section badge" value={c.unitBadge} onSave={unitBadge => content({ unitBadge })} />
+                  <ContentField
+                    label="Subtitle / Prompt"
+                    value={c.subtitle}
+                    multiline
+                    onSave={subtitle => content({ subtitle })}
+                    placeholder="Add an encouraging subtitle or question..."
+                  />
+                  <ContentField
+                    label="Concept / Teaching explanation"
+                    value={c.introText}
+                    multiline
+                    onSave={introText => content({ introText })}
+                    placeholder="Write the concept in simple, clear teaching language..."
+                  />
+                </>
+              )}
+              <ContentField
+                label={isSchema ? "Central chapter name" : "Key takeaway / Remember"}
+                value={c.calloutText}
+                multiline
+                onSave={calloutText => content({ calloutText })}
+                placeholder="Highlight the key learning rule or takeaway..."
+              />
+              {!isSchema && c.chapterNumber !== undefined && (
+                <ContentField label="Chapter number" value={c.chapterNumber} onSave={chapterNumber => content({ chapterNumber })} />
+              )}
+
+              {/* Dynamic Rows / Items */}
+              {isSchema ? (
+                <LessonSchemaTopicEditor
+                  topics={schemaTopics(source)}
+                  subject={source.curriculum!.subjectLabel}
+                  onChange={lessonSchemaTopics => content({ lessonSchemaTopics })}
+                />
+              ) : (
+                <ContentField
+                  label={
+                    o.layoutVariant === "comparison-table"
+                      ? "Table rows (one per line, separate columns with |)"
+                      : o.layoutVariant === "sorting-board"
+                      ? "Items to sort (one per line)"
+                      : "Learning points (one per line)"
+                  }
+                  value={(c.items || []).join("\n")}
+                  multiline
+                  onSave={v => content({ items: v.split("\n").filter(Boolean) })}
+                />
+              )}
+            </>
+          )}
 
           {(["comparison-table", "sorting-board", "compare-panels"] as string[]).includes(o.layoutVariant || "") && (
             <ContentField
@@ -363,7 +634,7 @@ export function CurriculumBlockInspector({ element }: { element: PageElement }) 
             />
           )}
 
-          {(
+          {!isSchema && !isStudySkills && !isLearningOutcomes && !isSignature && (
             <ContentField
               label="Reading passage"
               value={c.passage}
@@ -382,6 +653,7 @@ export function CurriculumBlockInspector({ element }: { element: PageElement }) 
             />
           )}
 
+          {!isSchema && !isStudySkills && !isLearningOutcomes && !isSignature && <>
           {/* Steps Array */}
           {(c.steps || []).map((step, i) => (
             <div key={i} className="curriculum-content-row">
@@ -513,7 +785,7 @@ export function CurriculumBlockInspector({ element }: { element: PageElement }) 
             value={c.footnote}
             multiline
             onSave={footnote => content({ footnote })}
-          />
+          /></>}
 
           {source.curriculum!.digitalExtension && (
             <div className="curriculum-content-row">
@@ -577,6 +849,7 @@ export function CurriculumBlockInspector({ element }: { element: PageElement }) 
         </fieldset>
       ) : (
         <fieldset disabled={!canEdit} className="space-y-4">
+          <ReferenceElementControls block={source} onChange={design} chapterId={chapter?.id}/>
           <div><span className="curriculum-eyebrow">APPEARANCE</span><div className="block-style-options">
             {BLOCK_STYLES.map(style => <button key={style.id} title={style.description} aria-pressed={o.blockStyle === style.id} onClick={() => design({ blockStyle: style.id })}><span className={"block-style-swatch is-" + style.id}/>{style.name}</button>)}
           </div></div>
@@ -602,7 +875,7 @@ export function CurriculumBlockInspector({ element }: { element: PageElement }) 
           </div>
 
           <label className="curriculum-field">
-            <span className="text-[11px] font-semibold text-slate-200">Custom accent color</span>
+            <span className="text-[11px] font-semibold text-slate-700 dark:text-slate-200">Custom accent color</span>
             <input
               type="color"
               value={
@@ -615,9 +888,9 @@ export function CurriculumBlockInspector({ element }: { element: PageElement }) 
           </label>
 
           <label className="curriculum-field">
-            <div className="flex justify-between items-center text-[11px] font-semibold text-slate-200">
+            <div className="flex justify-between items-center text-[11px] font-semibold text-slate-700 dark:text-slate-200">
               <span>Reading type scale</span>
-              <span className="text-amber-300 text-[10px] font-mono">
+              <span className="text-amber-600 dark:text-amber-300 text-[10px] font-mono">
                 {Math.round((o.fontSizeScale || 1) * 100)}%
               </span>
             </div>
@@ -629,11 +902,11 @@ export function CurriculumBlockInspector({ element }: { element: PageElement }) 
               value={o.fontSizeScale || 1}
               onChange={e => design({ fontSizeScale: Number(e.target.value) })}
             />
-            <span className="text-[10px] text-slate-400">Class base size is the guaranteed minimum for print legibility</span>
+            <span className="text-[10px] text-slate-500 dark:text-slate-400">Class base size is the guaranteed minimum for print legibility</span>
           </label>
 
           <label className="curriculum-field">
-            <span className="text-[11px] font-semibold text-slate-200">Heading typography</span>
+            <span className="text-[11px] font-semibold text-slate-700 dark:text-slate-200">Heading typography</span>
             <select
               value={o.fontFamily || "subject"}
               onChange={e => design({ fontFamily: e.target.value === "subject" ? undefined : e.target.value })}
@@ -645,7 +918,7 @@ export function CurriculumBlockInspector({ element }: { element: PageElement }) 
           </label>
 
           <label className="curriculum-field">
-            <span className="text-[11px] font-semibold text-slate-200">Paper texture treatment</span>
+            <span className="text-[11px] font-semibold text-slate-700 dark:text-slate-200">Paper texture treatment</span>
             <select
               value={o.backgroundSpec?.type || "default"}
               onChange={e =>
@@ -667,7 +940,7 @@ export function CurriculumBlockInspector({ element }: { element: PageElement }) 
           </label>
 
           <label className="curriculum-field">
-            <span className="text-[11px] font-semibold text-slate-200">Paper pattern overlay</span>
+            <span className="text-[11px] font-semibold text-slate-700 dark:text-slate-200">Paper pattern overlay</span>
             <select
               value={o.backgroundSpec?.patternOverlay || "none"}
               onChange={e =>
@@ -688,7 +961,7 @@ export function CurriculumBlockInspector({ element }: { element: PageElement }) 
           </label>
 
           <label className="curriculum-field">
-            <span className="text-[11px] font-semibold text-slate-200">Print export mode</span>
+            <span className="text-[11px] font-semibold text-slate-700 dark:text-slate-200">Print export mode</span>
             <select
               value={o.printMode || "colour"}
               onChange={e => design({ printMode: e.target.value as typeof o.printMode })}
@@ -763,7 +1036,7 @@ export function CurriculumBlockInspector({ element }: { element: PageElement }) 
 
           {/* Decorative Plates */}
           <label className="curriculum-field">
-            <span className="text-[11px] font-semibold text-slate-200">Add background motif</span>
+            <span className="text-[11px] font-semibold text-slate-700 dark:text-slate-200">Add background motif</span>
             <select
               value=""
               onChange={e => {
@@ -845,12 +1118,28 @@ export function CurriculumBlockInspector({ element }: { element: PageElement }) 
           <button
             type="button"
             className="curriculum-secondary w-full"
-            disabled={chapter?.framework?.mode !== "design"}
-            onClick={() => unlockCurriculumLayers(element)}
+            onClick={() => {
+              if (chapter?.id && chapter.framework?.mode !== "design") {
+                setFrameworkMode(chapter.id, "design");
+              }
+              unlockCurriculumLayers(element);
+            }}
           >
             <Layers size={13} />
-            <span>Unlock into independent layers</span>
+            <span>Unlock into independent layers (Free Edit)</span>
           </button>
+          <div className="p-2 rounded bg-amber-500/10 border border-amber-500/20 text-[10px] text-amber-200 flex items-center justify-between gap-2 mt-1">
+            <span>Mode: <strong>{chapter?.framework?.mode === "design" ? "🎨 Design Mode (Free Resize)" : "🔒 Easy Mode (Template Safe)"}</strong></span>
+            {chapter && (
+              <button
+                type="button"
+                onClick={() => setFrameworkMode(chapter.id, chapter.framework?.mode === "design" ? "easy" : "design")}
+                className="px-2 py-0.5 rounded bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-[9px] transition-colors shrink-0"
+              >
+                {chapter.framework?.mode === "design" ? "Set to Easy" : "Enable Design"}
+              </button>
+            )}
+          </div>
           <p className="text-[10px] text-slate-500 leading-normal">
             Design mode enables free dragging and resizing. Unlocking separates the block into independent text, shape and image layers.
           </p>

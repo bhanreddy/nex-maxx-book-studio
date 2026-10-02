@@ -1,0 +1,14 @@
+{
+  "pageCount": 220,
+  "elementCount": 444,
+  "visibleStripPages": 24,
+  "editedPage": 180,
+  "pageEditAndUndo": true,
+  "indexedDbRecovery": true,
+  "offlineReload": true,
+  "offlineWorkerPreflight": true,
+  "offlineSelectedPdfPages": 3,
+  "offlineChapterPdfPages": 20,
+  "offlineCompletePdfPages": 220,
+  "browserErrors": []
+}

@@ -48,7 +48,7 @@ export function serializeChapter(book:Book,chapter:Chapter,allElements:Record<st
   for(const [id,block] of Object.entries(chapter.framework.blocks)){
     const {semanticContent,curriculum,...presentation}=block;blockPresentation[id]=presentation as unknown as Record<string,unknown>;
   }
-  blockPresentation.__framework={config:chapter.framework.config,mode:chapter.framework.mode,compositionRevision:chapter.framework.compositionRevision};
+  blockPresentation.__framework={pageFrame:chapter.pageFrame !== undefined ? chapter.pageFrame : book.pageFrame,config:chapter.framework.config,mode:chapter.framework.mode,compositionRevision:chapter.framework.compositionRevision};
   const pages=book.pages.filter(p=>p.chapterId===chapter.id||chapter.pageIds.includes(p.id)).map(page=>{
     const {id,pageIndex,displayNumber,elementIds,...settings}=page;
     for(const elementId of elementIds){
@@ -56,7 +56,7 @@ export function serializeChapter(book:Book,chapter:Chapter,allElements:Record<st
       const {id:elId,pageId,transform,style,content,smartBlockData,...rest}=element;
       const semanticBlockId=smartBlockData&&chapter.framework?.blocks[smartBlockData.id]?smartBlockData.id:undefined;
       const nativeContentId=elId;
-      const canonicalContent={...content};if(canonicalContent.assetRef){delete canonicalContent.src;delete canonicalContent.imageUrl;delete canonicalContent.url;}
+      const canonicalContent=structuredClone(content);if(canonicalContent.smartMediaQr){delete canonicalContent.smartMediaQr.renderArtifact;delete canonicalContent.smartMediaQr.validation;delete canonicalContent.smartMediaQr.checksum;}if(canonicalContent.assetRef){delete canonicalContent.src;delete canonicalContent.imageUrl;delete canonicalContent.url;}
       const split=separatePresentation(canonicalContent);
       nativeContent[elId]={content:split.semantic};
       let smartPresentation:Record<string,unknown>|undefined;
@@ -72,7 +72,7 @@ export function serializeChapter(book:Book,chapter:Chapter,allElements:Record<st
 }
 export function restoreChapter(document:BookSnapshotDocument,chapter:Chapter):{chapter:Chapter;pages:PageDefinition[];elements:Record<string,PageElement>}{
   const layout=document.bookLayout,framework=restoreSemanticFramework(document,chapter.id,chapter.framework);
-  const presentation=layout.blockPresentation.__framework as {config?:typeof framework.config;mode?:typeof framework.mode;compositionRevision?:number}|undefined;
+  const presentation=layout.blockPresentation.__framework as {pageFrame?:Chapter['pageFrame'];config?:typeof framework.config;mode?:typeof framework.mode;compositionRevision?:number}|undefined;
   if(presentation?.config)framework.config={...framework.config,...presentation.config,...document.config};
   if(presentation?.mode)framework.mode=presentation.mode;
   if(presentation?.compositionRevision!==undefined)framework.compositionRevision=presentation.compositionRevision;
@@ -90,7 +90,7 @@ export function restoreChapter(document:BookSnapshotDocument,chapter:Chapter):{c
     if(content.assetRef)content.src=assetRenderUrl(content.assetRef as AssetPin);
     elements[id]={...settings,id,pageId:stored.pageId,transform:{...stored.transform},style:{...stored.style},content,...(smartBlockData?{smartBlockData}:{})} as PageElement;
   }
-  return {chapter:{...chapter,framework,pageIds:pages.map(p=>p.id)},pages,elements};
+  return {chapter:{...chapter,...(presentation?.pageFrame !== undefined ? {pageFrame:presentation.pageFrame} : {}),framework,pageIds:pages.map(p=>p.id)},pages,elements};
 }
 
 /** Metadata contains the index; inactive chapter content is deliberately absent. */

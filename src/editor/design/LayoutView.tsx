@@ -33,6 +33,57 @@ interface Tone {
   fill: string | undefined;
 }
 
+function LayoutInlineEditor({
+  initialValue,
+  style,
+  onCommit,
+  onCancel,
+}: {
+  initialValue: string;
+  style: React.CSSProperties;
+  onCommit: (val: string) => void;
+  onCancel: () => void;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+  React.useEffect(() => {
+    if (ref.current) {
+      ref.current.innerText = initialValue;
+      ref.current.focus();
+      const sel = window.getSelection();
+      if (sel) {
+        const range = document.createRange();
+        range.selectNodeContents(ref.current);
+        range.collapse(false);
+        sel.removeAllRanges();
+        sel.addRange(range);
+      }
+    }
+  }, []);
+
+  return (
+    <div
+      ref={ref}
+      contentEditable
+      suppressContentEditableWarning
+      style={{ ...style, outline: "none" }}
+      onMouseDown={(e) => e.stopPropagation()}
+      onKeyDown={(e) => {
+        e.stopPropagation();
+        if (e.key === "Escape") {
+          e.preventDefault();
+          onCancel();
+        } else if (e.key === "Enter" && !e.shiftKey) {
+          e.preventDefault();
+          onCommit(ref.current?.innerText || "");
+        }
+      }}
+      onBlur={() => {
+        onCommit(ref.current?.innerText || "");
+      }}
+    />
+  );
+}
+
 export const LayoutView: React.FC<LayoutViewProps> = ({
   dsl,
   tokens,
@@ -397,18 +448,15 @@ function TitleSlot({
   const size = titleSize(value, role, scale, width);
   if (editing === "text" && onEdit) {
     return (
-      <div
-        contentEditable
-        suppressContentEditableWarning
-        style={{ fontFamily: tokens.headingFont, fontSize: `${size}pt`, fontWeight: 650, lineHeight: 1.15, outline: "none", minWidth: 0 }}
-        onMouseDown={(event) => event.stopPropagation()}
-        onBlur={(event) => {
+      <LayoutInlineEditor
+        initialValue={value}
+        style={{ fontFamily: tokens.headingFont, fontSize: `${size}pt`, fontWeight: 650, lineHeight: 1.15, minWidth: 0 }}
+        onCommit={(text) => {
           setEditing(null);
-          onEdit({ text: event.currentTarget.innerText });
+          onEdit({ text });
         }}
-      >
-        {value}
-      </div>
+        onCancel={() => setEditing(null)}
+      />
     );
   }
   return (
@@ -492,18 +540,15 @@ function ProseSlot({
   const narrow = node.mods.includes("narrow");
   if (editing === field && onEdit) {
     return (
-      <div
-        contentEditable
-        suppressContentEditableWarning
-        style={{ ...proseStyle(tokens, tone, 10.5), outline: "none" }}
-        onMouseDown={(event) => event.stopPropagation()}
-        onBlur={(event) => {
+      <LayoutInlineEditor
+        initialValue={value}
+        style={proseStyle(tokens, tone, 10.5)}
+        onCommit={(text) => {
           setEditing(null);
-          onEdit({ [field]: event.currentTarget.innerText });
+          onEdit({ [field]: text });
         }}
-      >
-        {value}
-      </div>
+        onCancel={() => setEditing(null)}
+      />
     );
   }
   return (

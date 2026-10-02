@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { platformApiUrl } from "../../../../editor/persistence/platformApiUrl";
 
 const COOKIE = "nex_platform_access";
 
@@ -22,7 +23,7 @@ async function proxy(request: NextRequest, path: string[]) {
   }
   const renderAsset=request.method==='GET'&&path.length===5&&path[0]==='assets'&&path[2]==='revisions'&&path[4]==='render';
   const upstreamPath=renderAsset?[...path.slice(0,4),'download']:path;
-  const target = `${base.replace(/\/$/, "")}/api/v1/curriculum/authoring/${upstreamPath.map(encodeURIComponent).join("/")}${request.nextUrl.search}`;
+  const target = `${platformApiUrl(base, `api/v1/curriculum/authoring/${upstreamPath.map(encodeURIComponent).join("/")}`)}${request.nextUrl.search}`;
   const headers = new Headers();
   headers.set("authorization", `Bearer ${token}`);
   headers.set("content-type", "application/json");
@@ -44,7 +45,14 @@ async function proxy(request: NextRequest, path: string[]) {
     const json=await response.json();
     if(!json.data?.url||json.data.checksum!==request.nextUrl.searchParams.get('checksum'))return NextResponse.json({success:false,error:'Asset revision checksum mismatch'},{status:409});
     const url=new URL(json.data.url);if(url.protocol!=='https:'||!url.hostname.endsWith('.r2.cloudflarestorage.com'))return NextResponse.json({success:false,error:'Invalid asset delivery origin'},{status:502});
-    return new NextResponse(null,{status:302,headers:{location:url.toString(),'cache-control':'private, no-store'}});
+    // Keep image reads same-origin for canvas/PDF export. The signed URL stays
+    // server-side and each read still checks the authenticated revision pin.
+    let delivery: Response;
+    try { delivery = await fetch(url, { signal: AbortSignal.timeout(25000), redirect: 'error' }); }
+    catch { return NextResponse.json({success:false,error:'Cloud picture delivery failed. Retry loading the library.',code:'ASSET_UNREACHABLE'},{status:502}); }
+    const mime = delivery.headers.get('content-type')?.split(';')[0];
+    if (!delivery.ok || !mime || !['image/png','image/jpeg','image/webp'].includes(mime)) return NextResponse.json({success:false,error:'Cloud picture is unavailable',code:'ASSET_UNAVAILABLE'},{status:502});
+    return new NextResponse(delivery.body,{status:200,headers:{'content-type':mime,'cache-control':'private, no-store','x-content-type-options':'nosniff'}});
   }
   const body = await response.text();
   return new NextResponse(body, {

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { platformApiUrl } from "../../../../editor/persistence/platformApiUrl";
 
 const COOKIE = "nex_platform_access";
 
@@ -17,7 +18,7 @@ export async function POST(request: NextRequest) {
   try { body=JSON.parse(raw); } catch { return NextResponse.json({error:'Invalid login request'},{status:400}); }
   if (!body || typeof body.email!=='string' || typeof body.password!=='string') return NextResponse.json({error:'Email and password are required'},{status:400});
   let response: Response;
-  try { response = await fetch(`${base.replace(/\/$/, "")}/api/super-admin/auth/login`, {
+  try { response = await fetch(platformApiUrl(base, "api/super-admin/auth/login"), {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({ email: body.email, password: body.password }),

@@ -17,15 +17,18 @@ import {
   GripVertical,
   SearchX,
   Grid,
+  ChevronDown,
 } from "lucide-react";
 import { CURRICULUM_BLOCKS, CHAPTER_PRESETS, LAYOUT_NAMES } from "../../editor/curriculum/catalog";
 import type { CurriculumBlockDefinition } from "../../domain/educational/curriculum";
 import { CURRICULUM_SUBJECTS } from "../../editor/curriculum/chapterEngine";
 import { useEditorStore } from "../../editor/stores/editorStore";
-import { insertCurriculumBlock, activeFrameworkChapter } from "../../editor/curriculum/actions";
+import { insertCurriculumBlock, activeFrameworkChapter, createUniversal5PageChapter } from "../../editor/curriculum/actions";
+import { UNIVERSAL_CHAPTER_PRESETS } from "../../editor/curriculum/catalog";
 import { useCurriculumUi } from "../../editor/curriculum/uiState";
 import {CURRICULUM_GRADES,curriculumGradeLabel} from "../../domain/educational/curriculum";
 import type { CurriculumGrade, CurriculumLayout } from "../../domain/educational/curriculum";
+import { ReferenceElementsLibrary } from "./ReferenceElementsLibrary";
 import { CurriculumPreview } from "./CurriculumPreview";
 import { makeLibraryBlock } from "../../editor/curriculum/libraryExamples";
 import { BlockLayoutDialog } from "./BlockLayoutDialog";
@@ -185,6 +188,7 @@ export function CurriculumBlocksPanel({ floating = false }: { floating?: boolean
   const [purpose, setPurpose] = useState("all");
   const [complexity, setComplexity] = useState("all");
   const [filters, setFilters] = useState(false);
+  const [contextOpen, setContextOpen] = useState(false);
   const gridRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const openBuilder = useCurriculumUi(s => s.openBuilder);
@@ -310,14 +314,13 @@ export function CurriculumBlocksPanel({ floating = false }: { floating?: boolean
         )}
       </div>
 
-      {/* 2. Compact Discovery Filters */}
+      {/* 2. Discovery filters — two short rows so the block list stays in view */}
       <div className="curriculum-compact-filters">
-        {/* Search Input */}
         <label className="curriculum-search">
-          <Search size={14} aria-hidden="true" className="text-slate-400 flex-shrink-0" />
+          <Search size={13} aria-hidden="true" className="text-slate-400 flex-shrink-0" />
           <input
             ref={searchInputRef}
-            aria-label="Search 219 learning elements"
+            aria-label="Search learning elements"
             value={search}
             onChange={event => setSearch(event.target.value)}
             placeholder="Search elements…"
@@ -329,74 +332,62 @@ export function CurriculumBlocksPanel({ floating = false }: { floating?: boolean
               onClick={() => { setSearch(""); searchInputRef.current?.focus(); }}
               aria-label="Clear search query"
             >
-              <X size={13} />
+              <X size={12} />
             </button>
           )}
         </label>
 
-        {/* Section Pills Row — single compact horizontal strip with smooth wheel scroll */}
-        <div
-          className="curriculum-mini-sections"
-          role="radiogroup"
-          aria-label="Chapter sections"
-          onWheel={event => {
-            if (event.deltaY) {
-              event.currentTarget.scrollLeft += event.deltaY;
-            }
-          }}
-          onKeyDown={event => {
-            if (event.key === "ArrowRight" || event.key === "ArrowLeft") {
-              event.preventDefault();
-              moveFocus(event.target as HTMLElement, event.key);
-            }
-          }}
-        >
-          {SECTIONS.map(s => {
-            const isSelected = section === s.id;
-            const count = sectionCounts[s.id] ?? 0;
-            return (
-              <button
-                type="button"
-                role="radio"
-                aria-checked={isSelected}
-                key={s.id}
-                onClick={e => {
-                  setSection(s.id);
-                  e.currentTarget.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
-                }}
-                title={"hint" in s ? s.hint : "All 6 chapter sections"}
-                className={`curriculum-mini-pill ${isSelected ? "is-active" : ""}`}
-              >
-                <s.icon size={11} aria-hidden="true" />
-                <span>{s.id === "all" ? "All" : s.name}</span>
-                <span className="curriculum-mini-count">{count}</span>
-              </button>
-            );
-          })}
-        </div>
-
-        {/* Inline context: Class + Subject + More toggle */}
-        <div className="curriculum-inline-context">
-          <select
-            aria-label="Class"
-            value={grade}
-            onChange={event => setGrade((/^(NURSERY|LKG|UKG)$/.test(event.target.value)?event.target.value:Number(event.target.value)) as CurriculumGrade)}
-            className="curriculum-inline-select"
+        <div className="curriculum-browse-row">
+          <div
+            className="curriculum-mini-sections"
+            role="radiogroup"
+            aria-label="Chapter sections"
+            onWheel={event => {
+              if (event.deltaY) {
+                event.currentTarget.scrollLeft += event.deltaY;
+              }
+            }}
+            onKeyDown={event => {
+              if (event.key === "ArrowRight" || event.key === "ArrowLeft") {
+                event.preventDefault();
+                moveFocus(event.target as HTMLElement, event.key);
+              }
+            }}
           >
-            {CURRICULUM_GRADES.map(item => (
-              <option key={item} value={item}>{curriculumGradeLabel(item)}</option>
-            ))}
-          </select>
-          <select
-            aria-label="Subject"
-            value={subject}
-            onChange={event => setSubject(event.target.value)}
-            className="curriculum-inline-select"
+            {SECTIONS.map(s => {
+              const isSelected = section === s.id;
+              const count = sectionCounts[s.id] ?? 0;
+              return (
+                <button
+                  type="button"
+                  role="radio"
+                  aria-checked={isSelected}
+                  key={s.id}
+                  onClick={e => {
+                    setSection(s.id);
+                    e.currentTarget.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
+                  }}
+                  title={"hint" in s ? s.hint : "All 6 chapter sections"}
+                  className={`curriculum-mini-pill ${isSelected ? "is-active" : ""}`}
+                >
+                  <s.icon size={10} aria-hidden="true" />
+                  <span>{s.id === "all" ? "All" : s.name}</span>
+                  <span className="curriculum-mini-count">{count}</span>
+                </button>
+              );
+            })}
+          </div>
+          <button
+            type="button"
+            className={`curriculum-context-chip ${contextOpen ? "is-open" : ""}`}
+            onClick={() => setContextOpen(open => !open)}
+            aria-expanded={contextOpen}
+            aria-label={`Class and subject, ${curriculumGradeLabel(grade)}, ${subject}. Show class and subject`}
+            title="Class and subject used when you add a block"
           >
-            {CURRICULUM_SUBJECTS.map(item => (
-              <option key={item} value={item}>{item}</option>
-            ))}
-          </select>
+            <span>{curriculumGradeLabel(grade)} · {subject}</span>
+            <ChevronDown size={11} aria-hidden="true" />
+          </button>
           <button
             type="button"
             className={`curriculum-more-toggle relative ${filters ? "is-open" : ""}`}
@@ -405,7 +396,7 @@ export function CurriculumBlocksPanel({ floating = false }: { floating?: boolean
             aria-label="Show more filters"
             title="Subject collections, layout and density filters"
           >
-            <SlidersHorizontal size={13} />
+            <SlidersHorizontal size={12} />
             {(family !== "all" || layout !== "" || purpose !== "all" || complexity !== "all") && (
               <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-amber-500 ring-2 ring-white dark:ring-slate-900" />
             )}
@@ -418,10 +409,35 @@ export function CurriculumBlocksPanel({ floating = false }: { floating?: boolean
               aria-label="Reset all filters"
               title="Clear all active filters"
             >
-              <RotateCcw size={12} />
+              <RotateCcw size={11} />
             </button>
           )}
         </div>
+
+        {contextOpen && (
+          <div className="curriculum-inline-context">
+            <select
+              aria-label="Class"
+              value={grade}
+              onChange={event => setGrade((/^(NURSERY|LKG|UKG)$/.test(event.target.value)?event.target.value:Number(event.target.value)) as CurriculumGrade)}
+              className="curriculum-inline-select"
+            >
+              {CURRICULUM_GRADES.map(item => (
+                <option key={item} value={item}>{curriculumGradeLabel(item)}</option>
+              ))}
+            </select>
+            <select
+              aria-label="Subject"
+              value={subject}
+              onChange={event => setSubject(event.target.value)}
+              className="curriculum-inline-select"
+            >
+              {CURRICULUM_SUBJECTS.map(item => (
+                <option key={item} value={item}>{item}</option>
+              ))}
+            </select>
+          </div>
+        )}
 
         {/* Expandable extra filters */}
         {filters && (
@@ -507,6 +523,37 @@ export function CurriculumBlocksPanel({ floating = false }: { floating?: boolean
       <div className="curriculum-library-scroll custom-scrollbar">
         {family === "chapter-sets" ? (
           <div className="curriculum-set-list" role="list">
+            <div className="p-3 mb-2 rounded-xl border border-amber-300 dark:border-amber-500/40 bg-gradient-to-br from-amber-50 via-orange-50/50 to-amber-100/40 dark:from-amber-950/40 dark:to-slate-900 shadow-sm dark:shadow-lg">
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-[10px] font-extrabold uppercase tracking-wider text-amber-800 dark:text-amber-300">
+                  ✦ Flagship Reference
+                </span>
+                <span className="text-[9px] font-mono bg-amber-200/70 dark:bg-amber-500/20 text-amber-800 dark:text-amber-200 px-1.5 py-0.5 rounded font-semibold">
+                  5 Pages · All Editable
+                </span>
+              </div>
+              <strong className="text-slate-900 dark:text-white text-sm block mb-1">NEX MAXX Universal 5-Page Chapter</strong>
+              <p className="text-[11px] text-slate-600 dark:text-slate-300 mb-3 leading-snug">
+                Complete publication-grade chapter matching the Universal Layout Reference: Cover, Concept Discovery, Guided Practice, Hands-on Explore, and Mastery Check.
+              </p>
+              <div className="grid grid-cols-2 gap-1.5">
+                {(["editorial", "explorer", "academy", "workbook"] as const).map(presetKey => (
+                  <button
+                    key={presetKey}
+                    type="button"
+                    onClick={() => {
+                      createUniversal5PageChapter({ subject, grade, preset: presetKey });
+                      if (floating) close(false);
+                    }}
+                    className="py-1.5 px-2 rounded-lg bg-amber-100/80 hover:bg-amber-200/80 dark:bg-amber-500/20 dark:hover:bg-amber-500/30 border border-amber-300 dark:border-amber-400/30 text-amber-900 dark:text-amber-200 text-xs font-semibold flex items-center justify-between capitalize transition-all"
+                  >
+                    <span>{presetKey}</span>
+                    <Sparkles size={12} />
+                  </button>
+                ))}
+              </div>
+            </div>
+
             {CHAPTER_PRESETS.map((preset, index) => (
               <button
                 className="curriculum-set"
@@ -580,6 +627,8 @@ export function CurriculumBlocksPanel({ floating = false }: { floating?: boolean
                   </div>
                 </div>
               )}
+
+            {!search && family === "all" && section === "all" && <ReferenceElementsLibrary grade={grade} subject={subject} onInsert={() => { if (floating) close(false); }}/> }
 
             {/* 219 Element Cards Grid */}
             <div className="curriculum-block-grid" ref={gridRef} role="list" aria-label="Learning elements">

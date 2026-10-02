@@ -14,13 +14,19 @@ export const CURRICULUM_CATEGORIES: { id: CurriculumCategory | "new"; name: stri
   { id: "digital", name: "Online Resources" }, { id: "chapter-sets", name: "Chapter Templates" },
 ];
 export const LAYOUT_NAMES: Record<CurriculumLayout, string> = {
+  "topic-banner": "Topic Banner", "fact-zone": "Fact Zone", "life-connect": "Life Connect",
   ...Object.fromEntries(Object.entries(TEACHING_LAYOUTS).map(([id, layout]) => [id, layout.name])) as Record<import("../../domain/educational/curriculum").TeachingLayout, string>,
+  "lesson-schema": "Connected Topic Map", "lesson-schema-stacked": "Topic Cards",
+  "study-skills": "Study Skills Card",
+  "learning-outcomes": "Learning Targets Banner",
   panorama: "Full-page picture", asymmetric: "Picture on the side", editorial: "Simple page", "visual-first": "Picture first",
   split: "Text and picture", journey: "Learning steps", constellation: "Ideas around a centre", steps: "Numbered steps",
   notebook: "Notebook", workmat: "Activity sheet", conversation: "Talk together", question: "Big question",
   progression: "Practice levels", snapshot: "Idea map", confidence: "Self-check", digital: "Scan and learn",
   "comparison-table": "Two-column table", timeline: "Timeline", "writing-sheet": "Writing lines", "reading-page": "Reading page",
   "experiment-sheet": "Experiment sheet", "sorting-board": "Sorting spaces",
+  "universal-cover": "Signature Cover", "universal-concept": "Concept Explorer", "universal-practice": "Guided Practice",
+  "universal-explore": "Discovery Spread", "universal-assessment": "Mastery Check",
 };
 const defaultLayouts: Record<FrameworkStage, CurriculumLayout[]> = {
   discover: ["asymmetric", "visual-first", "question", "editorial"],
@@ -71,14 +77,108 @@ const LEGACY_ELEMENTS: CurriculumBlockDefinition[] = families.flatMap(([category
       ...(/visual|diagram|picture|map|timeline/i.test(name) ? ["visuals"] : [])],
   };
 }));
-export const CURRICULUM_BLOCKS: CurriculumBlockDefinition[] = [...LEGACY_ELEMENTS, ...ADDITIONAL_ELEMENTS].map(def => ({ ...def, layouts: teachingLayouts(def) }));
+const LESSON_SCHEMA: CurriculumBlockDefinition = {
+  id: "lesson-schema", name: "Lesson Schema", category: "discover", stage: "discover", archetype: "concept-map",
+  purpose: "Preview any chapter with an editable central idea and connected topic boxes. Add, remove, reorder, recolour or leave boxes empty.",
+  layouts: ["lesson-schema", "lesson-schema-stacked"], tags: ["lesson", "schema", "topics", "chapter plan", "mind map", "visuals", "all subjects"],
+  starterContent: { title: "LESSON SCHEMA", calloutText: "Your chapter name", items: ["Topic 1", "Topic 2", "Topic 3", "Topic 4", "Topic 5", "Topic 6", "Topic 7"] },
+};
+const LEARNING_OUTCOMES: CurriculumBlockDefinition = {
+  id: "learning-outcomes", name: "Learning Outcomes", category: "discover", stage: "discover", originalStage: "target", archetype: "learning-outcomes",
+  purpose: "Display clear, editable learning targets with action icons, verbs, empty spaces and educational illustration.",
+  layouts: ["learning-outcomes", "editorial"], tags: ["learning outcomes", "objectives", "targets", "outcomes", "goals", "all subjects"],
+  starterContent: {
+    title: "LEARNING OUTCOMES",
+    calloutText: "After studying this chapter, the students will be able to:",
+    items: [
+      "write 5-digit and 6-digit numbers",
+      "determine the place value and the face value of digits in a number",
+      "compare numbers up to 9,99,999",
+      "form the largest and the smallest numbers using 5 or 6 digits",
+      "estimate the rounded-off numbers to the nearest tens, hundreds and thousands",
+      "define Roman numerals",
+    ],
+  },
+};
+const STUDY_SKILLS: CurriculumBlockDefinition = {
+  id: "study-skills", name: "Study Skills", category: "discover", stage: "discover", originalStage: "learn", archetype: "study-skills",
+  purpose: "Display essential study rules, facts, strategies and customizable empty writing spaces.",
+  layouts: ["study-skills", "editorial"], tags: ["study skills", "strategy", "toolkit", "rules", "facts", "study", "skills", "all subjects"],
+  starterContent: {
+    title: "STUDY SKILLS",
+    badgeLabel: "STUDY SKILLS",
+    calloutText: "Face value of:",
+    items: ["7 is 7.", "9 is 9.", "2 is 2.", "7 is 7."],
+  },
+};
+const TOPIC_BANNER: CurriculumBlockDefinition = {
+  id: "topic-banner", name: "Topic Banner", category: "learn", stage: "learn", archetype: "section-heading",
+  purpose: "An editable topic heading with layered waves and raised lettering, adaptable to any subject.",
+  layouts: ["topic-banner", "editorial"], tags: ["topic", "banner", "heading", "ribbon", "3d", "successor", "predecessor", "all subjects"],
+  starterContent: {
+    title: "SUCCESSOR",
+    badgeLabel: "AND",
+    subtitle: "PREDECESSOR",
+    introText: "Every number has a neighbour before and a neighbour after.",
+  },
+};
+const FACT_ZONE: CurriculumBlockDefinition = {
+  id: "fact-zone", name: "Fact Zone", category: "discover", stage: "discover", originalStage: "think", archetype: "facts-curiosity",
+  purpose: "3D pill container with glowing lightbulb tab, editable fact content, and 3D books medallion badge. Versatile for every subject.",
+  layouts: ["fact-zone", "editorial"], tags: ["fact", "zone", "trivia", "did you know", "pro tip", "callout", "3d", "all subjects"],
+  starterContent: {
+    title: "FACT ZONE",
+    badgeLabel: "FACT ZONE",
+    calloutText: "0 is neither positive nor negative. It is the only number that cannot be represented in Roman numerals!",
+    items: [
+      "Every natural number has a successor (n + 1).",
+      "The number 1 has no predecessor in the set of natural numbers.",
+      "Zero added to any number does not change its value.",
+    ],
+  },
+};
+const LIFE_CONNECT: CurriculumBlockDefinition = {
+  id: "life-connect", name: "Life Connect", category: "apply", stage: "apply", archetype: "real-world-connect",
+  purpose: "A folded ribbon and editable medallion connecting a subject concept to a real-world application.",
+  layouts: ["life-connect", "editorial"], tags: ["life connect", "real world", "application", "ribbon", "planting boy", "all subjects"],
+  starterContent: {
+    badgeLabel: "LIFE",
+    title: "CONNECT",
+    subtitle: "Maths Around Us",
+    calloutText: "When you stand in a queue at the ticket counter, the person right ahead of you is your predecessor, and the person behind you is your successor!",
+  },
+};
+export const CURRICULUM_BLOCKS: CurriculumBlockDefinition[] = [
+  LEGACY_ELEMENTS[0], // chapter-hero (1st place)
+  LESSON_SCHEMA,      // lesson-schema (2nd place)
+  STUDY_SKILLS,       // study-skills (3rd place)
+  LEARNING_OUTCOMES,  // learning-outcomes (4th place)
+  TOPIC_BANNER,
+  FACT_ZONE,
+  LIFE_CONNECT,
+  ...LEGACY_ELEMENTS.slice(1).filter(b => b.id !== "learning-outcomes" && b.id !== "study-skills" && b.id !== "topic-banner" && b.id !== "fact-zone" && b.id !== "life-connect"),
+  ...ADDITIONAL_ELEMENTS
+].map(def => ({ ...def, layouts: teachingLayouts(def) }));
 export const CURRICULUM_BLOCK_MAP = Object.fromEntries(CURRICULUM_BLOCKS.map(b => [b.id, b]));
 export const CHAPTER_PRESETS: { id: ChapterPreset; name: string; description: string; blocks: string[] }[] = [
-  { id: "balanced", name: "Everyday chapter", description: "Clear explanations, practice, an activity, review and a test.", blocks: ["chapter-hero", "recall-radar", "learning-mission", "concept-explorer", "quick-check", "concept-explorer", "guided-practice", "concept-explorer", "hands-on", "practice-path", "chapter-snapshot", "mastery-check", "my-learning"] },
-  { id: "activity-rich", name: "Hands-on chapter", description: "More observing, making, partner work and projects.", blocks: ["chapter-hero", "chapter-spark", "recall-radar", "learning-mission", "concept-explorer", "hands-on", "concept-explorer", "life-link", "activity-zone", "think-about-it", "practice-path", "mini-project", "chapter-snapshot", "mastery-check", "my-learning"] },
-  { id: "concept-heavy", name: "Detailed chapter", description: "More explanations, solved examples and guided practice.", blocks: ["chapter-hero", "learning-mission", "concept-explorer", "worked-example", "quick-check", "concept-explorer", "worked-example", "quick-check", "concept-explorer", "worked-example", "practice-path", "reason-it-out", "hands-on", "chapter-snapshot", "mastery-check", "my-learning"] },
-  { id: "story-led", name: "Story chapter", description: "Stories, conversations and questions throughout the chapter.", blocks: ["chapter-hero", "story-hook", "scenario-starter", "learning-mission", "concept-explorer", "conversation-explanation", "try-with-me", "story-explanation", "life-link", "challenge-yourself", "chapter-snapshot", "mastery-check", "my-learning"] },
-  { id: "premium-nex", name: "Premium chapter", description: "An illustrated opening, clear teaching pages, varied activities, review and test.", blocks: ["chapter-hero", "curiosity-question", "recall-radar", "learning-mission", "concept-explorer", "visual-explanation", "try-with-me", "quick-check", "concept-explorer", "life-link", "hands-on", "think-deeper", "practice-path", "scan-learn", "chapter-snapshot", "mastery-check", "my-learning"] },
+  { id: "balanced", name: "Everyday chapter", description: "Clear explanations, practice, an activity, review and a test.", blocks: ["chapter-hero", "lesson-schema", "study-skills", "learning-outcomes", "recall-radar", "learning-mission", "concept-explorer", "quick-check", "concept-explorer", "guided-practice", "concept-explorer", "hands-on", "practice-path", "chapter-snapshot", "mastery-check", "my-learning"] },
+  { id: "activity-rich", name: "Hands-on chapter", description: "More observing, making, partner work and projects.", blocks: ["chapter-hero", "lesson-schema", "study-skills", "learning-outcomes", "chapter-spark", "recall-radar", "learning-mission", "concept-explorer", "hands-on", "concept-explorer", "life-link", "activity-zone", "think-about-it", "practice-path", "mini-project", "chapter-snapshot", "mastery-check", "my-learning"] },
+  { id: "concept-heavy", name: "Detailed chapter", description: "More explanations, solved examples and guided practice.", blocks: ["chapter-hero", "lesson-schema", "study-skills", "learning-outcomes", "learning-mission", "concept-explorer", "worked-example", "quick-check", "concept-explorer", "worked-example", "quick-check", "concept-explorer", "worked-example", "practice-path", "reason-it-out", "hands-on", "chapter-snapshot", "mastery-check", "my-learning"] },
+  { id: "story-led", name: "Story chapter", description: "Stories, conversations and questions throughout the chapter.", blocks: ["chapter-hero", "lesson-schema", "study-skills", "learning-outcomes", "story-hook", "scenario-starter", "learning-mission", "concept-explorer", "conversation-explanation", "try-with-me", "story-explanation", "life-link", "challenge-yourself", "chapter-snapshot", "mastery-check", "my-learning"] },
+  { id: "premium-nex", name: "Premium chapter", description: "An illustrated opening, clear teaching pages, varied activities, review and test.", blocks: ["chapter-hero", "lesson-schema", "study-skills", "learning-outcomes", "curiosity-question", "recall-radar", "learning-mission", "concept-explorer", "visual-explanation", "try-with-me", "quick-check", "concept-explorer", "life-link", "hands-on", "think-deeper", "practice-path", "scan-learn", "chapter-snapshot", "mastery-check", "my-learning"] },
+];
+
+export const UNIVERSAL_CHAPTER_PRESETS = [
+  {
+    id: "universal-editorial" as const,
+    name: "NEX MAXX Universal Editorial",
+    description: "Publisher-grade chapter matching the 5-page universal layout reference.",
+    blocks: [
+      "chapter-hero", "lesson-schema", "study-skills", "learning-outcomes", "quick-check", "concept-explorer",
+      "concept-explorer", "worked-example", "guided-practice", "try-with-me",
+      "hands-on", "chapter-snapshot", "mastery-check", "my-learning"
+    ],
+  },
 ];
 export function placeholderContent(def: CurriculumBlockDefinition): SmartBlockInstance["semanticContent"] {
   const c: SmartBlockInstance["semanticContent"] = { title: def.name, unitBadge: def.stage.toUpperCase() };

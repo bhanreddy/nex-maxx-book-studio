@@ -1,5 +1,8 @@
 "use client";
 
+import { PageFrameView } from "../../editor/renderer/PageFrameView";
+import { PublisherFooterView } from "../../editor/renderer/PublisherFooterView";
+import { pageFrameFor, frameMargins, pageMarginsFor } from "../../editor/pageFrame/pageFrame";
 import type { ArtworkKind } from "../../editor/educational/publicationScene";
 import { readPublicationImage } from "../educational/PublicationInspector";
 import { insertCurriculumBlock } from "../../editor/curriculum/actions";
@@ -18,6 +21,8 @@ import { PageDefinition, Book } from "../../domain/book/types";
 import { ptToMm } from "../../editor/core/coordinates";
 import { useLayoutPartnerStore } from "../../editor/layoutPartner/layoutPartnerStore";
 import { CanvasContextMenu, ContextMenuState } from "../ui/CanvasContextMenu";
+import { handleUniversalPaste, handleFileDropOnCanvas } from "../../editor/clipboard/universalClipboard";
+import { effectiveTextWrap } from "../../editor/layoutPartner/textWrapLayout";
 
 interface PageCanvasProps {
   book: Book;
@@ -65,6 +70,8 @@ export const PageCanvas: React.FC<PageCanvasProps> = ({ book, activePage }) => {
     removeUserGuide,
     activeMeasure,
     setActiveMeasure,
+    columnGrid,
+    baselineGrid,
   } = useUiStore();
 
   const containerRef = useRef<HTMLDivElement>(null);
@@ -89,10 +96,33 @@ export const PageCanvas: React.FC<PageCanvasProps> = ({ book, activePage }) => {
     y: 0,
   });
 
-  // Spacebar panning detector
+  // Spacebar panning detector & Universal Paste
   useEffect(() => {
+    const isTargetEditable = (target: EventTarget | null) => {
+      const active = typeof document !== "undefined" ? (document.activeElement as HTMLElement | null) : null;
+      if (active) {
+        if (active.tagName === "INPUT" || active.tagName === "TEXTAREA") return true;
+        if (active.isContentEditable || Boolean(active.closest?.('[contenteditable="true"]'))) return true;
+      }
+      if (target && target instanceof HTMLElement) {
+        if (target.tagName === "INPUT" || target.tagName === "TEXTAREA") return true;
+        if (target.isContentEditable || Boolean(target.closest?.('[contenteditable="true"]'))) return true;
+      }
+      return false;
+    };
+
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.code === "Space" && !e.repeat && document.activeElement?.tagName !== "INPUT") {
+      if (e.key === "Escape") {
+        const target = e.target as HTMLElement | null;
+        if (!target?.closest('[role="dialog"][aria-modal="true"]')) {
+          clearSelection();
+          const uiState = useUiStore.getState();
+          if (uiState.selectedNodeIds.length > 0) uiState.setSelectedNodeIds([]);
+          if (uiState.cropElementId) uiState.setCropElementId(null);
+          if (uiState.editingTextElementId) uiState.setEditingTextElementId(null);
+        }
+      }
+      if (e.code === "Space" && !e.repeat && !isTargetEditable(e.target)) {
         setIsSpacePanning(true);
       }
     };
@@ -102,11 +132,18 @@ export const PageCanvas: React.FC<PageCanvasProps> = ({ book, activePage }) => {
         setIsPanning(false);
       }
     };
+
+    const handlePaste = (e: ClipboardEvent) => {
+      handleUniversalPaste(e);
+    };
+
     window.addEventListener("keydown", handleKeyDown);
     window.addEventListener("keyup", handleKeyUp);
+    window.addEventListener("paste", handlePaste);
     return () => {
       window.removeEventListener("keydown", handleKeyDown);
       window.removeEventListener("keyup", handleKeyUp);
+      window.removeEventListener("paste", handlePaste);
     };
   }, []);
 
@@ -267,7 +304,7 @@ export const PageCanvas: React.FC<PageCanvasProps> = ({ book, activePage }) => {
     .map((id) => elements[id])
     .filter(Boolean);
 
-  const { dimensions, margins, bleed } = book;
+  const { dimensions, bleed } = book;
 
   // Single page or Spread mode
   const isSpread = viewMode === "spread" && activePage.displayNumber !== "Cover";
@@ -285,6 +322,11 @@ export const PageCanvas: React.FC<PageCanvasProps> = ({ book, activePage }) => {
       ? book.pages[currentPageIdx + 1]
       : activePage
     : undefined;
+
+  const margins = pageMarginsFor(book, leftPage);
+  const leftColumns = book.masterPages?.find(master => master.id === leftPage.masterPageId)?.gridColumns || columnGrid.columns;
+  const rightColumns = book.masterPages?.find(master => master.id === rightPage?.masterPageId)?.gridColumns || columnGrid.columns;
+  const rightMargins = rightPage ? pageMarginsFor(book, rightPage) : margins;
 
   const leftElements = isSpread
     ? leftPage.elementIds.map((id) => elements[id]).filter(Boolean)
@@ -315,6 +357,20 @@ export const PageCanvas: React.FC<PageCanvasProps> = ({ book, activePage }) => {
       onMouseDown={handleMouseDown}
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}
+      onDragOver={(e) => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = "copy";
+      }}
+      onDragEnter={(e) => {
+        e.preventDefault();
+      }}
+      onDrop={(e) => {
+        e.preventDefault();
+        if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+          const coords = getPageCoordinates(e);
+          handleFileDropOnCanvas(e.dataTransfer.files, coords);
+        }
+      }}
     >
       {/* Top Rulers (Points & Millimeters) */}
       {showRulers && (
@@ -488,13 +544,17 @@ export const PageCanvas: React.FC<PageCanvasProps> = ({ book, activePage }) => {
               }
             }}
             onClick={(e) => {
-              if (e.target === e.currentTarget && activeTool === "move") {
+              if (
+                (e.target === e.currentTarget || (e.target as HTMLElement).id === "page-artboard") &&
+                (activeTool === "move" || !["hand", "zoom", "measure", "pen", "pencil", "shape", "table", "brush", "eraser"].includes(activeTool))
+              ) {
                 clearSelection();
               }
             }}
           >
+            <PageFrameView book={book} page={leftPage}/>
             {/* Margin Guides (Cyan dashed) */}
-            {showMargins && (
+            {showMargins && !pageFrameFor(book, leftPage) && (
               <div
                 className="absolute border border-sky-400/30 border-dashed pointer-events-none"
                 style={{
@@ -508,6 +568,43 @@ export const PageCanvas: React.FC<PageCanvasProps> = ({ book, activePage }) => {
                   MARGIN
                 </span>
               </div>
+            )}
+
+            {/* Column Grid Guides (Lavender tinted vertical columns) */}
+            {columnGrid?.enabled && (
+              <div
+                className="absolute pointer-events-none flex z-20"
+                style={{
+                  top: `${margins.topPt}pt`,
+                  bottom: `${margins.bottomPt}pt`,
+                  left: `${margins.insidePt}pt`,
+                  right: `${margins.outsidePt}pt`,
+                  gap: `${columnGrid.gutterPt}pt`,
+                }}
+              >
+                {Array.from({ length: Math.max(1, leftColumns) }).map((_, i) => (
+                  <div
+                    key={i}
+                    className="flex-1 bg-indigo-500/[0.04] border-x border-indigo-400/25 relative"
+                  >
+                    <span className="absolute top-1 left-1 text-[5pt] text-indigo-400/60 font-mono">
+                      COL {i + 1}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Baseline Grid (Subtle horizontal typographic rhythm) */}
+            {baselineGrid?.enabled && (
+              <div
+                className="absolute inset-0 pointer-events-none z-20 overflow-hidden"
+                style={{
+                  backgroundImage: `linear-gradient(to bottom, rgba(99, 102, 241, 0.15) 1px, transparent 1px)`,
+                  backgroundSize: `100% ${Math.max(4, baselineGrid.stepPt)}pt`,
+                  backgroundPosition: `0 ${margins.topPt}pt`,
+                }}
+              />
             )}
 
             {/* Empty Page Assistant (Directive 38, Directive 85) */}
@@ -602,21 +699,22 @@ export const PageCanvas: React.FC<PageCanvasProps> = ({ book, activePage }) => {
             {/* Text Wrap Exclusion Area Outlines (Part 4) */}
             {leftElements
               .filter((el) => {
-                const wrapMode = el.textWrap?.mode || el.style.textWrap?.mode;
-                return wrapMode && wrapMode !== "none";
+                const wrapMode = effectiveTextWrap(el)?.mode;
+                return selectedElementIds.includes(el.id) && wrapMode && !["none", "through", "floating"].includes(wrapMode);
               })
               .map((el) => {
-                const wrap = el.textWrap || el.style.textWrap;
-                const top = el.transform.y - (wrap?.topOffsetPt ?? wrap?.wrapMarginPt ?? 12);
-                const left = el.transform.x - (wrap?.leftOffsetPt ?? wrap?.wrapMarginPt ?? 12);
+                const wrap = effectiveTextWrap(el);
+                const margin = wrap?.offsetPt ?? wrap?.wrapMarginPt ?? 12;
+                const top = el.transform.y - (wrap?.topOffsetPt ?? margin);
+                const left = el.transform.x - (wrap?.leftOffsetPt ?? margin);
                 const width =
                   el.transform.width +
-                  (wrap?.leftOffsetPt ?? wrap?.wrapMarginPt ?? 12) +
-                  (wrap?.rightOffsetPt ?? wrap?.wrapMarginPt ?? 12);
+                  (wrap?.leftOffsetPt ?? margin) +
+                  (wrap?.rightOffsetPt ?? margin);
                 const height =
                   el.transform.height +
-                  (wrap?.topOffsetPt ?? wrap?.wrapMarginPt ?? 12) +
-                  (wrap?.bottomOffsetPt ?? wrap?.wrapMarginPt ?? 12);
+                  (wrap?.topOffsetPt ?? margin) +
+                  (wrap?.bottomOffsetPt ?? margin);
                 return (
                   <div
                     key={`wrap-exclusion-${el.id}`}
@@ -626,10 +724,11 @@ export const PageCanvas: React.FC<PageCanvasProps> = ({ book, activePage }) => {
                       top: `${top}pt`,
                       width: `${width}pt`,
                       height: `${height}pt`,
+                      transform: el.transform.rotation ? `rotate(${el.transform.rotation}deg)` : undefined,
                     }}
                   >
                     <span className="absolute -top-3 left-1 text-[6pt] text-purple-700 font-mono bg-purple-50 px-1 rounded shadow-xs">
-                      Wrap: {el.textWrap?.mode || el.style.textWrap?.mode}
+                      Wrap: {wrap?.mode}
                     </span>
                   </div>
                 );
@@ -642,7 +741,7 @@ export const PageCanvas: React.FC<PageCanvasProps> = ({ book, activePage }) => {
                 <div
                   key={el.id}
                   onClick={(e) => {
-                    if (activeTool === "move") {
+                    if (activeTool === "move" || !["hand", "zoom", "measure", "pen", "pencil", "shape", "table", "brush", "eraser"].includes(activeTool)) {
                       e.stopPropagation();
                       selectElement(el.id, e.shiftKey || e.metaKey);
                     }
@@ -733,11 +832,7 @@ export const PageCanvas: React.FC<PageCanvasProps> = ({ book, activePage }) => {
               <VectorPenOverlay zoom={zoom} />
             )}
 
-            {/* Page Footer / Number Indicator */}
-            <div className="absolute bottom-2 left-6 right-6 flex items-center justify-between text-[7pt] text-slate-400 font-sans pointer-events-none">
-              <span>{book.title}</span>
-              <span className="font-semibold text-slate-600">{activePage.displayNumber}</span>
-            </div>
+            <PublisherFooterView book={book} page={leftPage} elements={elements}/>
           </div>
 
           {/* Right Page (In Spread Mode) */}
@@ -749,15 +844,53 @@ export const PageCanvas: React.FC<PageCanvasProps> = ({ book, activePage }) => {
                 height: `${dimensions.heightPt}pt`,
               }}
             >
+              <PageFrameView book={book} page={rightPage}/>
               {/* Margin Guides */}
-              {showMargins && (
+              {showMargins && !pageFrameFor(book, rightPage) && (
                 <div
                   className="absolute border border-sky-400/30 border-dashed pointer-events-none"
                   style={{
-                    top: `${margins.topPt}pt`,
-                    bottom: `${margins.bottomPt}pt`,
-                    left: `${margins.insidePt}pt`,
-                    right: `${margins.outsidePt}pt`,
+                    top: `${rightMargins.topPt}pt`,
+                    bottom: `${rightMargins.bottomPt}pt`,
+                    left: `${rightMargins.insidePt}pt`,
+                    right: `${rightMargins.outsidePt}pt`,
+                  }}
+                />
+              )}
+
+              {/* Column Grid Guides */}
+              {columnGrid?.enabled && (
+                <div
+                  className="absolute pointer-events-none flex z-20"
+                  style={{
+                    top: `${rightMargins.topPt}pt`,
+                    bottom: `${rightMargins.bottomPt}pt`,
+                    left: `${rightMargins.insidePt}pt`,
+                    right: `${rightMargins.outsidePt}pt`,
+                    gap: `${columnGrid.gutterPt}pt`,
+                  }}
+                >
+                  {Array.from({ length: Math.max(1, rightColumns) }).map((_, i) => (
+                    <div
+                      key={i}
+                      className="flex-1 bg-indigo-500/[0.04] border-x border-indigo-400/25 relative"
+                    >
+                      <span className="absolute top-1 left-1 text-[5pt] text-indigo-400/60 font-mono">
+                        COL {i + 1}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Baseline Grid */}
+              {baselineGrid?.enabled && (
+                <div
+                  className="absolute inset-0 pointer-events-none z-20 overflow-hidden"
+                  style={{
+                    backgroundImage: `linear-gradient(to bottom, rgba(99, 102, 241, 0.15) 1px, transparent 1px)`,
+                    backgroundSize: `100% ${Math.max(4, baselineGrid.stepPt)}pt`,
+                    backgroundPosition: `0 ${rightMargins.topPt}pt`,
                   }}
                 />
               )}
@@ -768,7 +901,7 @@ export const PageCanvas: React.FC<PageCanvasProps> = ({ book, activePage }) => {
                   <div
                     key={el.id}
                     onClick={(e) => {
-                      if (activeTool === "move") {
+                      if (activeTool === "move" || !["hand", "zoom", "measure", "pen", "pencil", "shape", "table", "brush", "eraser"].includes(activeTool)) {
                         e.stopPropagation();
                         selectElement(el.id, e.shiftKey || e.metaKey);
                       }
@@ -779,10 +912,7 @@ export const PageCanvas: React.FC<PageCanvasProps> = ({ book, activePage }) => {
                 );
               })}
 
-              <div className="absolute bottom-2 left-6 right-6 flex items-center justify-between text-[7pt] text-slate-400 font-sans pointer-events-none">
-                <span className="font-semibold text-slate-600">{rightPage.displayNumber}</span>
-                <span>{book.title}</span>
-              </div>
+              <PublisherFooterView book={book} page={rightPage} elements={elements}/>
             </div>
           )}
 
@@ -836,6 +966,7 @@ export const PageCanvas: React.FC<PageCanvasProps> = ({ book, activePage }) => {
       )}
 
       <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-40 flex items-center gap-1 rounded-xl border border-slate-200/90 dark:border-white/10 bg-white/95 dark:bg-slate-950 px-2 py-1 shadow-lg text-slate-700 dark:text-slate-300" onMouseDown={e=>e.stopPropagation()} onWheel={e=>e.stopPropagation()}>
+        <button onClick={() => useUiStore.getState().setPageBorderModalOpen(true)} className="px-2 py-1.5 text-xs font-semibold rounded-lg hover:bg-indigo-500/10" title="Edit page borders" aria-label="Page borders">Page borders</button>
         <button className="studio-icon-button px-3 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white" aria-label="Zoom out" onClick={zoomOut}>−</button>
         <span className="text-xs text-slate-700 dark:text-slate-300 w-12 text-center font-medium" aria-live="polite">{Math.round(zoom*100)}%</span>
         <button className="studio-icon-button px-3 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white" aria-label="Zoom in" onClick={zoomIn}>+</button>

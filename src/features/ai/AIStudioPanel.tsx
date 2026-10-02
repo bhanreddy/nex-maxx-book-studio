@@ -371,7 +371,7 @@ export const AIStudioPanel: React.FC = () => {
           {aiActiveTab === "removeBg" && (
             <div className="space-y-4 text-xs">
               <p className="text-slate-400">
-                Automatically detects the foreground educational subject and creates a non-destructive alpha mask without erasing original pixels.
+                Cuts the subject out of an uploaded photo or a preset picture. Edges follow the picture, and the original can be restored.
               </p>
               {singleElement && singleElement.type === "image" ? (
                 <div className="p-4 bg-black/30 border border-white/10 rounded-xl space-y-3">
@@ -382,7 +382,7 @@ export const AIStudioPanel: React.FC = () => {
                     onClick={() => removeImageBackground(singleElement.id)}
                     className="w-full py-2.5 bg-rose-600 hover:bg-rose-500 text-white font-semibold rounded-lg flex items-center justify-center gap-2"
                   >
-                    <Scissors className="w-4 h-4" /> 1-Click Remove Background (Create Mask)
+                    <Scissors className="w-4 h-4" /> Remove background
                   </button>
                 </div>
               ) : (

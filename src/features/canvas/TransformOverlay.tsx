@@ -1,5 +1,6 @@
 "use client";
 
+import { elementTree } from "../../editor/core/elementGroups";
 import React, { useState, useRef } from "react";
 import { PageElement } from "../../domain/element/types";
 import { PageDimensions, Margins, Bleed } from "../../domain/book/types";
@@ -16,9 +17,29 @@ import { useEditorStore } from "../../editor/stores/editorStore";
 import { useUiStore } from "../../editor/stores/uiStore";
 import { useLayoutPartnerStore } from "../../editor/layoutPartner/layoutPartnerStore";
 import { detectMagneticDropZone } from "../../editor/layoutPartner/partnerEngine";
+import { wrapsText } from "../../editor/layoutPartner/textWrapLayout";
 import { MotifOverlay } from "./MotifOverlay";
 import { stageName } from "../../editor/curriculum/frameworkPlan";
 import { CURRICULUM_BLOCK_MAP } from "../../editor/curriculum/catalog";
+import { setFrameworkMode } from "../../editor/curriculum/actions";
+import { Move, Unlink2 } from "lucide-react";
+
+/** Coalesce high-frequency mouse events and flush the final position before undo commits. */
+function frameMouseMoves(apply: (event: MouseEvent) => void) {
+  let pending: MouseEvent | null = null;
+  let scheduled = 0;
+  const flush = () => {
+    if (scheduled) cancelAnimationFrame(scheduled);
+    scheduled = 0;
+    const event = pending;
+    pending = null;
+    if (event) apply(event);
+  };
+  return { flush, move: (event: MouseEvent) => {
+    pending = event;
+    if (!scheduled) scheduled = requestAnimationFrame(flush);
+  } };
+}
 
 interface TransformOverlayProps {
   selectedElements: PageElement[];
@@ -37,8 +58,14 @@ export const TransformOverlay: React.FC<TransformOverlayProps> = ({
   bleed,
   zoom,
 }) => {
-  const { updateElementTransform, duplicateSelectedElementsWithOffset } = useEditorStore();
-  const { snapEnabled, cropElementId, setCropElementId, editingTextElementId, setEditingTextElementId } = useUiStore();
+  const updateElementTransform = useEditorStore((s) => s.updateElementTransform);
+  const duplicateSelectedElementsWithOffset = useEditorStore((s) => s.duplicateSelectedElementsWithOffset);
+  const detachEducationalBlock = useEditorStore((s) => s.detachEducationalBlock);
+  const snapEnabled = useUiStore((s) => s.snapEnabled);
+  const cropElementId = useUiStore((s) => s.cropElementId);
+  const setCropElementId = useUiStore((s) => s.setCropElementId);
+  const editingTextElementId = useUiStore((s) => s.editingTextElementId);
+  const setEditingTextElementId = useUiStore((s) => s.setEditingTextElementId);
 
   const [isDragging, setIsDragging] = useState(false);
   const [, setActiveHandle] = useState<HandleType | null>(null);
@@ -60,8 +87,7 @@ export const TransformOverlay: React.FC<TransformOverlayProps> = ({
     combinedBoundingBox: { x: 0, y: 0, width: 0, height: 0 },
   });
 
-  const curriculumLocked = selectedElements.length > 0 && selectedElements.every(el => el.smartBlockData?.isLockedDesign) && selectedElements.some(el => el.smartBlockData?.curriculum);
-  if (selectedElements.length === 0 || selectedElements.every(el => el.locked) || (!curriculumLocked && selectedElements.every(el => el.smartBlockData?.isLockedDesign)) || (selectedElements.length === 1 && (selectedElements[0].id === cropElementId || selectedElements[0].id === editingTextElementId))) return null;
+  if (selectedElements.length === 0 || selectedElements.every(el => el.locked) || (selectedElements.length === 1 && (selectedElements[0].id === cropElementId || selectedElements[0].id === editingTextElementId))) return null;
 
   const rects: Rect[] = selectedElements.map((el) => ({
     x: el.transform.x,
@@ -76,37 +102,6 @@ export const TransformOverlay: React.FC<TransformOverlayProps> = ({
   const handles = getTransformHandles(boundingBox, rotation);
   const curriculumMeta = singleElement?.smartBlockData?.curriculum;
   const curriculumName = curriculumMeta ? (CURRICULUM_BLOCK_MAP[curriculumMeta.type]?.name || singleElement?.displayName) : singleElement?.displayName;
-
-  if (curriculumLocked && singleElement) {
-    return (
-      <div
-        className="absolute z-40 pointer-events-none border-2 border-[#d7c49c] rounded-xs shadow-[0_0_0_1px_rgba(215,196,156,0.3)]"
-        role="status"
-        aria-label={`${curriculumName} selected. Edit its words in the inspector. Switch the chapter to Design mode to move it.`}
-        style={{
-          left: `${boundingBox.x}pt`,
-          top: `${boundingBox.y}pt`,
-          width: `${boundingBox.width}pt`,
-          height: `${boundingBox.height}pt`,
-          transform: rotation ? `rotate(${rotation}deg)` : undefined,
-        }}
-      >
-        {/* Corner framing handles */}
-        <div className="studio-handle-dot is-curriculum absolute -top-1.5 -left-1.5" />
-        <div className="studio-handle-dot is-curriculum absolute -top-1.5 -right-1.5" />
-        <div className="studio-handle-dot is-curriculum absolute -bottom-1.5 -left-1.5" />
-        <div className="studio-handle-dot is-curriculum absolute -bottom-1.5 -right-1.5" />
-        {/* Dimension & Status Tag */}
-        <div className="absolute -bottom-6 left-1/2 -translate-x-1/2 bg-[#10141d] border border-[#d7c49c]/40 text-[#f3e6c8] text-[7pt] font-mono px-2 py-0.5 rounded shadow pointer-events-none whitespace-nowrap">
-          {Math.round(boundingBox.width)} × {Math.round(boundingBox.height)} pt · Structured
-        </div>
-        <div className="studio-selection-label">
-          {curriculumName} · {stageName(curriculumMeta!.frameworkStage, curriculumMeta!.type)}
-          <small>Structured chapter block · Words & layout editable in Inspector</small>
-        </div>
-      </div>
-    );
-  }
 
   // Other elements for snapping calculations
   const otherRects: Rect[] = allPageElements
@@ -128,7 +123,22 @@ export const TransformOverlay: React.FC<TransformOverlayProps> = ({
       duplicateSelectedElementsWithOffset({ dx: 0, dy: 0 });
     }
 
-    const before = selectedElements.map(el=>useEditorStore.getState().elements[el.id]);
+    if (curriculumMeta?.chapterId) {
+      const activeBook = useEditorStore.getState().getActiveBook();
+      const ch = activeBook?.chapters.find(c => c.id === curriculumMeta.chapterId);
+      if (ch?.framework?.mode === "easy") {
+        setFrameworkMode(curriculumMeta.chapterId, "design");
+      }
+    }
+    selectedElements.forEach(el => {
+      if (el.smartBlockData?.isLockedDesign) {
+        useEditorStore.getState().updateElement(el.id, {
+          smartBlockData: { ...el.smartBlockData, isLockedDesign: false }
+        });
+      }
+    });
+
+    const before = elementTree(selectedElements.map(el => el.id), useEditorStore.getState().elements);
     setIsDragging(true);
     dragStartRef.current = {
       startX: e.clientX,
@@ -146,7 +156,7 @@ export const TransformOverlay: React.FC<TransformOverlayProps> = ({
       combinedBoundingBox: boundingBox,
     };
 
-    const handleMouseMove = (moveEvent: MouseEvent) => {
+    const applyMouseMove = (moveEvent: MouseEvent) => {
       const deltaScreenX = moveEvent.clientX - dragStartRef.current.startX;
       const deltaScreenY = moveEvent.clientY - dragStartRef.current.startY;
 
@@ -167,8 +177,15 @@ export const TransformOverlay: React.FC<TransformOverlayProps> = ({
         pageDimensions,
         margins,
         bleed,
-        5 / zoom,
-        !snapEnabled || moveEvent.altKey
+        {
+          thresholdPt: 5 / zoom, disabled: !snapEnabled || moveEvent.altKey,
+          userGuides: useUiStore.getState().userGuides,
+          columnGrid: useUiStore.getState().columnGrid.enabled ? {
+            columns: useEditorStore.getState().getActiveBook()?.masterPages.find(master => master.id === useEditorStore.getState().getActivePage()?.masterPageId)?.gridColumns || useUiStore.getState().columnGrid.columns,
+            gutterPt: useUiStore.getState().columnGrid.gutterPt,
+          } : undefined,
+          baselineGridPt: useUiStore.getState().baselineGrid.enabled ? useUiStore.getState().baselineGrid.stepPt : undefined,
+        }
       );
 
       setActiveGuides(snapResult.guides);
@@ -179,7 +196,7 @@ export const TransformOverlay: React.FC<TransformOverlayProps> = ({
 
       // Partner Magnetic Drop Zone detection (Part 8)
       const partnerStore = useLayoutPartnerStore.getState();
-      if (partnerStore.partnerMode !== "manual") {
+      if (partnerStore.partnerMode !== "manual" && !selectedElements.some(wrapsText)) {
         const detectedZone = detectMagneticDropZone(
           rawMovingRect.x,
           rawMovingRect.y,
@@ -204,7 +221,10 @@ export const TransformOverlay: React.FC<TransformOverlayProps> = ({
       });
     };
 
+    const moves = frameMouseMoves(applyMouseMove);
+    const handleMouseMove = moves.move;
     const handleMouseUp = () => {
+      moves.flush();
       setIsDragging(false);
       setActiveGuides([]);
       setActiveSpacing([]);
@@ -212,7 +232,8 @@ export const TransformOverlay: React.FC<TransformOverlayProps> = ({
       // Magnetic Drop Zone Snapping (Part 8)
       const partnerStore = useLayoutPartnerStore.getState();
       const dropZone = partnerStore.hoveredDropZone;
-      if (dropZone && partnerStore.partnerMode !== "manual" && selectedElements.length === 1 && !selectedElements[0].smartBlockData && selectedElements[0].category !== "decorative") {
+      const wrappingObject = selectedElements.some(wrapsText);
+      if (dropZone && !wrappingObject && partnerStore.partnerMode !== "manual" && selectedElements.length === 1 && !selectedElements[0].smartBlockData && selectedElements[0].category !== "decorative") {
         const singleEl=useEditorStore.getState().elements[selectedElements[0].id];
         updateElementTransform(singleEl.id,{x:dropZone.bounds.x,y:dropZone.bounds.y,width:dropZone.bounds.width,height:Math.min(singleEl.transform.height,dropZone.bounds.height)},false);
       }
@@ -237,7 +258,23 @@ export const TransformOverlay: React.FC<TransformOverlayProps> = ({
     e.stopPropagation();
 
     setActiveHandle(handle);
-    const before = selectedElements.map(el=>useEditorStore.getState().elements[el.id]);
+
+    if (curriculumMeta?.chapterId) {
+      const activeBook = useEditorStore.getState().getActiveBook();
+      const ch = activeBook?.chapters.find(c => c.id === curriculumMeta.chapterId);
+      if (ch?.framework?.mode === "easy") {
+        setFrameworkMode(curriculumMeta.chapterId, "design");
+      }
+    }
+    selectedElements.forEach(el => {
+      if (el.smartBlockData?.isLockedDesign) {
+        useEditorStore.getState().updateElement(el.id, {
+          smartBlockData: { ...el.smartBlockData, isLockedDesign: false }
+        });
+      }
+    });
+
+    const before = elementTree(selectedElements.map(el => el.id), useEditorStore.getState().elements);
     const artboard = document.getElementById("page-artboard")?.getBoundingClientRect();
     const startX = e.clientX;
     const startY = e.clientY;
@@ -247,7 +284,7 @@ export const TransformOverlay: React.FC<TransformOverlayProps> = ({
       y: initialRect.y + initialRect.height / 2,
     };
 
-    const handleMouseMove = (moveEvent: MouseEvent) => {
+    const applyMouseMove = (moveEvent: MouseEvent) => {
       const deltaX = (moveEvent.clientX - startX) * .75 / zoom;
       const deltaY = (moveEvent.clientY - startY) * .75 / zoom;
 
@@ -287,7 +324,10 @@ export const TransformOverlay: React.FC<TransformOverlayProps> = ({
       }
     };
 
+    const moves = frameMouseMoves(applyMouseMove);
+    const handleMouseMove = moves.move;
     const handleMouseUp = () => {
+      moves.flush();
       setActiveHandle(null);
       useEditorStore.getState().commitTransformGesture(before);
       window.removeEventListener("mousemove", handleMouseMove);
@@ -375,7 +415,7 @@ export const TransformOverlay: React.FC<TransformOverlayProps> = ({
 
       {/* Main Selection Bounding Box */}
       <div
-        className={`absolute pointer-events-auto border-2 z-40 transition-none ${curriculumMeta ? "border-[#d7c49c]" : "border-indigo-500/90"}`}
+        className={`absolute border-2 z-40 transition-none ${curriculumMeta ? "border-[#d7c49c]" : "border-indigo-500/90"} ${(singleElement?.type === "smart-block" || Boolean(curriculumMeta)) ? "pointer-events-none" : "pointer-events-auto"}`}
         style={{
           left: `${boundingBox.x}pt`,
           top: `${boundingBox.y}pt`,
@@ -388,10 +428,55 @@ export const TransformOverlay: React.FC<TransformOverlayProps> = ({
           if (singleElement?.type === "image") { e.stopPropagation(); setCropElementId(singleElement.id); }
           else if (singleElement && ["body", "heading", "subheading", "caption", "quote", "chapter-title", "lesson-title"].includes(singleElement.type)) { e.stopPropagation(); setEditingTextElementId(singleElement.id); }
         }}
-        onMouseDown={handleBoxMouseDown}
+        onMouseDown={(singleElement?.type === "smart-block" || Boolean(curriculumMeta)) ? undefined : handleBoxMouseDown}
       >
-        {(singleElement?.smartBlockData?.presetId.startsWith("atelier-") || singleElement?.smartBlockData?.curriculum) && <MotifOverlay element={singleElement!} zoom={zoom} />}
-        {curriculumMeta && <div className="studio-selection-label">{curriculumName} · {stageName(curriculumMeta.frameworkStage, curriculumMeta.type)}<small>Drag to move. Corners resize.</small></div>}
+        {curriculumMeta?.type === "lesson-schema" && <button type="button" aria-label="Move lesson schema" className="absolute -top-7 right-0 pointer-events-auto rounded bg-slate-900 px-2 py-1 text-[8pt] text-white cursor-move" onMouseDown={handleBoxMouseDown}>Move schema</button>}
+        {(singleElement?.type === "smart-block" || Boolean(curriculumMeta)) && (
+          <>
+            {/* Dedicated Top Move & Unlock Header Bar */}
+            <div
+              className="absolute -top-9 left-0 pointer-events-auto flex items-center gap-2 bg-slate-950/95 text-amber-200 border border-amber-500/40 text-[7.5pt] font-sans px-2.5 py-1 rounded-lg shadow-xl select-none z-50 backdrop-blur-md"
+            >
+              <div
+                className="flex items-center gap-1.5 cursor-grab active:cursor-grabbing hover:text-amber-300 font-bold"
+                onMouseDown={handleBoxMouseDown}
+                title="Click and drag to move block anywhere on the page"
+              >
+                <Move className="w-3.5 h-3.5 text-amber-400" />
+                <span>Move {curriculumName || singleElement?.displayName || "Block"}</span>
+              </div>
+              <div className="h-3 w-px bg-amber-500/30" />
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (singleElement) detachEducationalBlock(singleElement.id);
+                }}
+                className="flex items-center gap-1 px-2 py-0.5 rounded bg-amber-500/20 hover:bg-amber-500/30 text-amber-200 hover:text-white border border-amber-400/40 hover:border-amber-400 text-[7pt] font-medium transition-all"
+                title="Detach into independent movable text and image layers"
+              >
+                <Unlink2 className="w-3 h-3 text-amber-300" />
+                <span>Make Text & Images Movable</span>
+              </button>
+            </div>
+            {/* Edge Drag Hit Areas (8pt border perimeter) */}
+            <div className="absolute -top-2 left-0 right-0 h-4 pointer-events-auto cursor-move" onMouseDown={handleBoxMouseDown} title="Drag border to move block" />
+            <div className="absolute -bottom-2 left-0 right-0 h-4 pointer-events-auto cursor-move" onMouseDown={handleBoxMouseDown} title="Drag border to move block" />
+            <div className="absolute top-0 bottom-0 -left-2 w-4 pointer-events-auto cursor-move" onMouseDown={handleBoxMouseDown} title="Drag border to move block" />
+            <div className="absolute top-0 bottom-0 -right-2 w-4 pointer-events-auto cursor-move" onMouseDown={handleBoxMouseDown} title="Drag border to move block" />
+          </>
+        )}
+        {Boolean(singleElement?.smartBlockData) && <MotifOverlay element={singleElement!} zoom={zoom} />}
+        {curriculumMeta && (
+          <div
+            className="studio-selection-label pointer-events-auto cursor-move select-none"
+            onMouseDown={handleBoxMouseDown}
+            title="Drag here to move the block on page"
+          >
+            {curriculumName} · {stageName(curriculumMeta.frameworkStage, curriculumMeta.type)}
+            <small>Drag to move. Corners resize.</small>
+          </div>
+        )}
         {/* Dimensions Tag */}
         <div className="absolute -bottom-6 left-1/2 -translate-x-1/2 bg-indigo-600 text-white text-[7pt] font-mono px-1.5 py-0.5 rounded shadow pointer-events-none whitespace-nowrap">
           {Math.round(boundingBox.width)} × {Math.round(boundingBox.height)} pt
@@ -409,6 +494,7 @@ export const TransformOverlay: React.FC<TransformOverlayProps> = ({
                   left: "50%",
                   top: "-20pt",
                   transform: "translate(-50%, -50%)",
+                  pointerEvents: "auto",
                 }}
                 onMouseDown={(e) => handleHandleMouseDown("rot", e)}
                 aria-label="Rotate selected block"
@@ -438,6 +524,7 @@ export const TransformOverlay: React.FC<TransformOverlayProps> = ({
               style={{
                 ...posStyle,
                 cursor: h.cursor,
+                pointerEvents: "auto",
               }}
               onMouseDown={(e) => handleHandleMouseDown(h.type, e)}
             >

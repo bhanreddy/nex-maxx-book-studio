@@ -1,0 +1,15 @@
+{
+  "style": "scholar-wave",
+  "colors": {
+    "primary": "#79253E",
+    "secondary": "#B9586C",
+    "accent": "#F5C79A",
+    "leaf": "#547B67",
+    "paper": "#FFFEFC",
+    "line": "#D5A29F"
+  },
+  "showTopNumber": true,
+  "showBottomNumber": true,
+  "edits": {},
+  "additions": []
+}

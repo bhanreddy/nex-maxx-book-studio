@@ -1,4 +1,6 @@
 "use client";
+import { PageFrameView } from "../../editor/renderer/PageFrameView";
+import { PublisherFooterView } from "../../editor/renderer/PublisherFooterView";
 import React, { memo, useEffect, useMemo, useRef, useState } from "react";
 import type { PageDefinition } from "../../domain/book/types";
 import { useEditorStore } from "../../editor/stores/editorStore";
@@ -17,6 +19,8 @@ const ThumbnailLayer = memo(function ThumbnailLayer({ id, width, height }: { id:
 
 /** Off-screen pages mount no scenes; visible layers subscribe only to their own element. */
 export const EditorPageThumbnail = memo(function EditorPageThumbnail({ page, width, height }: { page: PageDefinition; width: number; height: number }) {
+  const book = useEditorStore(s => s.getActiveBook());
+  const elements = useEditorStore(s => s.elements);
   const ref = useRef<HTMLDivElement>(null), [visible, setVisible] = useState(false);
   useEffect(() => {
     if (!ref.current || typeof IntersectionObserver === "undefined") { setVisible(true); return; }
@@ -24,6 +28,8 @@ export const EditorPageThumbnail = memo(function EditorPageThumbnail({ page, wid
     observer.observe(ref.current); return () => observer.disconnect();
   }, []);
   return <div ref={ref} className="w-full flex-1 bg-white relative overflow-hidden pointer-events-none" aria-hidden="true">
+    {visible && book && <PageFrameView book={book} page={page}/>}
     {visible && page.elementIds.map(id => <ThumbnailLayer key={id} id={id} width={width} height={height}/>)}
+    {visible && book && <PublisherFooterView book={book} page={page} elements={elements}/>}
   </div>;
 });

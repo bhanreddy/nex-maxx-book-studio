@@ -1,5 +1,10 @@
 "use client";
+import { selectionRoot, isElementLocked } from "../../editor/core/elementGroups";
+import { PicturePresetLibrary } from "./PicturePresetLibrary";
+import { DeletePageButton } from "./DeletePageButton";
+import {SmartQrLibrary} from "../media/SmartQrPanel";
 
+import { computeVirtualPageWindow } from "../../editor/performance/largeBookEngine";
 import React, { useEffect, useState } from "react";
 import { useEditorStore } from "../../editor/stores/editorStore";
 import { useUiStore } from "../../editor/stores/uiStore";
@@ -26,6 +31,12 @@ import {
 } from "lucide-react";
 import { EducationalBlocksPanel } from "../educational/EducationalBlocksPanel";
 import { CurriculumBlocksPanel } from "../curriculum/CurriculumBlocksPanel";
+import { LessonSchemaLibraryCard } from "../curriculum/LessonSchemaLibraryCard";
+import { StudySkillsLibraryCard } from "../curriculum/StudySkillsLibraryCard";
+import { LearningOutcomesLibraryCard } from "../curriculum/LearningOutcomesLibraryCard";
+import { FactZoneLibraryCard } from "../curriculum/FactZoneLibraryCard";
+import { TopicBannerLibraryCard } from "../curriculum/TopicBannerLibraryCard";
+import { LifeConnectLibraryCard } from "../curriculum/LifeConnectLibraryCard";
 import { ChapterStructurePanel } from "../curriculum/ChapterStructurePanel";
 
 export const LeftSidebar: React.FC = () => {
@@ -66,6 +77,7 @@ export const LeftSidebar: React.FC = () => {
 
   const book = useEditorStore((s) => s.getActiveBook());
   const activeElements = getActivePageElements();
+  const pageWindow = computeVirtualPageWindow(book?.pages.length || 0, activePageIndex, 24);
 
   const handleStartResize = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -116,6 +128,11 @@ export const LeftSidebar: React.FC = () => {
         title="Drag to resize panel (Double-click to reset)"
       />
       {/* Tab Navigation Strip */}
+      <div className="shrink-0 px-3 py-2 border-b border-slate-200 dark:border-white/10">
+        <button aria-label="Page borders" aria-haspopup="dialog" className="w-full min-h-11 px-3 rounded-lg border border-slate-200 dark:border-white/15 bg-slate-50 dark:bg-white/5 text-left text-sm font-semibold hover:bg-slate-100 dark:hover:bg-white/10 active:scale-[.98] transition-transform" onClick={() => useUiStore.getState().setPageBorderModalOpen(true)}>
+          <span>Page borders</span><span className="float-right text-xs font-normal text-slate-500 dark:text-slate-400">Style & apply</span>
+        </button>
+      </div>
       <div className="studio-side-tabs">
         <div className="studio-side-tabs-scroll" role="tablist" aria-label="Sidebar">
           {(
@@ -203,7 +220,23 @@ export const LeftSidebar: React.FC = () => {
       </div>
 
       {/* Tab 0: Educational Blocks System */}
-      {leftPanelTab === "curriculum" && <CurriculumBlocksPanel />}
+      {leftPanelTab === "curriculum" && (
+        <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
+          <details className="shrink-0 border-b border-slate-200 dark:border-white/10 group">
+            <summary className="px-3 py-1.5 text-xs text-slate-600 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 cursor-pointer flex items-center justify-between font-medium select-none bg-slate-50/60 dark:bg-white/[0.02] transition-colors">
+              <span className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-indigo-600 dark:text-indigo-400">
+                <Sparkles className="w-3.5 h-3.5" />
+                <span>Smart QR & Learning Media</span>
+              </span>
+              <span className="text-[10px] text-slate-400 font-mono group-open:rotate-180 transition-transform">▼</span>
+            </summary>
+            <div className="max-h-72 overflow-y-auto">
+              <SmartQrLibrary />
+            </div>
+          </details>
+          <CurriculumBlocksPanel />
+        </div>
+      )}
       {leftPanelTab === "structure" && <ChapterStructurePanel />}
       {leftPanelTab === "blocks" && (
         <EducationalBlocksPanel />
@@ -212,6 +245,7 @@ export const LeftSidebar: React.FC = () => {
       {/* Tab 1: Elements Browser */}
       {leftPanelTab === "elements" && (
         <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
+          <details className="shrink-0 border-b border-slate-200 dark:border-white/10"><summary className="px-3 py-2 text-xs text-slate-600 dark:text-slate-300 cursor-pointer">Learning media / Smart QR</summary><SmartQrLibrary/></details>
           <PresetLibrary />
         </div>
       )}
@@ -221,10 +255,10 @@ export const LeftSidebar: React.FC = () => {
         <div className="flex-1 flex flex-col overflow-hidden p-3.5">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
-              <span className="text-xs font-bold uppercase tracking-wider text-slate-300 font-mono">
+              <span className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 font-mono">
                 Pages
               </span>
-              <span className="px-2 py-0.5 rounded-full bg-indigo-500/15 text-indigo-300 font-mono text-[9px] font-semibold border border-indigo-500/25">
+              <span className="px-2 py-0.5 rounded-full bg-indigo-500/15 text-indigo-700 dark:text-indigo-300 font-mono text-[9px] font-semibold border border-indigo-500/25">
                 {book.pages.length}
               </span>
             </div>
@@ -238,18 +272,24 @@ export const LeftSidebar: React.FC = () => {
           </div>
 
           <div className="flex-1 overflow-y-auto space-y-2 pr-1 custom-scrollbar">
-            {book.pages.map((p, idx) => {
+            <div className="flex items-center gap-2 sticky top-0 z-10 bg-white dark:bg-slate-950 py-2">
+              <button type="button" title="Previous page window" aria-label="Previous page window" disabled={pageWindow.startIndex === 0} className="min-h-11 px-2 disabled:opacity-40" onClick={() => setActivePageIndex(Math.max(0, pageWindow.startIndex - 12))}><ChevronLeft className="w-4 h-4"/></button>
+              <label className="flex-1 text-xs text-slate-500">Go to page <input aria-label="Go to physical page" type="number" min={1} max={book.pages.length} value={activePageIndex + 1} onChange={event => { const value = Number(event.target.value); if (Number.isInteger(value) && value > 0) setActivePageIndex(value - 1); }} className="ml-2 w-16 min-h-11 rounded-lg border border-slate-200 bg-transparent px-2 dark:border-white/10"/></label>
+              <button type="button" title="Next page window" aria-label="Next page window" disabled={pageWindow.endIndex === book.pages.length - 1} className="min-h-11 px-2 disabled:opacity-40" onClick={() => setActivePageIndex(Math.min(book.pages.length - 1, pageWindow.endIndex + 12))}><ChevronRight className="w-4 h-4"/></button>
+            </div>
+            {pageWindow.visibleIndices.map(idx => {
+              const p = book.pages[idx];
               const isCurrent = idx === activePageIndex;
 
               // Color mapping for publication status
               const statusColor =
                 p.status === "Approved"
-                  ? "bg-emerald-500/15 text-emerald-300 border-emerald-500/30"
+                  ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/30"
                   : p.status === "Writing"
-                  ? "bg-amber-500/15 text-amber-300 border-amber-500/30"
+                  ? "bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30"
                   : p.status === "Content Review"
-                  ? "bg-sky-500/15 text-sky-300 border-sky-500/30"
-                  : "bg-purple-500/15 text-purple-300 border-purple-500/30";
+                  ? "bg-sky-500/15 text-sky-700 dark:text-sky-300 border-sky-500/30"
+                  : "bg-purple-500/15 text-purple-700 dark:text-purple-300 border-purple-500/30";
 
               return (
                 <div
@@ -257,8 +297,8 @@ export const LeftSidebar: React.FC = () => {
                   onClick={() => setActivePageIndex(idx)}
                   className={`group flex items-center justify-between p-2.5 rounded-xl border transition-all cursor-pointer ${
                     isCurrent
-                      ? "bg-gradient-to-r from-indigo-500/20 via-purple-500/15 to-transparent border-indigo-500/80 text-white shadow-[0_0_18px_rgba(99,102,241,0.2)] scale-[1.01]"
-                      : "bg-white/[0.03] border-white/[0.06] hover:bg-white/[0.07] hover:border-white/15 text-slate-300"
+                      ? "bg-gradient-to-r from-indigo-500/20 via-purple-500/15 to-transparent border-indigo-500/80 text-slate-900 dark:text-white shadow-[0_0_18px_rgba(99,102,241,0.2)] scale-[1.01]"
+                      : "bg-slate-50 border-slate-200 hover:bg-slate-100 hover:border-slate-300 text-slate-700 dark:bg-white/[0.03] dark:border-white/[0.06] dark:hover:bg-white/[0.07] dark:hover:border-white/15 dark:text-slate-300"
                   }`}
                 >
                   <div className="flex items-center gap-3">
@@ -266,30 +306,30 @@ export const LeftSidebar: React.FC = () => {
                     <div
                       className={`w-7 h-9 rounded-sm border p-1 flex flex-col justify-between transition-colors ${
                         isCurrent
-                          ? "bg-white text-slate-900 border-indigo-400 shadow-sm"
-                          : "bg-slate-900/80 border-white/20 text-slate-400 group-hover:border-white/30"
+                          ? "bg-white text-slate-900 border-indigo-500 shadow-sm"
+                          : "bg-white dark:bg-slate-900/80 border-slate-300 dark:border-white/20 text-slate-400 group-hover:border-slate-400 dark:group-hover:border-white/30"
                       }`}
                     >
                       <div
                         className={`w-full h-1 rounded-xs ${
-                          isCurrent ? "bg-indigo-500" : "bg-slate-600"
+                          isCurrent ? "bg-indigo-500" : "bg-slate-400 dark:bg-slate-600"
                         }`}
                       />
                       <div
                         className={`w-3/4 h-0.5 rounded-xs ${
-                          isCurrent ? "bg-slate-300" : "bg-slate-700"
+                          isCurrent ? "bg-slate-300" : "bg-slate-300 dark:bg-slate-700"
                         }`}
                       />
                       <div
                         className={`w-full h-1.5 rounded-xs ${
-                          isCurrent ? "bg-slate-200" : "bg-slate-700"
+                          isCurrent ? "bg-slate-200" : "bg-slate-300 dark:bg-slate-700"
                         }`}
                       />
                     </div>
 
                     <div>
                       <div className="flex items-center gap-1.5">
-                        <span className="font-semibold text-xs text-slate-200 group-hover:text-white">
+                        <span className="font-semibold text-xs text-slate-800 group-hover:text-slate-950 dark:text-slate-200 dark:group-hover:text-white">
                           {p.displayNumber === "Cover" ? "Book Cover" : `Page ${p.displayNumber}`}
                         </span>
                       </div>
@@ -299,7 +339,7 @@ export const LeftSidebar: React.FC = () => {
                         >
                           {p.status}
                         </span>
-                        <span className="text-[9.5px] text-slate-400 font-mono">
+                        <span className="text-[9.5px] text-slate-500 dark:text-slate-400 font-mono">
                           • {p.elementIds.length} el
                         </span>
                       </div>
@@ -312,23 +352,12 @@ export const LeftSidebar: React.FC = () => {
                         e.stopPropagation();
                         duplicatePage(idx);
                       }}
-                      className="p-1.5 hover:bg-white/10 rounded-lg text-slate-400 hover:text-white transition-colors"
+                      className="p-1.5 hover:bg-slate-200 dark:hover:bg-white/10 rounded-lg text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white transition-colors"
                       title="Duplicate Page"
                     >
                       <Copy className="w-3.5 h-3.5" />
                     </button>
-                    {book.pages.length > 1 && (
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          deletePage(idx);
-                        }}
-                        className="p-1.5 hover:bg-rose-500/20 rounded-lg text-rose-400 hover:text-rose-300 transition-colors"
-                        title="Delete Page"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    )}
+                    <DeletePageButton index={idx} className="min-h-9 min-w-9 flex items-center justify-center hover:bg-rose-500/20 rounded-lg text-rose-500 dark:text-rose-400" />
                   </div>
                 </div>
               );
@@ -342,10 +371,10 @@ export const LeftSidebar: React.FC = () => {
         <div className="flex-1 flex flex-col overflow-hidden p-3 text-xs">
           {/* Header & Total Count */}
           <div className="flex items-center justify-between mb-2">
-            <span className="text-[10.5pt] font-semibold text-slate-200">
+            <span className="text-[10.5pt] font-semibold text-slate-800 dark:text-slate-200">
               Preset Library
             </span>
-            <span className="px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 font-mono text-[7.5pt] border border-indigo-500/30">
+            <span className="px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 font-mono text-[7.5pt] border border-indigo-500/30">
               {COMPREHENSIVE_PRESET_LIBRARY.length} Presets
             </span>
           </div>
@@ -358,7 +387,7 @@ export const LeftSidebar: React.FC = () => {
               placeholder="Search (e.g. science activity, mcq, hero)..."
               value={presetSearch}
               onChange={(e) => setPresetSearch(e.target.value)}
-              className="w-full bg-black/40 border border-white/10 rounded-lg pl-8 pr-3 py-1.5 text-xs text-slate-200 placeholder-slate-500 outline-none focus:border-indigo-500"
+              className="w-full bg-slate-50 dark:bg-black/40 border border-slate-300 dark:border-white/10 rounded-lg pl-8 pr-3 py-1.5 text-xs text-slate-800 dark:text-slate-200 placeholder-slate-400 dark:placeholder-slate-500 outline-none focus:border-indigo-500"
             />
           </div>
 
@@ -385,8 +414,8 @@ export const LeftSidebar: React.FC = () => {
                   onClick={() => setPresetCategoryFilter(cat.id)}
                   className={`px-2 py-1 rounded-md flex-shrink-0 font-medium transition-all ${
                     active
-                      ? "bg-indigo-600 text-white shadow-xs"
-                      : "bg-white/5 text-slate-400 hover:text-white hover:bg-white/10"
+                      ? "bg-indigo-600 text-white shadow-xs font-semibold"
+                      : "bg-slate-100 hover:bg-slate-200 text-slate-600 hover:text-slate-900 border border-slate-200 dark:bg-white/5 dark:text-slate-400 dark:hover:text-white dark:hover:bg-white/10 dark:border-transparent"
                   }`}
                 >
                   {cat.label}
@@ -400,7 +429,7 @@ export const LeftSidebar: React.FC = () => {
             <select
               value={presetGradeFilter}
               onChange={(e) => setPresetGradeFilter(e.target.value)}
-              className="bg-black/30 border border-white/10 rounded px-1.5 py-1 text-[7.5pt] text-slate-300 outline-none"
+              className="bg-white dark:bg-black/30 border border-slate-300 dark:border-white/10 rounded px-1.5 py-1 text-[7.5pt] text-slate-800 dark:text-slate-300 outline-none"
             >
               <option value="all">All Grades</option>
               <option value="nursery">Pre-K / Nursery</option>
@@ -411,7 +440,7 @@ export const LeftSidebar: React.FC = () => {
             <select
               value={presetSubjectFilter}
               onChange={(e) => setPresetSubjectFilter(e.target.value)}
-              className="bg-black/30 border border-white/10 rounded px-1.5 py-1 text-[7.5pt] text-slate-300 outline-none"
+              className="bg-white dark:bg-black/30 border border-slate-300 dark:border-white/10 rounded px-1.5 py-1 text-[7.5pt] text-slate-800 dark:text-slate-300 outline-none"
             >
               <option value="all">All Subjects</option>
               <option value="science">Science</option>
@@ -423,6 +452,12 @@ export const LeftSidebar: React.FC = () => {
 
           {/* Presets Virtualized / Scrollable Cards Grid */}
           <div className="flex-1 overflow-y-auto space-y-2 pr-1 custom-scrollbar">
+            {["all", "chapter", "visual"].includes(presetCategoryFilter) && (!presetSearch.trim() || /lesson|schema|topic|map/i.test(presetSearch)) && <LessonSchemaLibraryCard subject={useEditorStore.getState().getActiveBook()?.subject}/>}
+            {["all", "chapter", "visual", "learning", "study"].includes(presetCategoryFilter) && (!presetSearch.trim() || /study|skill|strategy|rule|fact|toolkit/i.test(presetSearch)) && <StudySkillsLibraryCard subject={useEditorStore.getState().getActiveBook()?.subject}/>}
+            {["all", "chapter", "visual", "learning"].includes(presetCategoryFilter) && (!presetSearch.trim() || /learning|outcome|objective|target|bloom/i.test(presetSearch)) && <LearningOutcomesLibraryCard subject={useEditorStore.getState().getActiveBook()?.subject}/>}
+            {["all", "chapter", "heading", "visual"].includes(presetCategoryFilter) && (!presetSearch.trim() || /topic|banner|successor|predecessor|heading|ribbon/i.test(presetSearch)) && <TopicBannerLibraryCard subject={useEditorStore.getState().getActiveBook()?.subject}/>}
+            {["all", "chapter", "visual", "learning", "study", "callout"].includes(presetCategoryFilter) && (!presetSearch.trim() || /fact|zone|trivia|tip|callout/i.test(presetSearch)) && <FactZoneLibraryCard subject={useEditorStore.getState().getActiveBook()?.subject}/>}
+            {["all", "chapter", "activity", "visual", "learning"].includes(presetCategoryFilter) && (!presetSearch.trim() || /life|connect|real|world|application|planting/i.test(presetSearch)) && <LifeConnectLibraryCard subject={useEditorStore.getState().getActiveBook()?.subject}/>}
             {COMPREHENSIVE_PRESET_LIBRARY.filter((p) => {
               // Category filter
               if (presetCategoryFilter !== "all" && p.category !== presetCategoryFilter) {
@@ -454,7 +489,7 @@ export const LeftSidebar: React.FC = () => {
                   e.dataTransfer.setData("application/x-nexmaxx-preset", preset.id);
                   e.dataTransfer.effectAllowed = "copy";
                 }}
-                className="p-2.5 rounded-xl bg-slate-900/60 border border-white/10 hover:border-indigo-500/60 hover:bg-slate-900 transition-all flex items-start gap-3 cursor-grab active:cursor-grabbing group select-none"
+                className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-white/10 hover:border-indigo-500/60 hover:bg-slate-100 dark:hover:bg-slate-900 transition-all flex items-start gap-3 cursor-grab active:cursor-grabbing group select-none shadow-xs"
               >
                 {/* Fast Cached SVG Schematic Thumbnail (Directive 26) */}
                 <div className="flex-shrink-0">
@@ -505,21 +540,21 @@ export const LeftSidebar: React.FC = () => {
                 {/* Details & Actions */}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between gap-1">
-                    <span className="font-semibold text-slate-100 block truncate group-hover:text-indigo-300 text-[8.5pt]">
+                    <span className="font-semibold text-slate-800 dark:text-slate-100 block truncate group-hover:text-indigo-600 dark:group-hover:text-indigo-300 text-[8.5pt]">
                       {preset.name}
                     </span>
-                    <span className="text-[6.5pt] font-mono uppercase px-1.5 py-0.2 rounded bg-white/10 text-slate-400 flex-shrink-0">
+                    <span className="text-[6.5pt] font-mono uppercase px-1.5 py-0.2 rounded bg-slate-200 dark:bg-white/10 text-slate-600 dark:text-slate-400 flex-shrink-0">
                       ⚡ Adapt
                     </span>
                   </div>
-                  <p className="text-[7.5pt] text-slate-400 line-clamp-2 mt-0.5 leading-snug">
+                  <p className="text-[7.5pt] text-slate-600 dark:text-slate-400 line-clamp-2 mt-0.5 leading-snug">
                     {preset.description}
                   </p>
 
                   <div className="mt-2 flex items-center gap-1.5">
                     <button
                       onClick={() => applyPagePreset(preset.id)}
-                      className="px-2.5 py-1 bg-indigo-600/30 hover:bg-indigo-600 text-indigo-200 hover:text-white rounded text-[7.5pt] font-medium transition-colors"
+                      className="px-2.5 py-1 bg-indigo-50 hover:bg-indigo-600 text-indigo-700 hover:text-white dark:bg-indigo-600/30 dark:hover:bg-indigo-600 dark:text-indigo-200 dark:hover:text-white rounded text-[7.5pt] font-medium transition-colors border border-indigo-200 dark:border-transparent"
                       title="Apply preset to current page"
                     >
                       Apply
@@ -539,30 +574,30 @@ export const LeftSidebar: React.FC = () => {
       {leftPanelTab === "content" && book && (
         <div className="flex-1 flex flex-col overflow-hidden p-3">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+            <span className="text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400">
               Curriculum Units & Chapters
             </span>
           </div>
 
           <div className="flex-1 overflow-y-auto space-y-3 pr-1">
             {book.units.map((unit) => (
-              <div key={unit.id} className="p-2.5 rounded-lg bg-white/5 border border-white/5">
-                <span className="text-[11px] font-bold text-emerald-400 uppercase tracking-wide block">
+              <div key={unit.id} className="p-2.5 rounded-lg bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/5">
+                <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wide block">
                   Unit {unit.number}: {unit.title}
                 </span>
                 {unit.description && (
-                  <p className="text-[10px] text-slate-400 mt-0.5">{unit.description}</p>
+                  <p className="text-[10px] text-slate-600 dark:text-slate-400 mt-0.5">{unit.description}</p>
                 )}
 
-                <div className="mt-2 space-y-1.5 pl-2 border-l border-white/10">
+                <div className="mt-2 space-y-1.5 pl-2 border-l border-slate-200 dark:border-white/10">
                   {book.chapters
                     .filter((c) => c.unitId === unit.id)
                     .map((ch) => (
-                      <div key={ch.id} className="text-xs text-slate-300">
-                        <span className="font-medium text-sky-400">
+                      <div key={ch.id} className="text-xs text-slate-700 dark:text-slate-300">
+                        <span className="font-medium text-sky-600 dark:text-sky-400">
                           Ch {ch.number}: {ch.title}
                         </span>
-                        <ul className="text-[10px] text-slate-400 mt-0.5 list-disc list-inside">
+                        <ul className="text-[10px] text-slate-600 dark:text-slate-400 mt-0.5 list-disc list-inside">
                           {ch.learningObjectives.map((obj, i) => (
                             <li key={i}>{obj}</li>
                           ))}
@@ -574,8 +609,8 @@ export const LeftSidebar: React.FC = () => {
             ))}
 
             {/* Quick Add Unit / Chapter */}
-            <div className="pt-2 border-t border-white/10 space-y-2">
-              <span className="text-[10px] text-slate-400 uppercase font-semibold block">
+            <div className="pt-2 border-t border-slate-200 dark:border-white/10 space-y-2">
+              <span className="text-[10px] text-slate-600 dark:text-slate-400 uppercase font-semibold block">
                 Add Unit to Curriculum
               </span>
               <input
@@ -583,7 +618,7 @@ export const LeftSidebar: React.FC = () => {
                 placeholder="Unit Title..."
                 value={newUnitTitle}
                 onChange={(e) => setNewUnitTitle(e.target.value)}
-                className="w-full bg-black/30 border border-white/10 rounded px-2.5 py-1 text-xs text-slate-200 outline-none"
+                className="w-full bg-white dark:bg-black/30 border border-slate-300 dark:border-white/10 rounded px-2.5 py-1 text-xs text-slate-800 dark:text-slate-200 outline-none"
               />
               <button
                 onClick={() => {
@@ -592,7 +627,7 @@ export const LeftSidebar: React.FC = () => {
                     setNewUnitTitle("");
                   }
                 }}
-                className="w-full py-1 bg-white/10 hover:bg-white/20 rounded text-xs font-medium text-slate-200"
+                className="w-full py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 dark:bg-white/10 dark:hover:bg-white/20 dark:text-slate-200 dark:border-transparent rounded text-xs font-medium"
               >
                 + Add Unit
               </button>
@@ -604,35 +639,39 @@ export const LeftSidebar: React.FC = () => {
       {/* Tab 5: Layers Tree */}
       {leftPanelTab === "layers" && (
         <div className="flex-1 flex flex-col overflow-hidden p-3">
-          <span className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-3">
+          <span className="text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400 mb-3">
             Page Layers ({activeElements.length})
           </span>
           <div className="flex-1 overflow-y-auto space-y-1 pr-1">
             {activeElements.slice().reverse().map((el) => {
-              const isSelected = selectedElementIds.includes(el.id);
+              const rootId = selectionRoot(el.id, useEditorStore.getState().elements);
+              const isSelected = selectedElementIds.includes(rootId);
+              const isLocked = isElementLocked(el.id, useEditorStore.getState().elements);
               return (
                 <div
                   key={el.id}
-                  onClick={() => selectElement(el.id)}
+                  onClick={e => selectElement(el.id, e.shiftKey || e.metaKey || e.ctrlKey)}
                   className={`flex items-center justify-between px-2.5 py-2 rounded-lg text-xs transition-colors cursor-pointer ${
                     isSelected
                       ? "bg-indigo-600 text-white"
-                      : "bg-white/5 text-slate-300 hover:bg-white/10"
+                      : "bg-slate-50 hover:bg-slate-100 text-slate-700 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10 border border-slate-200 dark:border-transparent"
                   }`}
                 >
-                  <div className="flex items-center gap-2 truncate">
-                    <span className="text-[10px] font-mono text-slate-400">z{el.transform.zIndex}</span>
+                  <div className={`flex items-center gap-2 truncate ${el.groupId ? "pl-3" : ""}`}>
+                    <span className="text-[10px] font-mono text-slate-500 dark:text-slate-400">z{el.transform.zIndex}</span>
                     <span className="truncate">{el.displayName}</span>
                   </div>
                   <div className="flex items-center gap-1">
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
-                        updateElementTransform(el.id, {}, true);
+                        useEditorStore.getState().toggleLockElement(rootId);
                       }}
-                      className="p-1 hover:bg-white/10 rounded"
+                      title={isLocked ? "Unlock element or group" : "Lock element or group"}
+                      aria-label={`${isLocked ? "Unlock" : "Lock"} ${el.displayName}`}
+                      className="min-h-8 min-w-8 flex items-center justify-center hover:bg-slate-200 dark:hover:bg-white/10 rounded"
                     >
-                      {el.locked ? <Lock className="w-3 h-3" /> : <Unlock className="w-3 h-3 opacity-40" />}
+                      {isLocked ? <Lock className="w-3 h-3" /> : <Unlock className="w-3 h-3 opacity-40" />}
                     </button>
                   </div>
                 </div>
@@ -642,85 +681,51 @@ export const LeftSidebar: React.FC = () => {
         </div>
       )}
 
-      {/* Tab 6: Central Asset Library */}
-      {leftPanelTab === "assets" && (
-        <div className="flex-1 flex flex-col overflow-hidden p-3">
-          <span className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-3">
-            Curriculum Media Library
-          </span>
-          <div className="grid grid-cols-2 gap-2 overflow-y-auto flex-1 pr-1">
-            {[
-              {
-                title: "Plant Cells",
-                src: "https://images.unsplash.com/photo-1530595467537-0b5996c41f2d?w=600&auto=format&fit=crop&q=80",
-              },
-              {
-                title: "Botanical Leaves",
-                src: "https://images.unsplash.com/photo-1518531933037-91b2f5f229cc?w=600&auto=format&fit=crop&q=80",
-              },
-              {
-                title: "Science Lab",
-                src: "https://images.unsplash.com/photo-1532094349884-543bc11b234d?w=600&auto=format&fit=crop&q=80",
-              },
-              {
-                title: "Microscope Optics",
-                src: "https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?w=600&auto=format&fit=crop&q=80",
-              },
-            ].map((asset, i) => (
-              <div
-                key={i}
-                onClick={() => addElement("preset-image-frame", 54, 180)}
-                className="group relative rounded-lg overflow-hidden bg-black/40 border border-white/5 hover:border-indigo-500 cursor-pointer aspect-video"
-              >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={asset.src} alt={asset.title} className="w-full h-full object-cover" />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent flex items-end p-1.5 opacity-90 group-hover:opacity-100">
-                  <span className="text-[9px] font-medium text-white">{asset.title}</span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
+      {/* Picture presets share the same verified cloud library from both entry points. */}
+      {leftPanelTab === "assets" && <PicturePresetLibrary/>}
 
-      {/* Tab 7: Typography Paragraph Styles */}
+      {/* Tab 7: Typography Paragraph Styles & Book Design */}
       {leftPanelTab === "styles" && book && (
-        <div className="flex-1 flex flex-col overflow-hidden p-3">
+        <div className="flex-1 min-h-0 overflow-y-auto p-3 space-y-4 custom-scrollbar">
           <DesignControls />
-          <span className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-3">
-            Paragraph Styles ({book.textStyles?.length || 0})
-          </span>
-          <div className="flex-1 overflow-y-auto space-y-2 pr-1">
-            {(book.textStyles || []).map((style) => (
-              <div
-                key={style.id}
-                className="p-2.5 rounded-lg bg-white/5 border border-white/5 hover:border-indigo-500/50 flex items-center justify-between group"
-              >
-                <div>
-                  <span className="font-semibold text-xs text-slate-200 block">{style.name}</span>
-                  <span className="text-[10px] text-slate-400 font-mono">
-                    {style.fontFamily.split(",")[0]} • {style.fontSize}pt • w{style.fontWeight}
-                  </span>
-                </div>
-                <button
-                  onClick={() => {
-                    if (selectedElementIds.length > 0) {
-                      selectedElementIds.forEach((id) =>
-                        useEditorStore.getState().applyTextStyle(id, style.id)
-                      );
-                    } else {
-                      useUiStore.getState().showToast({
-                        type: "info",
-                        title: "Select a text element first to apply style",
-                      });
-                    }
-                  }}
-                  className="px-2 py-1 rounded bg-white/10 group-hover:bg-indigo-600 text-[10px] text-slate-300 group-hover:text-white font-medium transition-colors"
+          <div className="pt-2 border-t border-slate-200 dark:border-white/10">
+            <div className="flex items-center justify-between mb-2.5">
+              <span className="text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400">
+                Paragraph Styles ({book.textStyles?.length || 0})
+              </span>
+            </div>
+            <div className="space-y-2">
+              {(book.textStyles || []).map((style) => (
+                <div
+                  key={style.id}
+                  className="p-2.5 rounded-lg bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/5 hover:border-indigo-500/50 flex items-center justify-between group transition-colors"
                 >
-                  Apply
-                </button>
-              </div>
-            ))}
+                  <div>
+                    <span className="font-semibold text-xs text-slate-800 dark:text-slate-200 block">{style.name}</span>
+                    <span className="text-[10px] text-slate-600 dark:text-slate-400 font-mono">
+                      {style.fontFamily.split(",")[0]} • {style.fontSize}pt • w{style.fontWeight}
+                    </span>
+                  </div>
+                  <button
+                    onClick={() => {
+                      if (selectedElementIds.length > 0) {
+                        selectedElementIds.forEach((id) =>
+                          useEditorStore.getState().applyTextStyle(id, style.id)
+                        );
+                      } else {
+                        useUiStore.getState().showToast({
+                          type: "info",
+                          title: "Select a text element first to apply style",
+                        });
+                      }
+                    }}
+                    className="px-2.5 py-1 rounded bg-slate-100 hover:bg-indigo-600 hover:text-white dark:bg-white/10 dark:group-hover:bg-indigo-600 text-[10px] text-slate-700 dark:text-slate-300 dark:group-hover:text-white font-medium transition-colors border border-slate-200 dark:border-transparent cursor-pointer"
+                  >
+                    Apply
+                  </button>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       )}
@@ -729,7 +734,7 @@ export const LeftSidebar: React.FC = () => {
       {leftPanelTab === "comments" && book && (
         <div className="flex-1 flex flex-col overflow-hidden p-3">
           <div className="flex items-center justify-between mb-3">
-            <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+            <span className="text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400">
               Review Comments ({book.comments?.length || 0})
             </span>
           </div>
@@ -740,37 +745,37 @@ export const LeftSidebar: React.FC = () => {
                 key={comm.id}
                 className={`p-2.5 rounded-lg border text-xs transition-colors ${
                   comm.resolved
-                    ? "bg-black/20 border-white/5 opacity-60"
-                    : "bg-indigo-950/20 border-indigo-500/30"
+                    ? "bg-slate-100/70 border-slate-200 dark:bg-black/20 dark:border-white/5 opacity-60 text-slate-600 dark:text-slate-400"
+                    : "bg-indigo-50/70 border-indigo-200 text-slate-800 dark:bg-indigo-950/20 dark:border-indigo-500/30 dark:text-slate-300"
                 }`}
               >
                 <div className="flex items-center justify-between mb-1">
-                  <span className="font-semibold text-[11px] text-indigo-300">
+                  <span className="font-semibold text-[11px] text-indigo-700 dark:text-indigo-300">
                     {comm.author} ({comm.role})
                   </span>
                   <button
                     onClick={() => useEditorStore.getState().resolveComment(comm.id)}
                     className={`text-[9px] px-1.5 py-0.5 rounded font-mono ${
                       comm.resolved
-                        ? "bg-emerald-500/20 text-emerald-400"
-                        : "bg-white/10 text-slate-400 hover:text-white"
+                        ? "bg-emerald-500/20 text-emerald-700 dark:text-emerald-400"
+                        : "bg-slate-200 hover:bg-slate-300 dark:bg-white/10 text-slate-700 dark:text-slate-400 dark:hover:text-white"
                     }`}
                   >
                     {comm.resolved ? "Resolved ✓" : "Mark Resolved"}
                   </button>
                 </div>
-                <p className="text-slate-300 leading-relaxed text-[11px]">{comm.text}</p>
+                <p className="leading-relaxed text-[11px]">{comm.text}</p>
                 <span className="text-[9px] text-slate-500 mt-1 block">{comm.timestamp}</span>
               </div>
             ))}
           </div>
 
           {/* Quick Comment Input */}
-          <div className="pt-2 border-t border-white/10">
+          <div className="pt-2 border-t border-slate-200 dark:border-white/10">
             <input
               type="text"
               placeholder="Leave an academic review comment..."
-              className="w-full bg-black/40 border border-white/10 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 outline-none focus:border-indigo-500 mb-2"
+              className="w-full bg-white dark:bg-black/40 border border-slate-300 dark:border-white/10 rounded-lg px-2.5 py-1.5 text-xs text-slate-800 dark:text-slate-200 outline-none focus:border-indigo-500 mb-2"
               onKeyDown={(e) => {
                 if (e.key === "Enter" && e.currentTarget.value.trim()) {
                   const activePage = useEditorStore.getState().getActivePage();

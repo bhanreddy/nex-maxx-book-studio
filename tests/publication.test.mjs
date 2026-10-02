@@ -212,6 +212,7 @@ test('arrange spaces unequal objects by their edges, respects locks and undoes i
  const result=arrangeElements(items,{x:50,y:60,width:260,height:30},'horizontal');
  assert.equal(result.b.x-(result.a.x+result.a.width),result.c.x-(result.b.x+result.b.width));assert.ok(!result.locked);
  const {useEditorStore}=require('../src/editor/stores/editorStore.ts'),{useHistoryStore}=require('../src/editor/stores/historyStore.ts');
+ useEditorStore.setState({books:useEditorStore.getState().books.map(book=>({...book,pageFrame:null,pageFramePolicy:'custom'}))});
  const s=useEditorStore.getState(),page=s.getActivePage();
  for(const item of items.slice(0,3))s.insertPublicationElement({...item,id:`arrange-${item.id}`,pageId:page.id,type:'shape',category:'decorative',version:1,displayName:item.id,style:{},content:{}});
  useEditorStore.setState({selectedElementIds:['arrange-a','arrange-b','arrange-c']});useHistoryStore.getState().clearHistory();
@@ -409,4 +410,3 @@ test('publication scene for image element preserves non-destructive adjustments 
  assert.equal(node.saturation, 1.3);
  assert.equal(node.radius, 12);
 });
-

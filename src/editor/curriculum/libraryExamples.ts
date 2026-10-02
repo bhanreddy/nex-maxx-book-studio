@@ -1,3 +1,5 @@
+import { REFERENCE_ELEMENTS } from "./referenceElements";
+import type { ReferenceElementKind } from "../../domain/educational/blockSchema";
 import type { CurriculumGrade } from "../../domain/educational/curriculum";
 import { DEFAULT_CHAPTER_CONFIG, makeCurriculumBlock } from "./chapterEngine";
 
@@ -65,7 +67,7 @@ export const SUBJECT_EXAMPLES: Record<string, Example> = {
 export function makeLibraryBlock(type: string, grade: CurriculumGrade = 3, subject = "Science") {
   const key = /evs|environment/i.test(subject) ? "Science" : subject === "Social Studies" ? "History" : subject;
   const sample = SUBJECT_EXAMPLES[key];
-  const config = { ...DEFAULT_CHAPTER_CONFIG, grade, subject, title: sample?.title || "Explore a new idea", concepts: [sample?.title || "Explore a new idea"], learningOutcomes: sample ? [sample.takeaway] : ["Explain the idea in your own words."], theme: "" };
+  const config = { ...DEFAULT_CHAPTER_CONFIG, grade, subject, title: sample?.title || "Explore a new idea", concepts: type === "lesson-schema" ? (sample?.items || ["Explore", "Observe", "Understand", "Practise", "Create", "Connect", "Review"]) : [sample?.title || "Explore a new idea"], learningOutcomes: sample ? [sample.takeaway] : ["Explain the idea in your own words."], theme: "" };
   const block = makeCurriculumBlock(type, config);
   // Sample lessons belong only to general-purpose blocks; specialised worksheets keep their own content.
   if (sample && ["concept-introduction", "concept-explorer", "big-idea", "explanation-block", "visual-explanation", "see-it", "example-non-example", "remember", "teacher-note", "worked-example", "quick-check", "guided-practice", "reading-passage", "reading-questions"].includes(type)) {
@@ -76,5 +78,27 @@ export function makeLibraryBlock(type: string, grade: CurriculumGrade = 3, subje
         : { introText: sample.intro, items: [...sample.items], calloutText: sample.takeaway }) };
     block.semanticContent.metadata = { librarySample: true };
   }
+  return block;
+}
+
+/** A subject-aware, independent, fully editable copy of each reference element. */
+export function makeReferenceLibraryBlock(kind: ReferenceElementKind, grade: CurriculumGrade = 3, subject = "Science") {
+  const preset = REFERENCE_ELEMENTS.find(item => item.kind === kind)!;
+  const block = makeLibraryBlock(preset.type, grade, subject);
+  const key = /evs|environment/i.test(subject) ? "Science" : subject === "Social Studies" ? "History" : subject;
+  const sample = SUBJECT_EXAMPLES[key];
+  const title = kind === "mental" ? `MENTAL ${/math/i.test(subject) ? "MATHS" : subject.toUpperCase()}`
+    : kind === "example" || kind === "example-arrow" ? "EXAMPLE"
+    : preset.name.toUpperCase();
+  block.semanticContent = { title,
+    ...(kind === "mental" || kind === "exercise" || kind === "quick-check" ? { questions: structuredClone(sample?.questions || [{prompt: "Explain one key idea from this chapter."}, {prompt: "Give an example and explain your reasoning."}]) }
+      : kind === "puzzle" ? { subtitle: "WHO AM I?", introText: "Read the clues and find me!", items: ["Add a clue about your chosen topic.", "Add another clue to narrow the possibilities.", "Add a final clue to check your answer."] }
+      : kind === "hots" ? { questions: [{prompt: "How would changing one part of this idea affect the result? Explain with evidence."}] }
+      : kind === "activity" ? { introText: sample?.intro || "Explore your topic through observation and making.", steps: [{stepNumber:1,title:"Explore",body:"Choose an example from this chapter."},{stepNumber:2,title:"Create",body:"Draw, build or demonstrate your idea."},{stepNumber:3,title:"Share",body:"Explain what you discovered."}] }
+      : { introText: sample?.intro || "Add an introduction for your subject.", items: sample?.items || ["Add your first learning point.", "Add a second example."], calloutText: sample?.takeaway || "Summarise the key idea." }) };
+  block.styleOverrides = { ...block.styleOverrides, customPalette: undefined, referenceElement: { kind, icon: preset.icon,
+    skillLabel: preset.skill || "", number: kind === "exercise" ? "1.1" : undefined,
+    hint: kind === "hots" ? "Connect this question to something you already know." : undefined,
+    answerLabel: kind === "puzzle" ? "I am" : undefined, answerLines: 1, showBody: true } };
   return block;
 }

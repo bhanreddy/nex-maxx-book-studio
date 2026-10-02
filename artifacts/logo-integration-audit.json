@@ -1,0 +1,13 @@
+{
+  "studioLogo": true,
+  "firstPageNativeImage": true,
+  "legacyMigrationPersisted": true,
+  "reloadLogoCount": 1,
+  "offlineLogo": true,
+  "offlineProofLogoEmbedded": true,
+  "firstPageLogoOnlyOnFirstPage": true,
+  "publisherFooterOnEveryPage": true,
+  "decorativeBorderFooter": true,
+  "legacyFooterExport": true,
+  "browserErrors": []
+}

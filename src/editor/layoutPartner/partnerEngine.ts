@@ -4,6 +4,7 @@ import {
 } from "../../domain/element/types";
 import { PageDimensions, Margins } from "../../domain/book/types";
 import { TextWrapMode } from "../../domain/creative/types";
+import { effectiveTextWrap } from "./textWrapLayout";
 
 /**
  * NEX Layout Partner - Core Layout & Relationship Engine (Parts 1, 3, 4, 6, 7, 8, 10, 11)
@@ -64,10 +65,10 @@ export interface LayoutVariation {
  * Part 4: Calculate text wrap exclusion region for an element
  */
 export function calculateExclusionRegion(element: PageElement): ExclusionRegion | null {
-  const wrap = element.textWrap || element.style.textWrap;
+  const wrap = effectiveTextWrap(element);
   if (!wrap || wrap.mode === "none") return null;
 
-  const baseOffset = wrap.offsetPt ?? 12;
+  const baseOffset = wrap.offsetPt ?? wrap.wrapMarginPt ?? 12;
   const top = wrap.topOffsetPt ?? baseOffset;
   const bottom = wrap.bottomOffsetPt ?? baseOffset;
   const left = wrap.leftOffsetPt ?? baseOffset;

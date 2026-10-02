@@ -165,7 +165,7 @@ const HudCornerBrackets: React.FC<{ color: string }> = ({ color }) => (
   </div>
 );
 
-/** Inline Editable Text component that syncs live with useEditorStore */
+/** Inline Editable Text component with 60fps zero-lag typing */
 const InlineText: React.FC<{
   value: string;
   onChange: (next: string) => void;
@@ -175,66 +175,79 @@ const InlineText: React.FC<{
   multiline?: boolean;
 }> = ({ value, onChange, className = "", style = {}, placeholder = "Type here...", multiline = false }) => {
   const [isEditing, setIsEditing] = useState(false);
-  const [draft, setDraft] = useState(value);
+  const elementRef = React.useRef<HTMLSpanElement>(null);
+  const textRef = React.useRef(value);
 
-  // Sync draft if prop updates externally
+  // Sync ref when value prop changes outside edit mode
   React.useEffect(() => {
-    setDraft(value);
-  }, [value]);
+    if (!isEditing) {
+      textRef.current = value;
+    }
+  }, [value, isEditing]);
+
+  // When entering edit mode, populate DOM once and place caret at the end
+  React.useEffect(() => {
+    if (isEditing && elementRef.current) {
+      elementRef.current.innerText = textRef.current;
+      elementRef.current.focus();
+      try {
+        const selection = window.getSelection();
+        const range = document.createRange();
+        range.selectNodeContents(elementRef.current);
+        range.collapse(false);
+        selection?.removeAllRanges();
+        selection?.addRange(range);
+      } catch {}
+    }
+  }, [isEditing]);
 
   const commit = () => {
     setIsEditing(false);
-    if (draft !== value) {
-      onChange(draft);
+    if (elementRef.current) {
+      const nextText = elementRef.current.innerText.trim();
+      if (nextText !== value && nextText.length > 0) {
+        textRef.current = nextText;
+        onChange(nextText);
+      } else if (nextText.length === 0) {
+        elementRef.current.innerText = value;
+        textRef.current = value;
+      }
     }
   };
 
   if (isEditing) {
-    if (multiline) {
-      return (
-        <textarea
-          autoFocus
-          rows={2}
-          value={draft}
-          onChange={(e) => setDraft(e.target.value)}
-          onBlur={commit}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" && !e.shiftKey) {
-              e.preventDefault();
-              commit();
-            }
-            if (e.key === "Escape") {
-              setDraft(value);
-              setIsEditing(false);
-            }
-          }}
-          onClick={(e) => e.stopPropagation()}
-          className={`w-full bg-white/95 text-slate-900 border-2 border-indigo-500 rounded p-1 text-inherit font-inherit outline-none shadow-lg z-30 ${className}`}
-          style={style}
-        />
-      );
-    }
-
     return (
-      <input
-        type="text"
-        autoFocus
-        value={draft}
-        onChange={(e) => setDraft(e.target.value)}
+      <span
+        ref={elementRef}
+        contentEditable
+        suppressContentEditableWarning
+        onInput={(e: React.FormEvent<HTMLSpanElement>) => {
+          textRef.current = (e.currentTarget as HTMLElement).innerText;
+        }}
         onBlur={commit}
-        onKeyDown={(e) => {
-          if (e.key === "Enter") {
+        onKeyDown={(e: React.KeyboardEvent) => {
+          e.stopPropagation();
+          if (e.key === "Enter" && !multiline) {
             e.preventDefault();
             commit();
           }
           if (e.key === "Escape") {
-            setDraft(value);
+            e.preventDefault();
+            if (elementRef.current) {
+              elementRef.current.innerText = value;
+              textRef.current = value;
+            }
             setIsEditing(false);
           }
         }}
-        onClick={(e) => e.stopPropagation()}
-        className={`bg-white/95 text-slate-900 border-2 border-indigo-500 rounded px-1.5 py-0.5 text-inherit font-inherit outline-none shadow-lg z-30 ${className}`}
-        style={style}
+        onKeyUp={(e: React.KeyboardEvent) => e.stopPropagation()}
+        onClick={(e: React.MouseEvent) => e.stopPropagation()}
+        className={`outline-2 outline-dashed outline-indigo-500 bg-white/40 dark:bg-black/40 rounded px-1 min-w-[1ch] max-w-full inline-block cursor-text select-text ${className}`}
+        style={{
+          ...style,
+          color: style.color || "inherit",
+          caretColor: "currentColor",
+        }}
       />
     );
   }
@@ -243,10 +256,11 @@ const InlineText: React.FC<{
     <span
       onClick={(e) => {
         e.stopPropagation();
+        textRef.current = value;
         setIsEditing(true);
       }}
       title="Click to edit text"
-      className={`cursor-text hover:outline-dashed hover:outline-1 hover:outline-indigo-400/80 rounded transition-all ${className}`}
+      className={`cursor-text hover:outline-dashed hover:outline-1 hover:outline-indigo-400/80 rounded transition-all inline-block ${className}`}
       style={style}
     >
       {value || <span className="opacity-40 italic">{placeholder}</span>}
@@ -260,7 +274,8 @@ export const SmartBlockRenderer = memo(function SmartBlockRenderer({
   onExploreStyles,
   onDetach,
 }: SmartBlockRendererProps) {
-  const store = useEditorStore();
+  const updateSmartBlockContent = useEditorStore((s) => s.updateSmartBlockContent);
+  const updateSmartBlockStyle = useEditorStore((s) => s.updateSmartBlockStyle);
   const [showLayoutMenu, setShowLayoutMenu] = useState(false);
   const [showPaletteMenu, setShowPaletteMenu] = useState(false);
 
@@ -321,11 +336,11 @@ export const SmartBlockRenderer = memo(function SmartBlockRenderer({
   }, [isCyber, block.styleOverrides.hudStyle?.chamfer]);
 
   const updateContent = (patch: Partial<SmartBlockInstance["semanticContent"]>) => {
-    store.updateSmartBlockContent(block.id, patch);
+    updateSmartBlockContent(block.id, patch);
   };
 
   const updateStyle = (patch: Partial<SmartBlockInstance["styleOverrides"]>) => {
-    store.updateSmartBlockStyle(block.id, patch);
+    updateSmartBlockStyle(block.id, patch);
   };
 
   // Background style based on chosen fancy layout

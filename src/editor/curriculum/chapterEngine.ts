@@ -1,3 +1,6 @@
+import { withReferenceElements } from "./referenceElements";
+import { renumberPages } from "../core/pageNumbering";
+import { chapterFrame, frameMargins } from "../pageFrame/pageFrame";
 import {curriculumGradeRank,curriculumGradeLabel} from "../../domain/educational/curriculum";
 import type { Book, Chapter, PageDefinition } from "../../domain/book/types";
 import type { PageElement } from "../../domain/element/types";
@@ -8,6 +11,10 @@ import { createSmartBlockInstance } from "../educational/blockRegistry";
 import { buildPublicationScene } from "../educational/publicationScene";
 import { CHAPTER_PRESETS, CURRICULUM_BLOCK_MAP, FRAMEWORK_STAGES } from "./catalog";
 import { simpleChapterPlan, stageName } from "./frameworkPlan";
+import { createSchemaTopic } from "./lessonSchema";
+import { createStudySkillTopic, getSubjectStudySkillDefault } from "./studySkills";
+import { createLearningOutcomeTopic, parseLearningOutcomeText, getSubjectOutcomeDefault } from "./learningOutcomes";
+import { getSignaturePreset } from "./signatureElements";
 import { sceneWindows } from "./pagination";
 
 export const DEFAULT_CHAPTER_CONFIG: ChapterBuilderConfig = {
@@ -50,6 +57,52 @@ export function makeCurriculumBlock(type: string, config: ChapterBuilderConfig, 
   if (type === "chapter-hero") {
     c.title = config.title; c.subtitle = config.theme || "A new idea. A new adventure.";
     c.introText = `Explore ${config.concepts[0] || config.title}. What do you already know?`;
+  } else if (type === "lesson-schema") {
+    c.title = "LESSON SCHEMA"; c.unitBadge = ""; c.calloutText = config.title;
+    c.items = undefined;
+    c.lessonSchemaTopics = [...(config.concepts.length ? config.concepts : Array(7).fill("")), ...Array(Math.max(0, Math.min(100, Math.floor(config.schemaEmptyBoxes || 0)))).fill("")].map((label, i) => createSchemaTopic(label, i, config.subject));
+  } else if (type === "study-skills") {
+    const sDef = getSubjectStudySkillDefault(config.subject);
+    c.title = "STUDY SKILLS";
+    c.unitBadge = "";
+    c.badgeLabel = "STUDY SKILLS";
+    c.calloutText = sDef.header;
+    c.studySkillTopics = sDef.topics.map(t => createStudySkillTopic(t, false));
+    c.items = c.studySkillTopics.map(t => t.text);
+  } else if (type === "learning-outcomes") {
+    const def = getSubjectOutcomeDefault(config.subject);
+    c.title = "LEARNING OUTCOMES";
+    c.unitBadge = "";
+    c.calloutText = def.intro;
+    c.learningOutcomeTopics = config.learningOutcomes.length
+      ? config.learningOutcomes.map((label, i) => parseLearningOutcomeText(label, i, config.subject))
+      : def.outcomes.map((item, i) => createLearningOutcomeTopic(item.verb, item.text, i, config.subject, false, item.icon));
+    c.items = c.learningOutcomeTopics.map(t => t.isEmpty ? "" : t.verb ? `${t.verb} ${t.text}`.trim() : t.text);
+  } else if (type === "fact-zone") {
+    const sDef = getSignaturePreset(config.subject);
+    c.title = sDef.factZone.badgeTitle;
+    c.badgeLabel = sDef.factZone.badgeTitle;
+    c.calloutText = sDef.factZone.factText;
+    c.introText = sDef.factZone.factText;
+    c.items = sDef.factZone.bullets;
+    c.iconName = sDef.factZone.rightIllustration;
+    c.unitBadge = "";
+  } else if (type === "topic-banner") {
+    const sDef = getSignaturePreset(config.subject);
+    c.title = sDef.topicBanner.word1;
+    c.badgeLabel = sDef.topicBanner.connector;
+    c.subtitle = sDef.topicBanner.word2;
+    c.introText = sDef.topicBanner.subtitle;
+    c.unitBadge = "";
+  } else if (type === "life-connect") {
+    const sDef = getSignaturePreset(config.subject);
+    c.badgeLabel = sDef.lifeConnect.word1;
+    c.title = sDef.lifeConnect.word2;
+    c.subtitle = sDef.lifeConnect.subtitle;
+    c.calloutText = sDef.lifeConnect.prompt;
+    c.introText = sDef.lifeConnect.prompt;
+    c.iconName = sDef.lifeConnect.illustration;
+    c.unitBadge = "";
   } else if (def.originalStage === "target" && def.archetype !== "vocabulary") {
     c.items = config.learningOutcomes.length ? [...config.learningOutcomes] : ["Add what learners will know.", "Add what learners will be able to do."];
   } else if (type === "concept-explorer" || type === "concept-introduction" || type === "visual-explanation") {
@@ -70,7 +123,7 @@ export function makeCurriculumBlock(type: string, config: ChapterBuilderConfig, 
     else if (/english|hindi|telugu/i.test(config.subject)) { c.materials = ["A short text or picture prompt", "Paper and pencil"]; }
     else if (/science|evs/i.test(config.subject)) { c.materials = ["Add safe observation materials", "A recording sheet"]; }
   }
-  if (curriculumGradeRank(config.grade) < 1) {
+  if (curriculumGradeRank(config.grade) < 1 && !["lesson-schema", "study-skills", "learning-outcomes"].includes(type)) {
     const idea = concept || config.concepts[0] || config.title;
     const foundation = {title: type === "chapter-hero" ? config.title : `${def.name} · ${idea}`, unitBadge: c.unitBadge,
       introText: "Listen, look and try with your teacher.", items: ["Point to a picture or object.", "Say, gesture or show what you notice."]};
@@ -88,7 +141,7 @@ export function makeCurriculumBlock(type: string, config: ChapterBuilderConfig, 
     if (def.stage === "reflect") block.semanticContent.items = ["Show one thing you enjoyed.", "Try it again together."];
   }
   if (curriculumGradeRank(config.grade) < 3 && c.questions) c.questions = c.questions.slice(0, 1);
-  return block;
+  return config.referenceElements ? withReferenceElements(block) : block;
 }
 export function generateFramework(raw: ChapterBuilderConfig, chapterId: string): ChapterFramework {
   const config = { ...raw, title: raw.title.trim(), pageCount: Math.max(1, Math.min(100, Math.round(raw.pageCount))),
@@ -96,7 +149,7 @@ export function generateFramework(raw: ChapterBuilderConfig, chapterId: string):
   if (!config.title) throw new Error("Enter a chapter name.");
   const preset = CHAPTER_PRESETS.find(p => p.id === config.preset) || CHAPTER_PRESETS[4];
   const foundation = curriculumGradeRank(config.grade) < 1;
-  let types = foundation ? ["chapter-hero", "picture-prompt", "learning-mission", "concept-explorer", "try-with-me", "hands-on", "chapter-snapshot", "mastery-check", "my-learning"] : [...preset.blocks];
+  let types = foundation ? ["chapter-hero", "lesson-schema", "study-skills", "learning-outcomes", "picture-prompt", "concept-explorer", "try-with-me", "hands-on", "chapter-snapshot", "mastery-check", "my-learning"] : [...preset.blocks];
   if (config.complexity === "compact") types = types.filter((type, i) => !["recall-radar", "visual-explanation", "scan-learn", "quick-check"].includes(type) && (type !== "concept-explorer" || i === types.indexOf(type)));
   if (config.complexity === "rich" || config.complexity === "premium") {
     types.splice(types.indexOf("hands-on"), 0, "vocabulary");
@@ -147,6 +200,8 @@ export interface CompositionResult { book: Book; chapter: Chapter; elements: Rec
 /** Recompose only this chapter; stable native IDs and unrelated book objects survive. */
 export function composeChapter(book: Book, chapter: Chapter, allElements: Record<string, PageElement>, vary = false): CompositionResult {
   if (!chapter.framework) throw new Error("This chapter has no framework.");
+  const frame = chapterFrame(book, chapter);
+  const margins = frameMargins(book, frame);
   const plan = simpleChapterPlan(chapter.framework);
   const framework: ChapterFramework = { ...plan, blocks: { ...plan.blocks }, compositionRevision: plan.compositionRevision + 1 };
   const oldPages = book.pages.filter(p => p.chapterId === chapter.id || chapter.pageIds.includes(p.id));
@@ -158,10 +213,10 @@ export function composeChapter(book: Book, chapter: Chapter, allElements: Record
     if (source && !framework.blocks[source]) delete elements[id];
   }));
   // Free artwork, detached primitives and designer-added objects keep their page and position.
-  const retained = oldPages.map(p => ({ ...p, elementIds: p.elementIds.filter(id => elements[id]) })).filter(p => p.elementIds.length);
+  const retained = oldPages.map(p => ({ ...p, elementIds: p.elementIds.filter(id => elements[id]) })).filter(p => p.elementIds.length || p.templateId === "chapter-empty-space");
   const reusable = oldPages.filter(p => !retained.some(r => r.id === p.id));
-  const width = book.dimensions.widthPt - book.margins.insidePt - book.margins.outsidePt;
-  const available = book.dimensions.heightPt - book.margins.topPt - book.margins.bottomPt;
+  const width = book.dimensions.widthPt - margins.insidePt - margins.outsidePt;
+  const available = book.dimensions.heightPt - margins.topPt - margins.bottomPt;
   if (width < 180) throw new Error("Page margins leave too little width for a curriculum block.");
   const sources = orderedBlocks(framework).filter(b => !b.isDetached);
   const pieces: { block: SmartBlockInstance; window: { from: number; to: number }; height: number; index: number }[] = [];
@@ -169,7 +224,7 @@ export function composeChapter(book: Book, chapter: Chapter, allElements: Record
   sources.forEach((source, index) => {
     const def = CURRICULUM_BLOCK_MAP[source.curriculum!.type];
     let block: SmartBlockInstance = { ...source, transform: { ...source.transform, width, height: 0 }, styleOverrides: { ...source.styleOverrides, sceneSlice: undefined } };
-    if (vary || (framework.compositionRevision === 1 && source.curriculum!.type !== "chapter-hero")) {
+    if (vary || (framework.compositionRevision === 1 && !["chapter-hero", "lesson-schema", "study-skills", "learning-outcomes"].includes(source.curriculum!.type))) {
       const layouts = def.layouts.filter(l => l !== recent[recent.length - 1]);
       block = changeBlockLayout(block, layouts[index % layouts.length] || def.layouts[0]);
     }
@@ -181,23 +236,23 @@ export function composeChapter(book: Book, chapter: Chapter, allElements: Record
     sceneWindows(scene, available).forEach((window, i) => pieces.push({ block, window, height: window.to - window.from, index: i }));
   });
   const pages: PageDefinition[] = [];
-  let page: PageDefinition | undefined, y = book.margins.topPt;
+  let page: PageDefinition | undefined, y = margins.topPt;
   const newPage = () => {
     page = { ...reusable[pages.length], id: reusable[pages.length]?.id || crypto.randomUUID(), pageIndex: pages.length,
       displayNumber: String(pages.length + 1), chapterId: chapter.id, unitId: chapter.unitId, status: "Design", layoutMode: "adaptive", templateId: "curriculum-framework", elementIds: [] };
-    pages.push(page); y = book.margins.topPt;
+    pages.push(page); y = margins.topPt;
   };
   const target = Math.min(pieces.length, Math.max(1, framework.config.pageCount - retained.length));
   let remainingWeight = pieces.reduce((sum, p) => sum + p.height + 18, 0);
   pieces.forEach((piece, i) => {
     const remainingPages = Math.max(1, target - pages.length + 1);
     const ideal = remainingWeight / remainingPages;
-    const filled = y - book.margins.topPt;
-    if (!page || (page.elementIds.length && (y + piece.height > book.dimensions.heightPt - book.margins.bottomPt || piece.index > 0 ||
-      piece.block.curriculum?.pageRules.startOnNewPage || (pieces[i - 1]?.block.curriculum?.type === "chapter-hero") ||
+    const filled = y - margins.topPt;
+    if (!page || (page.elementIds.length && (y + piece.height > book.dimensions.heightPt - margins.bottomPt || piece.index > 0 ||
+      piece.block.curriculum?.pageRules.startOnNewPage || (pieces[i - 1]?.block.curriculum?.type === "chapter-hero" && !["lesson-schema", "study-skills", "learning-outcomes"].includes(piece.block.curriculum?.type || "")) ||
       pieces.length - i === target - pages.length || (filled >= ideal && pieces.length - i >= target - pages.length)))) newPage();
     const pageId = page!.id;
-    if (!piece.index && piece.block.curriculum?.type === "chapter-hero") {
+    if (!frame && !piece.index && piece.block.curriculum?.type === "chapter-hero") {
       const backgroundId = `${piece.block.id}::background`;
       elements[backgroundId] = { id: backgroundId, pageId, type: "shape", category: "decorative", version: 4, displayName: "Chapter hero · full-bleed paper", locked: true, hidden: false,
         transform: { x: 0, y: 0, width: book.dimensions.widthPt, height: book.dimensions.heightPt, rotation: 0, zIndex: 0 },
@@ -206,7 +261,7 @@ export function composeChapter(book: Book, chapter: Chapter, allElements: Record
     }
     const id = piece.index ? `${piece.block.id}::${piece.index}` : piece.block.id;
     const slice = piece.window.from > 0 || piece.window.to < piece.block.transform.height ? piece.window : undefined;
-    const transform = { ...piece.block.transform, x: book.margins.insidePt, y, width, height: piece.height, zIndex: page!.elementIds.length + 1 };
+    const transform = { ...piece.block.transform, x: margins.insidePt, y, width, height: piece.height, zIndex: page!.elementIds.length + 1 };
     const block = { ...piece.block, pageId, transform, curriculum: { ...piece.block.curriculum!, sourceBlockId: piece.block.id },
       isLockedDesign: framework.mode === "easy", styleOverrides: { ...piece.block.styleOverrides, sceneSlice: slice } };
     elements[id] = { id, pageId, type: "smart-block", category: "educational", version: 4,
@@ -223,7 +278,7 @@ export function composeChapter(book: Book, chapter: Chapter, allElements: Record
   const insertion = first < 0 ? other.length : Math.min(first, other.length);
   other.splice(insertion, 0, ...chapterPages);
   const nextBook = { ...book, chapters: book.chapters.map(c => c.id === chapter.id ? nextChapter : c),
-    pages: other.map((p, i) => p.pageIndex === i && p.displayNumber === String(i + 1) ? p : { ...p, pageIndex: i, displayNumber: String(i + 1) }), updatedAt: new Date().toISOString() };
+    pages: renumberPages(other), updatedAt: new Date().toISOString() };
   return { book: nextBook, chapter: nextChapter, elements, pages: chapterPages, minimumPages: chapterPages.length };
 }
 export function pageDensity(page: PageDefinition, elements: Record<string, PageElement>, book: Pick<Book, "dimensions" | "margins">): { label: ContentDensity; ratio: number; words: number } {

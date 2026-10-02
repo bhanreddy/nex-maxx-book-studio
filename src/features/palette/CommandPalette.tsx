@@ -20,6 +20,8 @@ import {
   HelpCircle,
   Beaker,
   Maximize2,
+  LayoutTemplate,
+  Lock,
 } from "lucide-react";
 
 export const CommandPalette: React.FC = () => {
@@ -49,6 +51,7 @@ export const CommandPalette: React.FC = () => {
     shuffleCompatibleLayout,
     smartStack,
     groupSelectedElements,
+    groupAndLockSelectedElements,
     applyThemeToBook,
     applyFontPairingToBook,
   } = useEditorStore();
@@ -138,6 +141,26 @@ export const CommandPalette: React.FC = () => {
       category: "Adaptive Layout",
       icon: Box,
       action: () => groupSelectedElements("vertical"),
+    },
+    {
+      id: "cmd-group-and-lock",
+      title: "Group and Lock Selected Elements",
+      subtitle: "Group selected elements and immediately lock them together into a unified protected unit",
+      keywords: ["group and lock", "lock group", "protect group", "combine and lock", "group lock"],
+      category: "Adaptive Layout",
+      icon: Lock,
+      action: () => groupAndLockSelectedElements(),
+    },
+    {
+      id: "cmd-create-layout",
+      title: "Create Layout from Selection",
+      subtitle: "Save selected elements or group as a reusable layout preset in the Layout Library",
+      keywords: ["create layout", "save layout", "custom layout", "template from selection", "reusable"],
+      category: "Adaptive Layout",
+      icon: LayoutTemplate,
+      action: () => {
+        useUiStore.getState().setCreateLayoutModalOpen(true);
+      },
     },
 
     // Beginner Natural Add / Insert Commands

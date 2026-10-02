@@ -1,3 +1,5 @@
+import type { PageFrame } from "../../editor/pageFrame/types";
+
 export type WorkflowState =
   | "Draft"
   | "Writing"
@@ -33,7 +35,9 @@ export type GradeLevel =
   | "Grade 7"
   | "Grade 8"
   | "Grade 9"
-  | "Grade 10";
+  | "Grade 10"
+  | "Grade 11"
+  | "Grade 12";
 
 export type Subject =
   | "Science"
@@ -71,13 +75,28 @@ export interface Bleed {
 export interface MasterPageDefinition {
   id: string;
   name: string;
-  type: "Normal" | "ChapterOpen" | "UnitOpen" | "Activity" | "Assessment" | "Workbook";
+  type:
+    | "Normal"
+    | "ChapterOpen"
+    | "UnitOpen"
+    | "Lesson"
+    | "StandardContent"
+    | "Activity"
+    | "Exercise"
+    | "Worksheet"
+    | "Assessment"
+    | "Revision"
+    | "Workbook"
+    | string;
   headerText?: string;
   footerText?: string;
   showPageNumber: boolean;
   pageNumberPosition: "left" | "center" | "right" | "outside";
   backgroundPreset?: string;
   margins: Margins;
+  themeAccent?: string;
+  badgeLabel?: string;
+  gridColumns?: number;
 }
 
 export interface PageOverflowStatus {
@@ -90,12 +109,15 @@ export interface PageOverflowStatus {
 }
 
 export interface PageDefinition {
+  /** Shared editable page artwork; null explicitly disables inheritance. */
+  pageFrame?: PageFrame | null;
   id: string;
   pageIndex: number;          // 0-indexed in physical book
   displayNumber: string;      // e.g. "1", "i", "Cover"
   chapterId?: string;
   unitId?: string;
   masterPageId?: string;
+  masterPreset?: string;
   templateId?: string;
   presetId?: string;
   layoutMode?: "freeform" | "adaptive";
@@ -107,6 +129,10 @@ export interface PageDefinition {
 }
 
 export interface Chapter {
+  /** Apply editable reference ribbons to subsequently inserted chapter elements. */
+  referenceElements?: boolean;
+  /** Shared editable page artwork; null explicitly disables inheritance. */
+  pageFrame?: PageFrame | null;
   id: string;
   unitId: string;
   number: number;
@@ -151,6 +177,13 @@ export interface BookComment {
 }
 
 export interface Book {
+  /** One-time upgrade to a shared editorial border; later manual choices persist. */
+  premiumPageBorderVersion?: 1;
+  pageFramePolicy?: 'book' | 'custom';
+  /** One-time publisher image integration; preserves subsequent user edits/removal. */
+  publisherBrandingVersion?: 1;
+  /** Shared editable page artwork; null explicitly disables inheritance. */
+  pageFrame?: PageFrame | null;
   id: string;
   title: string;
   subtitle?: string;
@@ -171,6 +204,9 @@ export interface Book {
   chapters: Chapter[];
   pages: PageDefinition[];
   masterPages: MasterPageDefinition[];
+  globalTokens?: import("../theme/globalTokens").GlobalDesignTokens;
+  numbering?: "continuous" | "front-matter";
+  autoPagination?: boolean;
   textStyles?: TextStyleDefinition[];
   comments?: BookComment[];
   userGuides?: { id: string; type: "horizontal" | "vertical"; positionPt: number }[];

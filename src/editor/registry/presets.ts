@@ -1,4 +1,6 @@
 import { ElementPreset } from "../../domain/element/types";
+import { picturePresets } from "../media/picturePresetCatalog";
+import { smartQrPresets } from "../media/smartQr";
 import { buildDesignPresets } from "../design/buildLibrary";
 
 const LEGACY_ELEMENT_PRESETS: Record<string, ElementPreset> = {
@@ -921,6 +923,8 @@ const LEGACY_ELEMENT_PRESETS: Record<string, ElementPreset> = {
 
 export const ELEMENT_PRESETS: Record<string, ElementPreset> = {
   ...LEGACY_ELEMENT_PRESETS,
+  ...smartQrPresets,
+  ...picturePresets,
   ...buildDesignPresets(),
 };
 

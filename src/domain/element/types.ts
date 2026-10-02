@@ -88,6 +88,7 @@ export type ElementType =
   | "picture-frame"
   | "pictureFrame"
   | "qrCode"
+  | "smart-media-qr"
   | "illustration"
   | "diagram"
   | "pixel-layer"
@@ -384,6 +385,11 @@ export interface PageElement {
     overflowWarning?: boolean;
     /** Set when the user edits appearance directly, so palette changes can leave it alone. */
     styleOverride?: boolean;
+    referenceTemplate?: string;
+    referenceRenderedText?: string;
+    figureCaptionSource?: string;
+    tocTargetId?: string;
+    tokenStyleId?: string;
   };
 }
 

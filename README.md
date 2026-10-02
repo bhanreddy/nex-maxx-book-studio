@@ -14,6 +14,7 @@ NEX MAXX Book Studio delivers a full-fidelity editorial and curriculum authoring
   - **Easy Mode**: Enforces textbook layout constraints, preventing accidental breaks while preserving editing, palettes, and layout conversion.
   - **Design Mode**: Free placement, scaling, rotation, and micro-adjustments for creative art directing.
 - **Dynamic Re-flow & Continuation**: Text wraps and flows across pages automatically without shrinking grade-targeted reading typography.
+- **Live Object Text Wrap**: Drag or resize an image, shape, table, QR code, group, or educational block over a paragraph frame to reflow each line on both sides. Select any object to choose Text wrap and its Gap (pt) in the toolbar. Tight/Contour follows masks and transparent image silhouettes, as well as circles, stars, polygons, and supported vector contours; Above & below and No wrap are also available. A red overflow count marks text that needs a larger frame, and PDF/print export prevents that text from being omitted.
 - **Smart Vector & Pixel Studio**: Non-destructive CSS filters, SVG path editing, parametric shapes, Bézier controls, and corner fillets.
 - **Print & PDF Publication Pipeline**: High-precision vector scenes rendered directly to 300 DPI print-ready proofs and student workbooks (omitting teacher answer keys in student views).
 - **Optional AI Authoring**: Context-aware curriculum drafting assisted by structured OpenAI models via server-side API proxy.
@@ -110,6 +111,8 @@ npm run deploy
 ## Documentation
 
 For full architectural details, canonical document models, and rendering pipelines, see [docs/curriculum-engine.md](docs/curriculum-engine.md).
+
+For the nine-capability local-first upgrade, audit findings, validation commands and production limitations, see [docs/production-engine-audit.md](docs/production-engine-audit.md).
 
 ## License
 

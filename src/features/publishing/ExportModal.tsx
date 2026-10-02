@@ -1,10 +1,12 @@
 "use client";
+import { buildPageFrameScene, pageFrameFor } from "../../editor/pageFrame/pageFrame";
+import { buildPublisherFooterScene } from "../../editor/branding/publisherFooter";
 
+import {hydrateSmartQrs} from "../../editor/media/smartQr";
 import {preparePrintHtml} from "../../editor/publishing/publicationPrint";
-import {cloudBookSnapshotRepository,curriculumRequest,type CentralBook} from "../../editor/persistence/bookRepository";
-import {getCloudBookController} from "../../editor/stores/cloudBookStore";
-import {getCloudChapterController} from "../../editor/stores/cloudChapterStore";
-import {restoreBookMetadata,restoreChapter} from "../../editor/persistence/bookSnapshots";
+import { prepareCompleteExportBook } from "../../editor/publishing/exportBook";
+import { selectExportPages } from "../../editor/publishing/exportScope";
+import { scanPreflightInBackground } from "../../editor/publishing/backgroundPreflight";
 import React, { useState } from "react";
 import { useUiStore } from "../../editor/stores/uiStore";
 import { useEditorStore } from "../../editor/stores/editorStore";
@@ -12,6 +14,7 @@ import { ExportPreset } from "../../domain/publishing/types";
 import { toGrayHex } from "../../editor/design/contrast";
 import jsPDF from "jspdf";
 import { publicationSceneForElement, renderPublicationPdf } from "../../editor/educational/publicationPdf";
+import { prepareTextWrapContours } from "../../editor/layoutPartner/textWrapLayout";
 import confetti from "canvas-confetti";
 import {
   X,
@@ -31,7 +34,20 @@ export const ExportModal: React.FC = () => {
   const [isExporting, setIsExporting] = useState(false);
   const [exportProgress, setExportProgress] = useState(0);
 
+  // Export Scope Selection (Part 8)
+  const [exportScope, setExportScope] = useState<"all" | "chapter" | "selected">("all");
+  const [selectedChapterId, setSelectedChapterId] = useState<string>("");
+  const [pageRangeString, setPageRangeString] = useState<string>("1-5");
+
   const book = books.find((b) => b.id === activeBookId);
+
+  const selection = React.useMemo(() => {
+    if (!book) return { pages: [], error: '' };
+    try { return { pages: selectExportPages(book, exportScope, selectedChapterId || book.chapters[0]?.id, pageRangeString), error: '' }; }
+    catch (error) { return { pages: [], error: error instanceof Error ? error.message : 'Invalid export scope' }; }
+  }, [book, exportScope, selectedChapterId, pageRangeString]);
+  const effectivePages = selection.pages;
+
   if (!exportModalOpen || !book) return null;
 
   const handleEmbeddedPdf=async()=>{
@@ -39,18 +55,12 @@ export const ExportModal: React.FC = () => {
     if(!proof){showToast({type:'error',title:'Allow the print window',message:'Enable popups for Book Studio, then export again.'});return;}
     proof.opener=null;setIsExporting(true);setExportProgress(5);
     try{
-      let printable=book,printElements=elements;
-      const metadata=getCloudBookController(book.id);
-      if(metadata){
-        await metadata.flush();for(const chapter of book.chapters)await getCloudChapterController(chapter.id)?.flush();
-        const central=await curriculumRequest<CentralBook>(`books/${metadata.target.bookId}`),shell=restoreBookMetadata(central.id,central.document),repository=cloudBookSnapshotRepository(central.id);
-        printable={...shell,pages:[],chapters:[]};printElements={};
-        for(const [index,chapter] of shell.chapters.entries()){
-          const snapshot=await repository.loadSnapshot(chapter.id),restored=restoreChapter(snapshot.document,chapter);
-          printable.pages.push(...restored.pages);printable.chapters.push(restored.chapter);Object.assign(printElements,restored.elements);
-          setExportProgress(10+Math.round((index+1)/shell.chapters.length*55));
-        }
-      }
+      if (selection.error) throw new Error(selection.error);
+      const complete = exportScope === 'all' ? await prepareCompleteExportBook(book, elements) : { book, elements };
+      const report = await scanPreflightInBackground(complete.book, complete.elements);
+      if (!report.isValidForPrint) throw new Error(`${report.errorCount} preflight errors. Open Layout → Preflight and fix them before exporting.`);
+      const printable = { ...complete.book, pages: selectExportPages(complete.book, exportScope, selectedChapterId || complete.book.chapters[0]?.id, pageRangeString) };
+      const printElements = complete.elements;
       const html=await preparePrintHtml(printable,printElements,{bleed:includeBleed,cropMarks:includeCropMarks,grayscale:grayscaleProof});
       proof.document.open();proof.document.write(html);proof.document.close();
       await proof.document.fonts.ready;
@@ -72,6 +82,10 @@ export const ExportModal: React.FC = () => {
     setExportProgress(10);
 
     try {
+      if (selection.error) throw new Error(selection.error);
+      const complete = exportScope === 'all' ? await prepareCompleteExportBook(book, elements) : { book, elements };
+      const report = await scanPreflightInBackground(complete.book, complete.elements);
+      if (!report.isValidForPrint) throw new Error(`${report.errorCount} preflight errors. Open Layout → Preflight before exporting.`);
       if(/[\u0900-\u097f\u0c00-\u0c7f]/u.test(JSON.stringify({chapters:book.chapters,elements})))throw new Error('Use the font-embedded PDF exporter for Hindi or Telugu. The legacy exporter cannot shape these scripts.');
       const { dimensions, bleed } = book;
 
@@ -90,10 +104,17 @@ export const ExportModal: React.FC = () => {
         format: [pageWidthPt, pageHeightPt],
       });
 
-      const totalPages = book.pages.length;
+      const exportPages = selectExportPages(complete.book, exportScope, selectedChapterId || complete.book.chapters[0]?.id, pageRangeString);
+      const printableIds = new Set(exportPages.flatMap((page) => page.elementIds));
+      const exportElements = await hydrateSmartQrs(
+        Object.fromEntries(Object.entries(complete.elements).filter(([id]) => printableIds.has(id))),
+        dimensions.widthPt,
+        dimensions.heightPt
+      );
+      const totalPages = exportPages.length;
 
       for (let i = 0; i < totalPages; i++) {
-        const page = book.pages[i];
+        const page = exportPages[i];
         if (i > 0) {
           doc.addPage([pageWidthPt, pageHeightPt]);
         }
@@ -132,15 +153,23 @@ export const ExportModal: React.FC = () => {
           );
         }
 
+        const frame = pageFrameFor(complete.book, page);
+        if (frame) {
+          const scene = buildPageFrameScene(frame, page.displayNumber, dimensions.widthPt, dimensions.heightPt);
+          await renderPublicationPdf(doc, { ...scene, nodes: scene.nodes.filter(node => 'motifId' in node && node.motifId === 'Paper') }, { id: `frame-${page.id}`, pageId: page.id, type: "shape", category: "decorative", version: 1, displayName: "Page paper", locked: false, hidden: false, transform: { x: 0, y: 0, width: scene.width, height: scene.height, rotation: 0, zIndex: -1 }, style: {}, content: {} }, originX, originY, grayscaleProof);
+        }
         // Render page elements deterministically
+        const wrapElements = page.elementIds.map(id => elements[id]).filter(el => Boolean(el) && !el.content.teacherOnly);
         const pageElements = page.elementIds
-          .map((id) => elements[id])
+          .map((id) => exportElements[id])
           .filter(el => Boolean(el) && !el.hidden && !el.content.teacherOnly)
           .sort((a, b) => a.transform.zIndex - b.transform.zIndex);
 
+        await prepareTextWrapContours(pageElements);
         for (const el of pageElements) {
-          const publicationScene = publicationSceneForElement(el);
+          const publicationScene = publicationSceneForElement(el, wrapElements);
           if(publicationScene) {
+            if(publicationScene.variant === "flow-text" && publicationScene.warnings.length) throw new Error(publicationScene.warnings.join(" ") + " Enlarge the text frame or move the overlapping object before exporting.");
             if(el.smartBlockData && publicationScene.height > el.transform.height + 1) throw new Error(`“${el.displayName}” needs more vertical space. Open its inspector and resize it before exporting.`);
             await renderPublicationPdf(doc,publicationScene,el,originX,originY,grayscaleProof);
             continue;
@@ -212,7 +241,7 @@ export const ExportModal: React.FC = () => {
                 doc.line(x + 4, y + h - 4, x + w - 4, y + h - 4);
               }
             }
-          } else if (["heading", "subheading", "body", "body-text", "caption", "quote", "chapter-title", "header", "footer"].includes(el.type)) {
+          } else if (["heading", "subheading", "body", "body-text", "caption", "quote", "chapter-title", "lesson-title", "header", "footer", "pageNumber", "page-number"].includes(el.type)) {
             const fontSize = el.style.fontSize || 10.5;
             doc.setFontSize(fontSize);
             doc.setFont("helvetica", el.style.fontWeight && el.style.fontWeight >= 600 ? "bold" : "normal");
@@ -226,7 +255,8 @@ export const ExportModal: React.FC = () => {
             }
 
             const textLines = doc.splitTextToSize(el.content.text || "", w);
-            doc.text(textLines, x, y + fontSize);
+            const align = el.style.textAlign === 'right' ? 'right' : el.style.textAlign === 'center' ? 'center' : 'left';
+            doc.text(textLines, align === 'right' ? x + w : align === 'center' ? x + w / 2 : x, y + fontSize, { align });
           } else if (el.type === "learningObjectives") {
             doc.setFontSize(9);
             doc.setFont("helvetica", "bold");
@@ -264,17 +294,13 @@ export const ExportModal: React.FC = () => {
           }
         }
 
-        // Draw page footer number
-        doc.setFontSize(7);
-        doc.setFont("helvetica", "normal");
-        doc.setTextColor(148, 163, 184);
-        doc.text(book.title, originX + 36, originY + dimensions.heightPt - 12);
-        doc.text(
-          page.displayNumber,
-          originX + dimensions.widthPt - 36,
-          originY + dimensions.heightPt - 12,
-          { align: "right" }
-        );
+        if (frame) {
+          const scene = buildPageFrameScene(frame, page.displayNumber, dimensions.widthPt, dimensions.heightPt);
+          await renderPublicationPdf(doc, { ...scene, nodes: scene.nodes.filter(node => !('motifId' in node) || node.motifId !== 'Paper') }, { id: `border-${page.id}`, pageId: page.id, type: 'shape', category: 'decorative', version: 1, displayName: 'Page border', locked: true, hidden: false, transform: { x: 0, y: 0, width: scene.width, height: scene.height, rotation: 0, zIndex: 1 }, style: {}, content: {} }, originX, originY, grayscaleProof);
+        }
+        const footer = buildPublisherFooterScene(complete.book, page, exportElements);
+        if (footer.warnings.length) throw new Error(footer.warnings.join(' '));
+        await renderPublicationPdf(doc, footer, { id: `publisher-footer-${page.id}`, pageId: page.id, type: 'shape', category: 'decorative', version: 1, displayName: 'Publisher footer', locked: true, hidden: false, transform: { x: 0, y: 0, width: footer.width, height: footer.height, rotation: 0, zIndex: 1 }, style: {}, content: {} }, originX, originY, grayscaleProof);
       }
 
       setExportProgress(100);
@@ -343,6 +369,68 @@ export const ExportModal: React.FC = () => {
         {/* Configuration Body */}
         <p className="mx-6 mt-4 text-xs text-amber-200/90 leading-relaxed">Educational templates and artwork use shared vector geometry. Legacy elements may be simplified. The font-embedded proof uses bundled English, Telugu and Hindi fonts. PDF/X and ICC conversion still require the printer’s prepress process.</p>
         <div className="p-6 space-y-4 text-xs text-slate-300">
+          {/* Export Scope Selector (Part 8) */}
+          <div className="p-3.5 rounded-xl border border-white/10 bg-black/30 space-y-2.5">
+            <label className="font-semibold text-slate-200 block text-xs">Export Scope</label>
+            <div className="grid grid-cols-3 gap-2">
+              {[
+                { id: "all", label: "Complete Book", sub: `${book.pages.length} pages` },
+                { id: "chapter", label: "Chapter PDF", sub: "Single chapter" },
+                { id: "selected", label: "Selected Pages", sub: "Custom range" },
+              ].map((s) => (
+                <button
+                  key={s.id}
+                  onClick={() => setExportScope(s.id as typeof exportScope)}
+                  className={`p-2.5 rounded-lg border text-left transition-all ${
+                    exportScope === s.id
+                      ? "bg-teal-600/20 border-teal-500 text-white font-semibold shadow-sm"
+                      : "bg-white/5 border-white/5 hover:bg-white/10 text-slate-300"
+                  }`}
+                >
+                  <span className="block text-xs">{s.label}</span>
+                  <span className="text-[10px] text-slate-400 block mt-0.5">{s.sub}</span>
+                </button>
+              ))}
+            </div>
+
+            {exportScope === "chapter" && book.chapters.length > 0 && (
+              <div className="pt-2">
+                <label className="text-[11px] text-slate-400 block mb-1">Select Chapter</label>
+                <select
+                  value={selectedChapterId || book.chapters[0]?.id}
+                  onChange={(e) => setSelectedChapterId(e.target.value)}
+                  className="w-full bg-black/40 border border-white/10 rounded-lg px-2.5 py-1.5 text-xs text-slate-100 outline-none"
+                >
+                  {book.chapters.map((ch, idx) => (
+                    <option key={ch.id} value={ch.id}>
+                      Chapter {ch.number || idx + 1}: {ch.title}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            {exportScope === "selected" && (
+              <div className="pt-2">
+                <label className="text-[11px] text-slate-400 block mb-1">
+                  Enter Page Range (e.g. 1-5, 8, 12-15)
+                </label>
+                <input
+                  type="text"
+                  aria-invalid={!!selection.error}
+                    value={pageRangeString}
+                  onChange={(e) => setPageRangeString(e.target.value)}
+                  placeholder="1-5"
+                  className="w-full bg-black/40 border border-white/10 rounded-lg px-2.5 py-1.5 text-xs text-slate-100 outline-none font-mono focus:border-teal-500"
+                />
+              </div>
+            )}
+
+            <div className="text-[10px] text-teal-400/90 font-mono">
+              Ready to export: {effectivePages.length} {effectivePages.length === 1 ? "page" : "pages"}
+            </div>
+          </div>
+
           {/* Preset Selector */}
           <div>
             <label className="font-semibold text-slate-200 block mb-2">Export Preset</label>
@@ -455,7 +543,8 @@ export const ExportModal: React.FC = () => {
           )}
         </div>
 
-        <button className="curriculum-secondary mx-6 mb-3" disabled={isExporting} onClick={handleExportPdf}>Legacy Latin-font vector proof</button>
+        <button className="curriculum-secondary mx-6 mb-3" disabled={isExporting || !!selection.error} title={selection.error || `Export ${effectivePages.length} pages`} onClick={handleExportPdf}>Legacy Latin-font vector proof</button>
+        {selection.error && <p role="alert" className="px-6 py-3 text-sm text-rose-300">{selection.error}</p>}
         {/* Footer */}
         <div className="flex items-center justify-between px-6 py-4 border-t border-white/10 bg-black/20">
           <span className="text-[11px] text-slate-400 font-mono">
@@ -471,8 +560,8 @@ export const ExportModal: React.FC = () => {
               </button>
             )}
             <button
-              onClick={handleEmbeddedPdf}
-              disabled={isExporting}
+              title={selection.error || `Export ${effectivePages.length} pages with bundled fonts`} onClick={handleEmbeddedPdf}
+              disabled={isExporting || !!selection.error}
               className="flex items-center gap-2 px-5 py-2 rounded-lg bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-500 hover:to-emerald-500 text-white text-xs font-semibold shadow-lg shadow-teal-900/30 transition-all"
             >
               {isExporting ? (

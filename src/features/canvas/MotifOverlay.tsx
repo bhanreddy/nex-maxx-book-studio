@@ -13,9 +13,28 @@ export function MotifOverlay({ element, zoom }: { element: PageElement; zoom: nu
   const block = element.smartBlockData;
   const [active, setActive] = useState<string | null>(null);
   const [cropping, setCropping] = useState(false);
-  if ((!block?.presetId.startsWith("atelier-") && !block?.curriculum) || block?.isLockedDesign) return null;
+  if (!block) return null;
   const scene = buildPublicationScene({ ...block, transform: element.transform });
-  const frames = scene.motifs || [];
+  // Whole-card semantic frames are for export/editing metadata. Covering them
+  // with drag targets intercepts the native content buttons underneath.
+  const frames = (scene.motifs || []).filter(frame => ["plate", "photo", "illustration", "capsule", "bubble"].includes(frame.role));
+  const imageNodes = scene.nodes.filter((n): n is Extract<typeof scene.nodes[number], { kind: "image" }> => n.kind === "image");
+  const existingIds = new Set(frames.map(f => f.id));
+  for (const [idx, img] of imageNodes.entries()) {
+    const imgId = img.motifId || `img-node-${idx}`;
+    if (!existingIds.has(imgId)) {
+      frames.push({
+        id: imgId,
+        role: "photo",
+        kind: "photo",
+        x: img.x,
+        y: img.y,
+        w: img.w,
+        h: img.h,
+        locked: false,
+      });
+    }
+  }
   const apply = (id: string, frame: SceneMotifFrame, patch: Partial<BlockMotif>) => {
     const current = useEditorStore.getState().elements[element.id];
     const motifs = liveMotifs(current);

@@ -2,6 +2,8 @@ import { Book, DEFAULT_BLEED, DEFAULT_PRINT_MARGINS, STANDARD_PAGE_SIZES } from 
 import { PageElement } from "../../domain/element/types";
 import { PAGE_TEMPLATES } from "../registry/templates";
 import { ELEMENT_PRESETS } from "../registry/presets";
+import { integrateFirstPageLogo } from '../branding/bookBranding';
+import { integrateBookPageBorder } from '../pageFrame/bookBorder';
 
 export function createDefaultDemoBook(): { book: Book; elements: Record<string, PageElement> } {
   const bookId = "book-grade5-science";
@@ -735,5 +737,5 @@ export function createDefaultDemoBook(): { book: Book; elements: Record<string, 
     coverImage: "https://images.unsplash.com/photo-1518531933037-91b2f5f229cc?w=800&auto=format&fit=crop&q=80",
   };
 
-  return { book, elements };
+  return integrateFirstPageLogo(integrateBookPageBorder(book), elements);
 }

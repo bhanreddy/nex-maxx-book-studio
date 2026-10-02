@@ -19,7 +19,14 @@ import {
   ArrowRight,
   Plus,
   Trash2,
+  LayoutTemplate,
+  Layers,
+  Group,
+  Ungroup,
 } from "lucide-react";
+import { setFrameworkMode } from "../../editor/curriculum/actions";
+import { effectiveTextWrap } from "../../editor/layoutPartner/textWrapLayout";
+import type { TextWrapMode } from "../../domain/creative/types";
 
 export const ContextToolbar: React.FC = () => {
   const {
@@ -52,9 +59,18 @@ export const ContextToolbar: React.FC = () => {
 
   return (
     <div className="h-12 shrink-0 w-full bg-white dark:bg-[#0e131f] border-b border-slate-200/90 dark:border-white/[0.08] px-3.5 flex items-center text-[13px] text-slate-700 dark:text-slate-300 z-20 select-none overflow-x-auto scrollbar-none font-sans">
-      {selectedElements.length === 0 && <span className="text-slate-500 dark:text-slate-400 text-xs">Select an object to edit its appearance. Double-click text to write.</span>}
+      {selectedElements.length === 0 && <span className="text-slate-500 dark:text-slate-400 text-xs">Select an object to edit its appearance. Double-click text to write. Shift-click to select multiple elements.</span>}
       <div className="flex items-center gap-2.5 flex-shrink-0">
-        {/* 0A. MULTIPLE ELEMENTS: SMART STACK (Directive 12) */}
+        {selectedElements.length > 0 && <div className="flex items-center gap-2 border-r border-slate-200 dark:border-white/10 pr-3">
+          {selectedElements.length > 1 && <button type="button" disabled={selectedElements.some(el => el.locked)} className="min-h-9 px-2 rounded-lg flex items-center gap-1.5 hover:bg-slate-100 dark:hover:bg-white/10 disabled:opacity-40" title="Group without changing positions (⌘/Ctrl+G)" onClick={() => useEditorStore.getState().groupSelectedElements()}><Group size={15}/>Group</button>}
+          {selectedElements.length > 1 && <button type="button" disabled={selectedElements.some(el => el.locked)} className="min-h-9 px-2 rounded-lg flex items-center gap-1.5 hover:bg-amber-500/15 text-amber-600 dark:text-amber-400 hover:text-amber-700 dark:hover:text-amber-300 disabled:opacity-40 font-medium" title="Group and lock elements in one step (⌘/Ctrl+Shift+L)" onClick={() => useEditorStore.getState().groupAndLockSelectedElements()}><Lock size={15}/>Group & Lock</button>}
+          {singleElement?.childElementIds?.length && <button type="button" disabled={singleElement.locked} className="min-h-9 px-2 rounded-lg flex items-center gap-1.5 hover:bg-slate-100 dark:hover:bg-white/10 disabled:opacity-40" title="Ungroup (⌘/Ctrl+Shift+G)" onClick={() => useEditorStore.getState().ungroupSelectedElements()}><Ungroup size={15}/>Ungroup</button>}
+          <button type="button" className="min-h-9 px-2 rounded-lg flex items-center gap-1.5 hover:bg-slate-100 dark:hover:bg-white/10" title="Lock or unlock selection (⌘/Ctrl+L)" onClick={() => { const locked = selectedElements.every(el => el.locked); selectedElements.forEach(el => useEditorStore.getState().updateElement(el.id, { locked: !locked })); }}>
+            {selectedElements.every(el => el.locked) ? <Unlock size={15}/> : <Lock size={15}/>}{selectedElements.every(el => el.locked) ? "Unlock" : "Lock"}
+          </button>
+        </div>}
+
+        {/* 0A. MULTIPLE ELEMENTS: SMART STACK & CREATE LAYOUT */}
         {selectedElements.length > 1 && (
           <div className="flex items-center gap-1.5">
             <button
@@ -71,7 +87,27 @@ export const ContextToolbar: React.FC = () => {
             >
               <span>↔ Stack Horizontally</span>
             </button>
+            <button
+              onClick={() => useUiStore.getState().setCreateLayoutModalOpen(true)}
+              className="px-3 py-1 bg-gradient-to-r from-amber-500 to-rose-600 hover:from-amber-400 hover:to-rose-500 text-white rounded-lg text-[10.5px] font-semibold flex items-center gap-1.5 shadow-[0_0_14px_rgba(245,158,11,0.35)] transition-all active:scale-95"
+              title="Save selection as a reusable custom layout in the Layout Library"
+            >
+              <LayoutTemplate className="w-3.5 h-3.5" />
+              <span>Create Layout from Selection</span>
+            </button>
           </div>
+        )}
+
+        {/* 0B. SINGLE GROUP: CREATE LAYOUT FROM GROUP */}
+        {singleElement && (singleElement.type === "group" || Boolean(singleElement.childElementIds?.length)) && (
+          <button
+            onClick={() => useUiStore.getState().setCreateLayoutModalOpen(true)}
+            className="px-3 py-1 bg-gradient-to-r from-amber-500 to-rose-600 hover:from-amber-400 hover:to-rose-500 text-white rounded-lg text-[10.5px] font-semibold flex items-center gap-1.5 shadow-[0_0_14px_rgba(245,158,11,0.35)] transition-all active:scale-95"
+            title="Convert this group into a reusable custom layout in the Layout Library"
+          >
+            <LayoutTemplate className="w-3.5 h-3.5" />
+            <span>Create Layout from Group</span>
+          </button>
         )}
 
         {/* 1. SELECTION / TRANSFORM CONTROLS (When an element is selected) */}
@@ -83,18 +119,24 @@ export const ContextToolbar: React.FC = () => {
               <input
                 type="number"
                 value={Math.round(currentTransform.x)}
-                onChange={(e) =>
-                  updateElementTransform(singleElement.id, { x: parseFloat(e.target.value) || 0 }, true)
-                }
+                onChange={(e) => {
+                  if (singleElement.smartBlockData?.curriculum?.chapterId && singleElement.smartBlockData.isLockedDesign) {
+                    setFrameworkMode(singleElement.smartBlockData.curriculum.chapterId, "design");
+                  }
+                  updateElementTransform(singleElement.id, { x: parseFloat(e.target.value) || 0 }, true);
+                }}
                 className="w-12 bg-black/40 border border-white/10 rounded px-1 py-0.5 text-slate-200 text-[10px] outline-none focus:border-indigo-500"
               />
               <span className="text-slate-500 ml-1">Y:</span>
               <input
                 type="number"
                 value={Math.round(currentTransform.y)}
-                onChange={(e) =>
-                  updateElementTransform(singleElement.id, { y: parseFloat(e.target.value) || 0 }, true)
-                }
+                onChange={(e) => {
+                  if (singleElement.smartBlockData?.curriculum?.chapterId && singleElement.smartBlockData.isLockedDesign) {
+                    setFrameworkMode(singleElement.smartBlockData.curriculum.chapterId, "design");
+                  }
+                  updateElementTransform(singleElement.id, { y: parseFloat(e.target.value) || 0 }, true);
+                }}
                 className="w-12 bg-black/40 border border-white/10 rounded px-1 py-0.5 text-slate-200 text-[10px] outline-none focus:border-indigo-500"
               />
             </div>
@@ -105,26 +147,32 @@ export const ContextToolbar: React.FC = () => {
               <input
                 type="number"
                 value={Math.round(currentTransform.width)}
-                onChange={(e) =>
+                onChange={(e) => {
+                  if (singleElement.smartBlockData?.curriculum?.chapterId && singleElement.smartBlockData.isLockedDesign) {
+                    setFrameworkMode(singleElement.smartBlockData.curriculum.chapterId, "design");
+                  }
                   updateElementTransform(
                     singleElement.id,
                     { width: Math.max(10, parseFloat(e.target.value) || 10) },
                     true
-                  )
-                }
+                  );
+                }}
                 className="w-12 bg-black/40 border border-white/10 rounded px-1 py-0.5 text-slate-200 text-[10px] outline-none focus:border-indigo-500"
               />
               <span className="text-slate-500 ml-1">H:</span>
               <input
                 type="number"
                 value={Math.round(currentTransform.height)}
-                onChange={(e) =>
+                onChange={(e) => {
+                  if (singleElement.smartBlockData?.curriculum?.chapterId && singleElement.smartBlockData.isLockedDesign) {
+                    setFrameworkMode(singleElement.smartBlockData.curriculum.chapterId, "design");
+                  }
                   updateElementTransform(
                     singleElement.id,
                     { height: Math.max(10, parseFloat(e.target.value) || 10) },
                     true
-                  )
-                }
+                  );
+                }}
                 className="w-12 bg-black/40 border border-white/10 rounded px-1 py-0.5 text-slate-200 text-[10px] outline-none focus:border-indigo-500"
               />
             </div>
@@ -135,13 +183,16 @@ export const ContextToolbar: React.FC = () => {
               <input
                 type="number"
                 value={Math.round(currentTransform.rotation || 0)}
-                onChange={(e) =>
+                onChange={(e) => {
+                  if (singleElement.smartBlockData?.curriculum?.chapterId && singleElement.smartBlockData.isLockedDesign) {
+                    setFrameworkMode(singleElement.smartBlockData.curriculum.chapterId, "design");
+                  }
                   updateElementTransform(
                     singleElement.id,
                     { rotation: parseFloat(e.target.value) || 0 },
                     true
-                  )
-                }
+                  );
+                }}
                 className="w-10 bg-black/40 border border-white/10 rounded px-1 py-0.5 text-slate-200 text-[10px] outline-none focus:border-indigo-500"
               />
               <span className="text-slate-500">°</span>
@@ -150,7 +201,7 @@ export const ContextToolbar: React.FC = () => {
             {/* Lock / Unlock */}
             <button
               onClick={() =>
-                useEditorStore.getState().updateElementTransform(singleElement.id, {}, false)
+                useEditorStore.getState().toggleLockElement(singleElement.id)
               }
               className="p-1 rounded hover:bg-white/10 text-slate-400 hover:text-white"
               title={singleElement.locked ? "Unlock Element" : "Lock Element"}
@@ -161,7 +212,7 @@ export const ContextToolbar: React.FC = () => {
         )}
 
         {/* MULTI-SELECTION BOOLEAN OPERATIONS */}
-        {selectedElements.length >= 2 && (
+        {selectedElements.length >= 2 && selectedElements.every(el => el.type === "shape" || el.type === "vector-curve") && (
           <div className="flex items-center gap-1.5 bg-indigo-950/40 border border-indigo-500/30 px-2 py-0.5 rounded">
             <span className="text-[10px] text-indigo-300 font-medium">
               {selectedElements.length} Shapes Selected
@@ -488,12 +539,12 @@ export const ContextToolbar: React.FC = () => {
             </button>
 
             <button
-              disabled={singleElement.locked || singleElement.smartBlockData.isLockedContent || singleElement.smartBlockData.isLockedDesign}
+              disabled={singleElement.locked}
               onClick={() => useEditorStore.getState().detachEducationalBlock(singleElement.id)}
-              className="px-2 py-0.5 rounded bg-white/10 hover:bg-white/20 text-slate-300 text-[10.5px] font-mono"
-              title="Detach the rendered layout into editable text, images, and shapes"
+              className="px-2.5 py-0.5 rounded bg-amber-500/20 hover:bg-amber-500/30 text-amber-200 border border-amber-500/30 text-[10.5px] font-medium transition-all cursor-pointer shadow-sm active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+              title="Make every text and image in this block completely movable as independent canvas layers"
             >
-              Detach
+              🔓 Make Text & Images Movable
             </button>
           </div>
         )}
@@ -516,6 +567,30 @@ export const ContextToolbar: React.FC = () => {
             )}
           </div>
         )}
+
+        {singleElement && (() => {
+          const wrap = effectiveTextWrap(singleElement)!;
+          return <div className="flex items-center gap-2 pl-2 border-l border-slate-200 dark:border-white/10 text-[11px]">
+            <label className="flex items-center gap-1.5">Text wrap
+              <select aria-label="Object text wrap" disabled={singleElement.locked} value={wrap.mode}
+                onChange={e => useEditorStore.getState().updateElement(singleElement.id, { textWrap: { ...wrap, mode: e.target.value as TextWrapMode } })}
+                className="bg-white dark:bg-slate-900 border border-slate-300 dark:border-white/10 rounded px-1.5 py-1">
+                <option value="square">Both sides</option><option value="tight">Tight</option><option value="contour">Contour</option>
+                <option value="largest-side">Largest side</option><option value="top-bottom">Above & below</option><option value="none">No wrap</option>
+                {["box", "through", "inline", "floating"].includes(wrap.mode) && <option value={wrap.mode}>{wrap.mode}</option>}
+              </select>
+            </label>
+            <label className="flex items-center gap-1">Gap
+              <input aria-label="Object wrap gap in points" type="number" min={0} max={72} step={1} disabled={singleElement.locked}
+                value={wrap.offsetPt ?? wrap.wrapMarginPt ?? 8} onChange={e => {
+                  const value = Number(e.target.value); if (!Number.isFinite(value)) return;
+                  const gap = Math.max(0, Math.min(72, value));
+                  useEditorStore.getState().updateElement(singleElement.id, { textWrap: { ...wrap, offsetPt: gap,
+                    topOffsetPt: gap, rightOffsetPt: gap, bottomOffsetPt: gap, leftOffsetPt: gap } });
+                }} className="w-12 bg-white dark:bg-slate-900 border border-slate-300 dark:border-white/10 rounded px-1 py-1" />pt
+            </label>
+          </div>;
+        })()}
 
         {/* 6. PIXEL / IMAGE ADJUSTMENTS */}
         {singleElement && singleElement.type === "image" && (
@@ -549,7 +624,13 @@ export const ContextToolbar: React.FC = () => {
                 className="w-14 accent-rose-500"
               />
             </div>
-            {/* Effective DPI badge */}
+            <button
+              type="button"
+              onClick={() => useEditorStore.getState().removeImageBackground(singleElement.id)}
+              className="px-2 py-0.5 bg-rose-600/30 hover:bg-rose-600/50 text-rose-100 border border-rose-500/40 rounded text-[10px] font-medium"
+            >
+              Remove background
+            </button>
             {singleElement.content.rawWidthPx && (
               <span className="px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 text-[10px] font-mono">
                 {Math.round(singleElement.content.rawWidthPx / (singleElement.transform.width / 72))} DPI

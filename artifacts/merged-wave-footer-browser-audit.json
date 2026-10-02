@@ -1,0 +1,20 @@
+{
+  "studioLogo": true,
+  "firstPageNativeImage": true,
+  "legacyMigrationPersisted": true,
+  "reloadLogoCount": 1,
+  "firstPageLogoOnlyOnFirstPage": true,
+  "publisherFooterOnEveryPage": true,
+  "decorativeBorderFooter": true,
+  "legacyFooterExport": true,
+  "bookWideBorder": true,
+  "manualPaletteApply": true,
+  "futurePageInheritance": true,
+  "nativeBackdropDoesNotHideBorder": true,
+  "browserErrors": [],
+  "offlineTested": false,
+  "innerMarginGuideHidden": true,
+  "footerRuleRemoved": true,
+  "footerMergedIntoBottomWave": true,
+  "brandingAboveWaveLayer": true
+}

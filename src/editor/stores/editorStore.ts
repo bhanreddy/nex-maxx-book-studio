@@ -1,3 +1,9 @@
+import { cloneElementTree, elementTree, selectionRoot, isElementLocked, transformGroupChildren } from "../core/elementGroups";
+import { repaginateFromPage } from "../core/paginationEngine";
+import { solveElementConstraint } from "../core/snapping";
+import { synchronizeBookStructure } from "../structure/bookStructureEngine";
+import { renumberBookPages, renumberPages } from "../core/pageNumbering";
+import { frameMargins, pageFrameFor, pageMarginsFor } from "../pageFrame/pageFrame";
 import {queueCentralBook} from './cloudBookStore';
 import { composePage } from "../core/pageComposition";
 import { schedulePersistence } from "../core/debouncedPersistence";
@@ -8,6 +14,7 @@ import { makePublicationDemo, makePublicationPages } from "../educational/public
 import { create } from "zustand";
 import { Book, PageDefinition, Chapter, Unit, TextStyleDefinition, BookComment } from "../../domain/book/types";
 import { PageElement, ElementTransform, ElementStyle, ElementContent, DesignBorder, DesignColorTokens, DesignDecoration, DesignSpacing } from "../../domain/element/types";
+import { CustomLayoutDefinition, CustomLayoutCategory, CustomLayoutPlaceholder } from "../../domain/layout/customLayoutTypes";
 import {
   CurveNode,
   AdjustmentType,
@@ -19,9 +26,12 @@ import { traceImageToVector, ImageTraceOptions } from "../vector/imageTrace";
 import { generateBackgroundRemovalMask } from "../pixel/selectionEngine";
 import { EducationalAIProvider } from "../ai/aiProvider";
 import { createDefaultDemoBook } from "../seed/demoBook";
+import { integrateFirstPageLogo } from '../branding/bookBranding';
+import { integrateBookPageBorder } from '../pageFrame/bookBorder';
 import { ELEMENT_PRESETS, PAGE_PRESETS_MAP, COMPREHENSIVE_PRESET_LIBRARY, PagePresetDefinition } from "../registry/presets";
 import { PageTemplate, PAGE_TEMPLATES } from "../registry/templates";
 import {
+  estimateTextHeight,
   solvePageReflow,
   adaptPageToDimensions,
   solveSmartStack,
@@ -54,6 +64,7 @@ import { documentSignature } from "../persistence/cloudSaveController";
 import { acceptCloudChapter, connectNewCloudChapter, getCloudChapterController, queueLinkedChapters } from "./cloudChapterStore";
 import { composeChapter } from "../curriculum/chapterEngine";
 import { editCurriculumBlock, editFramework, deleteCurriculumSelection, duplicateCurriculumSelection, reshuffleCurriculumBlock, unlockCurriculumLayers, curriculumSource, insertCurriculumBlock, convertBlock } from "../curriculum/actions";
+import { localDb, type StorageProjectPayload } from "../persistence/indexedDbStorage";
 
 const STORAGE_KEY = "nex_maxx_book_studio_data_v1";
 
@@ -177,6 +188,7 @@ interface EditorState {
     spacingPt?: number
   ) => PageElement | null;
   groupSelectedElements: (direction?: "vertical" | "horizontal" | "grid") => void;
+  groupAndLockSelectedElements: () => void;
   ungroupSelectedElements: () => void;
   smartStack: (elementIds?: string[], direction?: "vertical" | "horizontal" | "grid") => void;
   setElementLayoutMode: (elementId: string, mode: "freeform" | "adaptive") => void;
@@ -209,7 +221,21 @@ interface EditorState {
   savePublicationPreset: (name: string, elementId: string) => void;
   insertPublicationPreset: (id: string) => void;
   insertPublicationElement: (element: PageElement) => void;
+  insertElement: (element: PageElement) => void;
+
+  // Custom Layouts (Phase 4)
+  userCustomLayouts: Record<string, CustomLayoutDefinition>;
+  createCustomLayoutFromSelection: (
+    name: string,
+    category?: CustomLayoutCategory,
+    description?: string,
+    placeholders?: CustomLayoutPlaceholder[]
+  ) => CustomLayoutDefinition | null;
+  insertCustomLayout: (layoutId: string, targetX?: number, targetY?: number) => string[];
+  deleteCustomLayout: (layoutId: string) => void;
+
   commitTransformGesture: (before: PageElement[]) => void;
+  fitRenderedBlockHeight: (id: string, height: number) => void;
   addPublicationPages: (templateId: string) => void;
   createPublicationDemo: () => void;
   addPublicationArtwork: (kind: ArtworkKind, x?: number, y?: number) => void;
@@ -226,7 +252,7 @@ interface EditorState {
 
   // Persistence & Recovery
   saveToStorage: () => void;
-  loadFromStorage: () => boolean;
+  loadFromStorage: () => Promise<boolean>;
   saveChapterDocument: (chapterId: string, target: ChapterSaveTarget, repository?: ChapterRepository) => Promise<{ revision: number; checksum: string }>;
   loadChapterDocument: (chapterId: string, target: ChapterSaveTarget, repository?: ChapterRepository) => Promise<void>;
   saveChapterToCloud: (chapterId: string, target: ChapterSaveTarget) => Promise<{ revision: number; checksum: string }>;
@@ -235,17 +261,19 @@ interface EditorState {
 }
 
 export const useEditorStore = create<EditorState>((set, get) => {
+  const structureSignatures = new Map<string, string>();
   // Initialize with seeded demo book
   const demo = createDefaultDemoBook();
 
   return {
     books: [demo.book],
     activeBookId: demo.book.id,
-    activePageIndex: 1, // Start on Chapter Opener
+    activePageIndex: 0, // Open the branded first page.
     elements: demo.elements,
     selectedElementIds: [],
     clipboardElements: [],
     publicationPresets: {},
+    userCustomLayouts: {},
 
     getActiveBook: () => {
       const { books, activeBookId } = get();
@@ -270,6 +298,7 @@ export const useEditorStore = create<EditorState>((set, get) => {
 
     selectBook: (id) => {
       set({ activeBookId: id, activePageIndex: 0, selectedElementIds: [] });
+      useUiStore.setState({ userGuides: get().getActiveBook()?.userGuides || [] });
     },
 
     createBook: (bookData) => {
@@ -278,6 +307,7 @@ export const useEditorStore = create<EditorState>((set, get) => {
 
       const newBook: Book = {
         id: newBookId,
+        autoPagination: bookData.autoPagination ?? true,
         title: bookData.title || "Untitled Book",
         subtitle: bookData.subtitle || "",
         grade: bookData.grade || "Grade 5",
@@ -311,15 +341,17 @@ export const useEditorStore = create<EditorState>((set, get) => {
         status: "Draft",
       };
 
+      const branded = integrateFirstPageLogo(integrateBookPageBorder(newBook), get().elements);
       set((state) => ({
-        books: [newBook, ...state.books],
+        books: [branded.book, ...state.books],
+        elements: branded.elements,
         activeBookId: newBook.id,
         activePageIndex: 0,
         selectedElementIds: [],
       }));
 
       get().saveToStorage();
-      return newBook;
+      return branded.book;
     },
 
     updateActiveBook: (updates) => {
@@ -360,7 +392,11 @@ export const useEditorStore = create<EditorState>((set, get) => {
 
       const insertIndex = afterIndex !== undefined ? afterIndex + 1 : book.pages.length;
       const newPageId = `page-${Math.random().toString(36).substring(2, 9)}`;
+      const precedingPage = book.pages[afterIndex ?? get().activePageIndex];
+      const owningChapter = book.chapters.find(c => c.id === precedingPage?.chapterId || c.pageIds.includes(precedingPage?.id));
       const newPage: PageDefinition = {
+        chapterId: owningChapter?.id,
+        unitId: owningChapter?.unitId,
         id: newPageId,
         pageIndex: insertIndex,
         displayNumber: `${insertIndex + 1}`,
@@ -369,19 +405,13 @@ export const useEditorStore = create<EditorState>((set, get) => {
         status: "Draft",
       };
 
-      const updatedPages = [...book.pages];
+      const updatedPages = book.pages.map(p => ({ ...p }));
       updatedPages.splice(insertIndex, 0, newPage);
-      // Re-index remaining pages
-      updatedPages.forEach((p, idx) => {
-        p.pageIndex = idx;
-        if (p.displayNumber !== "Cover") {
-          p.displayNumber = `${idx}`;
-        }
-      });
+      const numberedPages = renumberPages(updatedPages);
 
       set((state) => ({
         books: state.books.map((b) =>
-          b.id === book.id ? { ...b, pages: updatedPages, updatedAt: new Date().toISOString() } : b
+          b.id === book.id ? { ...b, chapters: b.chapters.map(c => c.id === owningChapter?.id ? { ...c, pageIds: [...c.pageIds, newPageId] } : c), pages: numberedPages, updatedAt: new Date().toISOString() } : b
         ),
         activePageIndex: insertIndex,
         selectedElementIds: [],
@@ -408,21 +438,8 @@ export const useEditorStore = create<EditorState>((set, get) => {
 
       const sourcePage = book.pages[index];
       const newPageId = `page-${Math.random().toString(36).substring(2, 9)}`;
-      const newElementIds: string[] = [];
-      const newElements: Record<string, PageElement> = {};
-
-      sourcePage.elementIds.forEach((oldElId) => {
-        const oldEl = get().elements[oldElId];
-        if (oldEl) {
-          const newElId = `el-${Math.random().toString(36).substring(2, 9)}`;
-          newElements[newElId] = {
-            ...oldEl,
-            id: newElId,
-            pageId: newPageId,
-          };
-          newElementIds.push(newElId);
-        }
-      });
+      const { elements: newElements } = cloneElementTree(elementTree(sourcePage.elementIds, get().elements), newPageId, { dx: 0, dy: 0 });
+      const newElementIds = Object.keys(newElements);
 
       const duplicatedPage: PageDefinition = {
         ...sourcePage,
@@ -432,16 +449,14 @@ export const useEditorStore = create<EditorState>((set, get) => {
         elementIds: newElementIds,
       };
 
-      const updatedPages = [...book.pages];
+      const updatedPages = book.pages.map(p => ({ ...p }));
       updatedPages.splice(index + 1, 0, duplicatedPage);
-      updatedPages.forEach((p, idx) => {
-        p.pageIndex = idx;
-      });
+      const numberedPages = renumberPages(updatedPages);
 
       set((state) => ({
         elements: { ...state.elements, ...newElements },
         books: state.books.map((b) =>
-          b.id === book.id ? { ...b, pages: updatedPages, updatedAt: new Date().toISOString() } : b
+          b.id === book.id ? { ...b, pages: numberedPages, updatedAt: new Date().toISOString() } : b
         ),
         activePageIndex: index + 1,
       }));
@@ -454,45 +469,50 @@ export const useEditorStore = create<EditorState>((set, get) => {
     },
 
     deletePage: (index) => {
-      const book = get().getActiveBook();
-      if (!book || book.pages.length <= 1) return;
-
-      const updatedPages = book.pages.filter((_, idx) => idx !== index);
-      updatedPages.forEach((p, idx) => {
-        p.pageIndex = idx;
+      const book = get().getActiveBook(), page = book?.pages[index];
+      if (!book || !page || book.pages.length <= 1) return;
+      const previousIndex = get().activePageIndex;
+      const removed = Object.fromEntries(Object.entries(get().elements).filter(([, el]) => el.pageId === page.id));
+      const remaining = Object.fromEntries(Object.entries(get().elements).filter(([, el]) => el.pageId !== page.id));
+      const pages = renumberPages(book.pages.filter(p => p.id !== page.id).map(p => ({ ...p })));
+      const chapters = book.chapters.map(ch => {
+        if (!ch.framework) return { ...ch, pageIds: ch.pageIds.filter(id => id !== page.id) };
+        const blocks = { ...ch.framework.blocks };
+        for (const el of Object.values(removed)) {
+          const source = el.smartBlockData?.curriculum?.sourceBlockId || el.id;
+          if (!Object.values(remaining).some(other => other.id === source || other.smartBlockData?.curriculum?.sourceBlockId === source)) delete blocks[source];
+        }
+        return { ...ch, pageIds: ch.pageIds.filter(id => id !== page.id), framework: { ...ch.framework, blocks,
+          sections: ch.framework.sections.map(section => ({ ...section, blockIds: section.blockIds.filter(id => Boolean(blocks[id])) })) } };
       });
-
-      const nextActive = Math.max(0, Math.min(updatedPages.length - 1, index - 1));
-
-      set((state) => ({
-        books: state.books.map((b) =>
-          b.id === book.id ? { ...b, pages: updatedPages, updatedAt: new Date().toISOString() } : b
-        ),
-        activePageIndex: nextActive,
-        selectedElementIds: [],
-      }));
-
-      get().saveToStorage();
-      useUiStore.getState().showToast({
-        type: "info",
-        title: "Page Removed",
-      });
+      const nextBook = { ...book, pages, chapters, updatedAt: new Date().toISOString() };
+      const nextIndex = index < previousIndex ? previousIndex - 1 : Math.min(previousIndex, pages.length - 1);
+      const apply = (forward: boolean) => {
+        set(state => {
+          const elements = { ...state.elements };
+          for (const [id, el] of Object.entries(removed)) { if (forward) delete elements[id]; else elements[id] = el; }
+          return { elements, books: state.books.map(b => b.id === book.id ? (forward ? nextBook : book) : b),
+            activePageIndex: forward ? nextIndex : previousIndex, selectedElementIds: [] };
+        });
+        get().saveToStorage();
+      };
+      apply(true);
+      useHistoryStore.getState().pushAction({ description: `Delete page ${page.displayNumber}`, undo: () => apply(false), redo: () => apply(true) });
+      useUiStore.getState().showToast({ type: "info", title: `Page ${page.displayNumber} deleted`, message: "Undo restores the page and its contents." });
     },
 
     reorderPages: (fromIndex, toIndex) => {
       const book = get().getActiveBook();
       if (!book) return;
-      const updatedPages = [...book.pages];
+      const updatedPages = book.pages.map(p => ({ ...p }));
       const [movedPage] = updatedPages.splice(fromIndex, 1);
       updatedPages.splice(toIndex, 0, movedPage);
 
-      updatedPages.forEach((p, idx) => {
-        p.pageIndex = idx;
-      });
+      const numberedPages = renumberPages(updatedPages);
 
       set((state) => ({
         books: state.books.map((b) =>
-          b.id === book.id ? { ...b, pages: updatedPages, updatedAt: new Date().toISOString() } : b
+          b.id === book.id ? { ...b, pages: numberedPages, updatedAt: new Date().toISOString() } : b
         ),
         activePageIndex: toIndex,
       }));
@@ -601,6 +621,7 @@ export const useEditorStore = create<EditorState>((set, get) => {
     },
 
     selectElement: (id, multiSelect = false) => {
+      id = selectionRoot(id, get().elements);
       set((state) => {
         if (multiSelect) {
           const exists = state.selectedElementIds.includes(id);
@@ -620,7 +641,7 @@ export const useEditorStore = create<EditorState>((set, get) => {
 
     selectAllOnActivePage: () => {
       const activeElements = get().getActivePageElements();
-      set({ selectedElementIds: activeElements.map((el) => el.id) });
+      set({ selectedElementIds: [...new Set(activeElements.map(el => selectionRoot(el.id, get().elements)))] });
     },
 
     addElement: (presetId, initialX = 54, initialY = 120) => {
@@ -983,6 +1004,7 @@ export const useEditorStore = create<EditorState>((set, get) => {
 
       // Compute compound bounding box
       const selected = selectedElementIds.map((id) => elements[id]).filter(Boolean);
+      if (selected.some(el => isElementLocked(el.id, elements) || el.childElementIds?.length)) return;
       const minX = Math.min(...selected.map((e) => e.transform.x));
       const minY = Math.min(...selected.map((e) => e.transform.y));
       const maxX = Math.max(...selected.map((e) => e.transform.x + e.transform.width));
@@ -1451,48 +1473,65 @@ export const useEditorStore = create<EditorState>((set, get) => {
 
     removeImageBackground: async (elementId) => {
       const el = get().elements[elementId];
-      if (!el || el.type !== "image" || !el.content.src) {
+      const picture = el && ["image", "picture-frame", "pictureFrame", "ai-image"].includes(el.type);
+      const source = el?.content.originalSrc || el?.content.src || el?.content.imageUrl || el?.content.url;
+      if (!el || !picture || !source) {
         useUiStore.getState().showToast({
           type: "warning",
-          title: "Select an Image Element",
+          title: "Select a picture",
+          message: "Choose an uploaded photo or a preset picture first.",
+        });
+        return;
+      }
+      if (isElementLocked(elementId, get().elements)) {
+        useUiStore.getState().showToast({
+          type: "warning",
+          title: "Picture is locked",
+          message: "Unlock it before removing the background.",
         });
         return;
       }
 
       useUiStore.getState().showToast({
         type: "info",
-        title: "Segmenting Foreground Subject...",
-        message: "Generating non-destructive alpha mask",
+        title: "Removing background",
+        message: "Tracing the subject edge.",
       });
 
       try {
-        const { maskDataUrl, maskedPreviewUrl } = await generateBackgroundRemovalMask(el.content.src);
-        set((state) => ({
-          elements: {
-            ...state.elements,
-            [elementId]: {
-              ...state.elements[elementId],
-              content: {
-                ...state.elements[elementId].content,
-                originalSrc: state.elements[elementId].content.src,
-                src: maskedPreviewUrl,
-                maskDataUrl,
-              },
-            },
+        const { maskDataUrl, maskedPreviewUrl, changed } = await generateBackgroundRemovalMask(source);
+        const current = get().elements[elementId];
+        if (!current) return;
+        if (!changed) {
+          useUiStore.getState().showToast({
+            type: "warning",
+            title: "Background stayed in place",
+            message: "The subject and backdrop could not be separated cleanly.",
+          });
+          return;
+        }
+        const originalSrc = current.content.originalSrc || current.content.src || current.content.imageUrl || current.content.url;
+        get().updateElement(elementId, {
+          content: {
+            ...current.content,
+            originalSrc,
+            src: maskedPreviewUrl,
+            ...(current.content.imageUrl ? { imageUrl: maskedPreviewUrl } : {}),
+            ...(current.content.url && !current.content.src ? { url: maskedPreviewUrl } : {}),
+            maskDataUrl,
           },
-        }));
-
-        get().saveToStorage();
+          style: { ...current.style, backgroundColor: "transparent" },
+        });
         useUiStore.getState().showToast({
           type: "success",
-          title: "Background Removed",
-          message: "Alpha mask attached non-destructively",
+          title: "Background removed",
+          message: "The original picture is kept so this can be restored.",
         });
       } catch (err: unknown) {
         const errorMsg = err instanceof Error ? err.message : "Failed to remove background";
         useUiStore.getState().showToast({
           type: "error",
-          title: "Background Removal Failed",
+          title: "Background removal failed",
           message: errorMsg,
         });
       }
@@ -1668,7 +1707,8 @@ export const useEditorStore = create<EditorState>((set, get) => {
       const targetStyle = book.textStyles.find((ts) => ts.id === styleId);
       if (!targetStyle) return;
 
-      get().updateElementStyle(elementId, {
+      get().updateElement(elementId, { metadata: { ...get().elements[elementId]?.metadata, styleOverride: false }, style: {
+        ...get().elements[elementId]?.style,
         fontFamily: targetStyle.fontFamily,
         fontSize: targetStyle.fontSize,
         fontWeight: targetStyle.fontWeight,
@@ -1677,7 +1717,7 @@ export const useEditorStore = create<EditorState>((set, get) => {
         color: targetStyle.color,
         textTransform: targetStyle.textTransform,
         styleId: targetStyle.id,
-      });
+      } });
 
       useUiStore.getState().showToast({
         type: "success",
@@ -1729,8 +1769,8 @@ export const useEditorStore = create<EditorState>((set, get) => {
 
       // Propagate to all elements using this styleId throughout the book!
       const updatedElements = { ...get().elements };
-      Object.keys(updatedElements).forEach((elId) => {
-        if (updatedElements[elId].style?.styleId === styleId) {
+      new Set(book.pages.flatMap(page => page.elementIds)).forEach((elId) => {
+        if (updatedElements[elId]?.style?.styleId === styleId && !updatedElements[elId].metadata?.styleOverride) {
           updatedElements[elId] = {
             ...updatedElements[elId],
             style: {
@@ -1926,8 +1966,10 @@ export const useEditorStore = create<EditorState>((set, get) => {
 
     updateElement: (id, updates) => {
       const old = get().elements[id]; if (!old) return;
-      if (old.smartBlockData?.curriculum?.chapterId && (updates.hidden !== undefined || updates.locked !== undefined)) {
-        const meta = old.smartBlockData.curriculum;
+      if (isElementLocked(id, get().elements) && Object.keys(updates).some(key => key !== "locked" && key !== "hidden")) return;
+      const chapter = old.smartBlockData?.curriculum?.chapterId ? get().getActiveBook()?.chapters.find(c => c.id === old.smartBlockData!.curriculum!.chapterId) : undefined;
+      if (chapter?.framework && (updates.hidden !== undefined || updates.locked !== undefined)) {
+        const meta = old.smartBlockData!.curriculum!;
         editFramework(meta.chapterId!, "Change block layer visibility / lock", framework => {
           const block = framework.blocks[meta.sourceBlockId || id];
           if (block) block.curriculum = { ...block.curriculum!, ...(updates.hidden !== undefined ? { hidden: updates.hidden } : {}), ...(updates.locked !== undefined ? { locked: updates.locked } : {}) };
@@ -1935,42 +1977,70 @@ export const useEditorStore = create<EditorState>((set, get) => {
         }, id);
         return;
       }
-      if (old.smartBlockData?.curriculum?.chapterId && updates.smartBlockData &&
+      if (old.smartBlockData && chapter?.framework && updates.smartBlockData &&
           (updates.smartBlockData.semanticContent !== old.smartBlockData.semanticContent || updates.smartBlockData.styleOverrides !== old.smartBlockData.styleOverrides)) {
         editCurriculumBlock(old, `Edit ${old.displayName}`, source => ({ ...source, ...updates.smartBlockData!, id: source.id,
           curriculum: { ...updates.smartBlockData!.curriculum!, sourceBlockId: undefined },
           styleOverrides: { ...updates.smartBlockData!.styleOverrides, sceneSlice: undefined } }));
         return;
       }
-      if (old.smartBlockData?.isLockedDesign && updates.transform) return;
+      if ((old.locked || old.smartBlockData?.isLockedDesign) && updates.transform) return;
       const next = { ...old, ...updates };
+      if (updates.content && old.metadata?.tags?.some(tag => ['master-header','master-footer','master-folio'].includes(tag))) next.metadata = { ...next.metadata, styleOverride: true };
       if (next.type === "body" && next.content.publicationPrimitive && (updates.content || updates.style || updates.transform)) {
         const height = detachedSceneForElement(next)?.height;
         if (height) next.transform = { ...next.transform, height };
       }
       if (next.smartBlockData) next.smartBlockData = { ...next.smartBlockData, transform: { ...next.transform } };
-      const apply = (value: PageElement) => {
-        set(state => ({ elements: { ...state.elements, [id]: value } }));
+      const activeBook = get().getActiveBook();
+      if (activeBook?.autoPagination && (updates.content || updates.smartBlockData || updates.style) &&
+          !next.smartBlockData?.curriculum && !next.content.publicationPrimitive && ['body','body-text','smart-block'].includes(next.type)) {
+        const previous = get();
+        if (next.smartBlockData) {
+          const height = buildPublicationScene({ ...next.smartBlockData, transform: { ...next.transform, height: 0 } }).height;
+          next.transform = { ...next.transform, height: Math.max(next.transform.height, height) };
+          next.smartBlockData = { ...next.smartBlockData, transform: next.transform };
+        } else if (typeof next.content.text === 'string' && !next.content.html) {
+          next.transform = { ...next.transform, height: Math.max(next.transform.height, estimateTextHeight(next.content.text, next.style.fontSize || 10.5, next.style.lineHeight || 1.45, next.transform.width)) };
+        }
+        const result = repaginateFromPage(activeBook, { ...previous.elements, [id]: next }, activeBook.pages.findIndex(page => page.id === next.pageId));
+        const updatedBook = { ...activeBook, pages: result.updatedPages, chapters: activeBook.chapters.map(chapter => ({ ...chapter, pageIds: [...new Set([...chapter.pageIds, ...result.updatedPages.filter(page => page.chapterId === chapter.id).map(page => page.id)])] })) };
+        const updatedBooks = previous.books.map(book => book.id === activeBook.id ? updatedBook : book);
+        const applyDocument = (books: Book[], elements: Record<string, PageElement>) => { set({ books, elements }); get().saveToStorage(); };
+        applyDocument(updatedBooks, result.updatedElements);
+        useHistoryStore.getState().pushAction({ description: `Edit and flow ${old.displayName}`, undo: () => applyDocument(previous.books, previous.elements), redo: () => applyDocument(updatedBooks, result.updatedElements) });
+        if (!result.overflowResolved) useUiStore.getState().showToast({ type: 'warning', title: 'Block needs layout review', message: 'This block cannot fit safely. Its content is preserved; resize it or use chapter composition.' });
+        return;
+      }
+      const before = elementTree([id], get().elements);
+      const after = [next, ...Object.values(transformGroupChildren(old, next.transform, get().elements))];
+      const apply = (items: PageElement[]) => {
+        set(state => ({ elements: { ...state.elements, ...Object.fromEntries(items.map(el => [el.id, el])) } }));
         get().saveToStorage();
       };
-      apply(next);
-      useHistoryStore.getState().pushAction({description: `Edit ${old.displayName}`, undo: () => apply(old), redo: () => apply(next)});
+      apply(after);
+      useHistoryStore.getState().pushAction({description: `Edit ${old.displayName}`, undo: () => apply(before), redo: () => apply(after)});
     },
 
     updateElementTransform: (id, newTransform, recordHistory = false) => {
       const current = get().elements[id];
-      if (!current || current.locked || current.smartBlockData?.isLockedDesign) return;
+      if (!current || isElementLocked(id, get().elements) || current.smartBlockData?.isLockedDesign || elementTree(current.childElementIds || [], get().elements).some(el => el.locked)) return;
 
-      const prevTransform = { ...current.transform };
+      const beforeTree = elementTree([id], get().elements);
       const updatedTransform = { ...current.transform, ...newTransform };
       if(current.smartBlockData && (newTransform.width !== undefined || newTransform.height !== undefined)) {
-        updatedTransform.width=Math.max(180,updatedTransform.width);
-        updatedTransform.height=Math.max(updatedTransform.height,buildPublicationScene({...current.smartBlockData,transform:{...updatedTransform,height:0}}).height);
+        updatedTransform.width = Math.max(60, updatedTransform.width);
+        if (newTransform.height !== undefined) {
+          updatedTransform.height = Math.max(30, updatedTransform.height);
+        } else {
+          updatedTransform.height = Math.max(updatedTransform.height, buildPublicationScene({...current.smartBlockData, transform:{...updatedTransform, height:0}}).height);
+        }
       }
 
       set((state) => ({
         elements: {
           ...state.elements,
+          ...transformGroupChildren(current, updatedTransform, state.elements),
           [id]: {
             ...state.elements[id],
             transform: updatedTransform,
@@ -1979,27 +2049,7 @@ export const useEditorStore = create<EditorState>((set, get) => {
         },
       }));
 
-      if (recordHistory) {
-        useHistoryStore.getState().pushAction({
-          description: "Move / Resize Element",
-          undo: () => {
-            set((s) => ({
-              elements: {
-                ...s.elements,
-                [id]: { ...s.elements[id], transform: prevTransform },
-              },
-            }));
-          },
-          redo: () => {
-            set((s) => ({
-              elements: {
-                ...s.elements,
-                [id]: { ...s.elements[id], transform: updatedTransform },
-              },
-            }));
-          },
-        });
-      }
+      if (recordHistory) get().commitTransformGesture(beforeTree);
 
       if(recordHistory)get().saveToStorage();
     },
@@ -2014,7 +2064,8 @@ export const useEditorStore = create<EditorState>((set, get) => {
     },
 
     deleteSelectedElements: () => {
-      const { selectedElementIds, elements } = get();
+      const { elements } = get();
+      const selectedElementIds = elementTree(get().selectedElementIds.filter(id => !isElementLocked(id, elements)), elements).map(el => el.id);
       if (selectedElementIds.length === 0) return;
       const curriculum = selectedElementIds.map(id => elements[id]).filter(el => el?.smartBlockData?.curriculum?.chapterId);
       if (curriculum.length) {
@@ -2025,136 +2076,27 @@ export const useEditorStore = create<EditorState>((set, get) => {
       const page = get().getActivePage();
       if (!page) return;
 
-      const deletedElements: Record<string, PageElement> = {};
-      selectedElementIds.forEach((id) => {
-        if (elements[id]) deletedElements[id] = elements[id];
-      });
-
-      set((state) => {
-        const nextElements = { ...state.elements };
-        selectedElementIds.forEach((id) => {
-          delete nextElements[id];
-        });
-
-        return {
-          elements: nextElements,
-          books: state.books.map((b) =>
-            b.id === state.activeBookId
-              ? {
-                  ...b,
-                  pages: b.pages.map((p) =>
-                    p.id === page.id
-                      ? {
-                          ...p,
-                          elementIds: p.elementIds.filter((id) => !selectedElementIds.includes(id)),
-                        }
-                      : p
-                  ),
-                }
-              : b
-          ),
-          selectedElementIds: [],
-        };
-      });
-
-      // Push undo action
-      useHistoryStore.getState().pushAction({
-        description: `Delete ${selectedElementIds.length} element(s)`,
-        undo: () => {
-          set((s) => ({
-            elements: { ...s.elements, ...deletedElements },
-            books: s.books.map((b) =>
-              b.id === s.activeBookId
-                ? {
-                    ...b,
-                    pages: b.pages.map((p) =>
-                      p.id === page.id
-                        ? { ...p, elementIds: [...p.elementIds, ...Object.keys(deletedElements)] }
-                        : p
-                    ),
-                  }
-                : b
-            ),
-            selectedElementIds: Object.keys(deletedElements),
-          }));
-        },
-        redo: () => {
-          get().deleteSelectedElements();
-        },
-      });
-
-      get().saveToStorage();
-      useUiStore.getState().showToast({
-        type: "info",
-        title: "Element(s) Deleted",
-      });
+      const book = get().getActiveBook();
+      if (!book) return;
+      const roots = get().selectedElementIds;
+      const removed = Object.fromEntries(selectedElementIds.map(id => [id, elements[id]]));
+      const apply = (forward: boolean) => {
+        set(state => {
+          const next = { ...state.elements };
+          if (forward) selectedElementIds.forEach(id => delete next[id]); else Object.assign(next, removed);
+          return { elements: next, books: state.books.map(b => b.id === book.id ? { ...b, pages: b.pages.map(p => p.id === page.id ? { ...p, elementIds: forward ? page.elementIds.filter(id => !selectedElementIds.includes(id)) : page.elementIds } : p) } : b), selectedElementIds: forward ? roots.filter(id => !selectedElementIds.includes(id)) : roots };
+        }); get().saveToStorage();
+      };
+      apply(true);
+      useHistoryStore.getState().pushAction({ description: `Delete ${roots.length} element(s)`, undo: () => apply(false), redo: () => apply(true) });
+      useUiStore.getState().showToast({ type: "info", title: "Elements deleted", message: "Undo restores the selection." });
     },
 
-    duplicateSelectedElements: () => {
-      const { selectedElementIds, elements } = get();
-      if (selectedElementIds.some(id => elements[id]?.smartBlockData?.curriculum?.chapterId)) {
-        duplicateCurriculumSelection(selectedElementIds); return;
-      }
-      const page = get().getActivePage();
-      if (!page || selectedElementIds.length === 0) return;
-
-      const newElements: Record<string, PageElement> = {};
-      const newIds: string[] = [];
-
-      selectedElementIds.forEach((id) => {
-        const source = elements[id];
-        if (source) {
-          const newId = `el-${Math.random().toString(36).substring(2, 9)}`;
-          newElements[newId] = {
-            ...source,
-            id: newId,
-            transform: {
-              ...source.transform,
-              x: source.transform.x + 16,
-              y: source.transform.y + 16,
-              zIndex: source.transform.zIndex + 1,
-            },
-          };
-          newIds.push(newId);
-        }
-      });
-
-      set((state) => ({
-        elements: { ...state.elements, ...newElements },
-        books: state.books.map((b) =>
-          b.id === state.activeBookId
-            ? {
-                ...b,
-                pages: b.pages.map((p) =>
-                  p.id === page.id ? { ...p, elementIds: [...p.elementIds, ...newIds] } : p
-                ),
-              }
-            : b
-        ),
-        selectedElementIds: newIds,
-      }));
-
-      get().saveToStorage();
-      useUiStore.getState().showToast({
-        type: "success",
-        title: "Element(s) Duplicated",
-      });
-    },
+    duplicateSelectedElements: () => get().duplicateSelectedElementsWithOffset({ dx: 16, dy: 16 }),
 
     toggleLockElement: (id) => {
       const current = get().elements[id];
-      if (!current) return;
-      if (current.smartBlockData?.curriculum?.chapterId) { get().updateElement(id, { locked: !current.locked }); return; }
-      set((state) => ({
-        elements: {
-          ...state.elements,
-          [id]: {
-            ...state.elements[id],
-            locked: !state.elements[id].locked,
-          },
-        },
-      }));
-      get().saveToStorage();
+      if (current) get().updateElement(id, { locked: !current.locked });
     },
 
     bringForward: (id) => {
@@ -2187,9 +2129,10 @@ export const useEditorStore = create<EditorState>((set, get) => {
 
     arrangeSelection: (mode, relative, gap=18, columns=2) => {
       const book=get().getActiveBook(),page=get().getActivePage();if(!book||!page)return;
-      const before=get().selectedElementIds.map(id=>get().elements[id]).filter(el=>el && !el.locked && !el.hidden && !el.smartBlockData?.isLockedDesign);
+      const before=get().selectedElementIds.map(id=>get().elements[id]).filter(el=>el && !isElementLocked(el.id, get().elements) && !el.hidden);
+      const beforeTree=elementTree(before.map(el=>el.id),get().elements);
       if(!before.length)return;
-      const margin=page.overrideMargins||book.margins;
+      const margin=pageMarginsFor(book,page);
       const pageBounds={x:margin.insidePt,y:margin.topPt,width:book.dimensions.widthPt-margin.insidePt-margin.outsidePt,height:book.dimensions.heightPt-margin.topPt-margin.bottomPt};
       const x=Math.min(...before.map(el=>el.transform.x)),y=Math.min(...before.map(el=>el.transform.y));
       const bounds=relative==="page"?pageBounds:{x,y,width:Math.max(...before.map(el=>el.transform.x+el.transform.width))-x,height:Math.max(...before.map(el=>el.transform.y+el.transform.height))-y};
@@ -2197,7 +2140,7 @@ export const useEditorStore = create<EditorState>((set, get) => {
         const transforms=arrangeElements(before,bounds,mode,gap,columns);
         if(Object.values(transforms).some(t=>t.x<pageBounds.x-.1||t.y<pageBounds.y-.1||t.x+t.width>pageBounds.x+pageBounds.width+.1||t.y+t.height>pageBounds.y+pageBounds.height+.1))throw new Error("This arrangement does not fit inside the page margins. Reduce the gap, choose fewer columns, or move some objects to another page.");
         Object.entries(transforms).forEach(([id,t])=>get().updateElementTransform(id,t,false));
-        get().commitTransformGesture(before);
+        get().commitTransformGesture(beforeTree);
         get().evaluateActivePageOverflow();
       } catch(error) { useUiStore.getState().showToast({type:"warning",title:"Arrangement not applied",message:String(error instanceof Error?error.message:error)}); }
     },
@@ -2206,7 +2149,7 @@ export const useEditorStore = create<EditorState>((set, get) => {
 
     copySelection: () => {
       const { selectedElementIds, elements } = get();
-      const copies = selectedElementIds.map((id) => elements[id]).filter(Boolean);
+      const copies = structuredClone(elementTree(selectedElementIds, elements));
       set({ clipboardElements: copies });
       useUiStore.getState().showToast({
         type: "info",
@@ -2219,38 +2162,17 @@ export const useEditorStore = create<EditorState>((set, get) => {
       const page = get().getActivePage();
       if (!page || clipboardElements.length === 0) return;
 
-      const newElements: Record<string, PageElement> = {};
-      const newIds: string[] = [];
-
-      clipboardElements.forEach((source) => {
-        const newId = `el-${Math.random().toString(36).substring(2, 9)}`;
-        newElements[newId] = {
-          ...source,
-          id: newId,
-          pageId: page.id,
-          transform: {
-            ...source.transform,
-            x: source.transform.x + 20,
-            y: source.transform.y + 20,
-          },
-        };
-        newIds.push(newId);
-      });
-
-      set((state) => ({
-        elements: { ...state.elements, ...newElements },
-        books: state.books.map((b) =>
-          b.id === state.activeBookId
-            ? {
-                ...b,
-                pages: b.pages.map((p) =>
-                  p.id === page.id ? { ...p, elementIds: [...p.elementIds, ...newIds] } : p
-                ),
-              }
-            : b
-        ),
-        selectedElementIds: newIds,
-      }));
+      const { elements: newElements, roots } = cloneElementTree(clipboardElements, page.id, { dx: 20, dy: 20 });
+      const newIds = Object.keys(newElements);
+      const apply = (forward: boolean) => {
+        set(state => {
+          const elements = { ...state.elements };
+          if (forward) Object.assign(elements, newElements); else newIds.forEach(id => delete elements[id]);
+          return { elements, books: state.books.map(book => ({ ...book, pages: book.pages.map(p => p.id === page.id ? { ...p, elementIds: forward ? [...p.elementIds, ...newIds] : p.elementIds.filter(id => !newIds.includes(id)) } : p) })), selectedElementIds: forward ? roots : [] };
+        }); get().saveToStorage();
+      };
+      apply(true);
+      useHistoryStore.getState().pushAction({ description: "Paste elements", undo: () => apply(false), redo: () => apply(true) });
 
       get().saveToStorage();
       useUiStore.getState().showToast({
@@ -2260,17 +2182,28 @@ export const useEditorStore = create<EditorState>((set, get) => {
     },
 
     saveToStorage: () => {
+      let elements = get().elements, structureChanged = false;
+      const books = get().books.map(stored => {
+        const book = renumberBookPages(stored);
+        const signature = JSON.stringify([book.title, book.numbering, book.pages.map(page => [page.id, page.chapterId, page.displayNumber, page.elementIds]), book.chapters.map(chapter => [chapter.id, chapter.title, chapter.framework?.compositionRevision])]);
+        if (structureSignatures.get(book.id) === signature) return book;
+        structureSignatures.set(book.id, signature); structureChanged = true;
+        const result = synchronizeBookStructure(book, elements); elements = result.updatedElements;
+        return result.updatedBook;
+      });
+      if (structureChanged || books.some((book, i) => book !== get().books[i])) set({ books, elements });
       if (typeof window === "undefined") return;
       const activeBook=get().getActiveBook();
-      if(activeBook && queueCentralBook(activeBook,get().elements)) {
-        const page=activeBook.pages[get().activePageIndex],chapter=activeBook.chapters.find(c=>c.id===page?.chapterId||c.pageIds.includes(page?.id));
-        if(chapter)rememberCentralBook(activeBook.id,chapter.id);
-        useUiStore.getState().setSaveStatus("Local backup only");
-        return;
-      }
-      queueLinkedChapters(activeBook?.chapters || []);
+      // Cloud recovery/storage errors must never prevent the primary local save.
+      try {
+        if(activeBook && queueCentralBook(activeBook,get().elements)) {
+          const page=activeBook.pages[get().activePageIndex],chapter=activeBook.chapters.find(c=>c.id===page?.chapterId||c.pageIds.includes(page?.id));
+          if(chapter)rememberCentralBook(activeBook.id,chapter.id);
+        }
+        queueLinkedChapters(activeBook?.chapters || []);
+      } catch (error) { console.warn('Cloud changes remain pending', error); }
       useUiStore.getState().setSaveStatus("Saving...");
-      schedulePersistence(() => {
+      schedulePersistence(async () => {
       try {
         const payload = {
           books: get().books,
@@ -2278,29 +2211,49 @@ export const useEditorStore = create<EditorState>((set, get) => {
           activePageIndex: get().activePageIndex,
           elements: get().elements,
           publicationPresets: get().publicationPresets,
+          userCustomLayouts: get().userCustomLayouts,
+          savedAt: new Date().toISOString(),
         };
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+
+        // Report success only after an actual durable write.
+        const indexedSaved = await localDb.saveWorkspace(payload);
+        let fallbackSaved = false;
+
+        // Secondary: localStorage snapshot
+        try {
+          if (!indexedSaved) { localStorage.setItem(STORAGE_KEY, JSON.stringify(payload)); fallbackSaved = true; }
+        } catch {}
+
+        if (!indexedSaved && !fallbackSaved) throw new Error("Browser storage is full or unavailable");
         const now = new Date().toLocaleTimeString();
         useUiStore.getState().setSaveStatus("Local backup only");
         useUiStore.getState().setLastSavedAt(now);
+        if (payload.books !== get().books || payload.elements !== get().elements) useUiStore.getState().setSaveStatus('Changes pending');
       } catch (err) {
         console.error("Autosave failed", err);
         useUiStore.getState().setSaveStatus("Changes pending");
-        useUiStore.getState().showToast({type:"error",title:"Browser storage is full",message:"Recent changes are still in memory. Remove large images or export your work before closing this tab."});
+        useUiStore.getState().showToast({ type: "error", title: "Local save failed", message: "Free browser storage and retry. Keep this tab open; changes are still in memory." });
       }
       });
     },
 
-    loadFromStorage: () => {
+    loadFromStorage: async () => {
       if (typeof window === "undefined") return false;
+      const initialBooks = get().books, initialElements = get().elements;
       try {
-        const raw = localStorage.getItem(STORAGE_KEY);
-        const central=recoverActiveCentralBook();
-        if (!raw && !central) return false;
-        const data = raw?JSON.parse(raw):{books:[],elements:{}};
-        if(central){
-          data.books=[...data.books.filter((b:Book)=>b.id!==central.book.id),central.book];
-          data.elements={...data.elements,...central.elements};data.activeBookId=central.book.id;data.activePageIndex=0;
+        let legacy: StorageProjectPayload | null = null;
+        try { const raw = localStorage.getItem(STORAGE_KEY); if (raw) legacy = JSON.parse(raw); } catch {}
+        const indexed = await localDb.loadWorkspace() || (await localDb.getLatestRecoverySnapshot())?.payload;
+        // Do not overwrite work performed while recovery was loading.
+        if (get().books !== initialBooks || get().elements !== initialElements) return false;
+        const data = indexed && (!legacy || Date.parse(indexed.savedAt) >= Date.parse(legacy.savedAt || '1970-01-01')) ? indexed : legacy;
+        if (!data) {
+          const central = recoverActiveCentralBook();
+          if (!central) return false;
+          const branded = integrateFirstPageLogo(integrateBookPageBorder(central.book), central.elements);
+          set({ books: [branded.book], elements: branded.elements, activeBookId: central.book.id, activePageIndex: 0, selectedElementIds: [] });
+          if (branded.book !== central.book) get().saveToStorage();
+          return true;
         }
         if (data.books && data.elements) {
           let recoveredElements = data.elements;
@@ -2322,17 +2275,22 @@ export const useEditorStore = create<EditorState>((set, get) => {
                 useUiStore.getState().showToast({type:"warning",title:"Chapter recovery needs review",message:"The separate cloud recovery JSON remains on this device. Open the matching chapter before reloading."});
               }
             }
-            return recoveredBook;
+            const branded = integrateFirstPageLogo(integrateBookPageBorder(renumberBookPages(recoveredBook)), recoveredElements);
+            recoveredElements = branded.elements;
+            return branded.book;
           });
           set({
             books: recoveredBooks,
             activeBookId: data.activeBookId || data.books[0].id,
-            activePageIndex: data.activePageIndex || 0,
+            activePageIndex: Math.max(0, recoveredBooks.find(book => book.id === data.activeBookId)?.pages.findIndex(page => page.id === data.books.find(book => book.id === data.activeBookId)?.pages[data.activePageIndex || 0]?.id) ?? 0),
             elements: recoveredElements,
             publicationPresets: data.publicationPresets || {},
+            userCustomLayouts: data.userCustomLayouts || {},
             selectedElementIds: [],
           });
+          useUiStore.setState({ userGuides: get().getActiveBook()?.userGuides || [] });
           useUiStore.getState().setSaveStatus("Recovered");
+          if (recoveredBooks.some((book, index) => book.publisherBrandingVersion !== data.books[index].publisherBrandingVersion || book.premiumPageBorderVersion !== data.books[index].premiumPageBorderVersion)) get().saveToStorage();
           return true;
         }
       } catch (err) {
@@ -2492,69 +2450,81 @@ export const useEditorStore = create<EditorState>((set, get) => {
       return groupElement;
     },
 
-    groupSelectedElements: (direction = "vertical") => {
-      const selectedIds = get().selectedElementIds;
-      if (selectedIds.length > 1) {
-        get().createAdaptiveGroup(selectedIds, direction);
+    groupSelectedElements: () => {
+      const page = get().getActivePage();
+      const ids = [...new Set(get().selectedElementIds.map(id => selectionRoot(id, get().elements)))];
+      const children = ids.map(id => get().elements[id]).filter(el => el?.pageId === page?.id);
+      if (!page || children.length < 2) return;
+      if (elementTree(ids, get().elements).some(el => el.locked)) {
+        useUiStore.getState().showToast({ type: "warning", title: "Unlock elements before grouping", message: "For protected chapter blocks, enable Design mode first." });
+        return;
       }
+      const x = Math.min(...children.map(el => el.transform.x)), y = Math.min(...children.map(el => el.transform.y));
+      const id = crypto.randomUUID();
+      const group: PageElement = { id, pageId: page.id, type: "group", category: "decorative", version: 1,
+        displayName: `Group (${children.length} elements)`, locked: false, hidden: false, content: {}, style: {}, layoutMode: "freeform",
+        childElementIds: children.map(el => el.id), transform: { x, y, width: Math.max(...children.map(el => el.transform.x + el.transform.width)) - x,
+          height: Math.max(...children.map(el => el.transform.y + el.transform.height)) - y, rotation: 0, zIndex: Math.max(...children.map(el => el.transform.zIndex)) + 1 } };
+      const before = Object.fromEntries(children.map(el => [el.id, el]));
+      const after = Object.fromEntries(children.map(el => [el.id, { ...el, groupId: id }]));
+      const apply = (forward: boolean) => {
+        set(state => {
+          const elements = { ...state.elements, ...(forward ? after : before) };
+          if (forward) elements[id] = group; else delete elements[id];
+          return { elements, books: state.books.map(book => ({ ...book, pages: book.pages.map(p => p.id === page.id ? { ...p, elementIds: forward ? [...page.elementIds, id] : page.elementIds } : p) })), selectedElementIds: forward ? [id] : ids };
+        }); get().saveToStorage();
+      };
+      apply(true);
+      useHistoryStore.getState().pushAction({ description: "Group elements", undo: () => apply(false), redo: () => apply(true) });
+      useUiStore.getState().showToast({ type: "success", title: "Elements grouped", message: "Move, resize or lock them together. Ungroup restores individual editing." });
+    },
+
+    groupAndLockSelectedElements: () => {
+      const page = get().getActivePage();
+      const ids = [...new Set(get().selectedElementIds.map(id => selectionRoot(id, get().elements)))];
+      const children = ids.map(id => get().elements[id]).filter(el => el?.pageId === page?.id);
+      if (!page || children.length < 2) return;
+      if (elementTree(ids, get().elements).some(el => el.locked)) {
+        useUiStore.getState().showToast({ type: "warning", title: "Unlock elements before grouping", message: "For protected chapter blocks, enable Design mode first." });
+        return;
+      }
+      const x = Math.min(...children.map(el => el.transform.x)), y = Math.min(...children.map(el => el.transform.y));
+      const id = crypto.randomUUID();
+      const group: PageElement = { id, pageId: page.id, type: "group", category: "decorative", version: 1,
+        displayName: `Group (${children.length} elements)`, locked: true, hidden: false, content: {}, style: {}, layoutMode: "freeform",
+        childElementIds: children.map(el => el.id), transform: { x, y, width: Math.max(...children.map(el => el.transform.x + el.transform.width)) - x,
+          height: Math.max(...children.map(el => el.transform.y + el.transform.height)) - y, rotation: 0, zIndex: Math.max(...children.map(el => el.transform.zIndex)) + 1 } };
+      const before = Object.fromEntries(children.map(el => [el.id, el]));
+      const after = Object.fromEntries(children.map(el => [el.id, { ...el, groupId: id }]));
+      const apply = (forward: boolean) => {
+        set(state => {
+          const elements = { ...state.elements, ...(forward ? after : before) };
+          if (forward) elements[id] = group; else delete elements[id];
+          return { elements, books: state.books.map(book => ({ ...book, pages: book.pages.map(p => p.id === page.id ? { ...p, elementIds: forward ? [...page.elementIds, id] : page.elementIds } : p) })), selectedElementIds: forward ? [id] : ids };
+        }); get().saveToStorage();
+      };
+      apply(true);
+      useHistoryStore.getState().pushAction({ description: "Group and lock elements", undo: () => apply(false), redo: () => apply(true) });
+      useUiStore.getState().showToast({ type: "success", title: "Elements grouped and locked", message: "Unified into a protected group. Click Unlock anytime to edit individual parts." });
     },
 
     ungroupSelectedElements: () => {
-      const selectedIds = get().selectedElementIds;
       const page = get().getActivePage();
-      if (!page || selectedIds.length === 0) return;
-
-      const updatedElements = { ...get().elements };
-      const newPageElementIds = [...page.elementIds];
-      const newlySelectedIds: string[] = [];
-
-      selectedIds.forEach((id) => {
-        const el = updatedElements[id];
-        if (el && el.type === "group" && el.childElementIds && el.childElementIds.length > 0) {
-          // Unparent children
-          el.childElementIds.forEach((childId) => {
-            if (updatedElements[childId]) {
-              updatedElements[childId] = {
-                ...updatedElements[childId],
-                groupId: undefined,
-              };
-              if (!newPageElementIds.includes(childId)) {
-                newPageElementIds.push(childId);
-              }
-              newlySelectedIds.push(childId);
-            }
-          });
-          // Remove group element from page and store
-          const groupIdx = newPageElementIds.indexOf(id);
-          if (groupIdx !== -1) {
-            newPageElementIds.splice(groupIdx, 1);
-          }
-          delete updatedElements[id];
-        }
-      });
-
-      if (newlySelectedIds.length > 0) {
-        set((state) => ({
-          elements: updatedElements,
-          books: state.books.map((b) =>
-            b.id === state.activeBookId
-              ? {
-                  ...b,
-                  pages: b.pages.map((p) =>
-                    p.id === page.id ? { ...p, elementIds: newPageElementIds } : p
-                  ),
-                }
-              : b
-          ),
-          selectedElementIds: newlySelectedIds,
-        }));
-        get().saveToStorage();
-        useUiStore.getState().showToast({
-          type: "info",
-          title: "Ungrouped",
-          message: `${newlySelectedIds.length} elements unbundled`,
-        });
-      }
+      const groups = get().selectedElementIds.map(id => get().elements[id]).filter(el => el?.childElementIds?.length && !isElementLocked(el.id, get().elements));
+      if (!page || !groups.length) return;
+      const before = Object.fromEntries(elementTree(groups.map(el => el.id), get().elements).map(el => [el.id, el]));
+      const children = groups.flatMap(group => group.childElementIds!).filter(id => Boolean(get().elements[id]));
+      const apply = (forward: boolean) => {
+        set(state => {
+          const elements = { ...state.elements };
+          if (forward) {
+            groups.forEach(group => { delete elements[group.id]; group.childElementIds!.forEach(id => { if (elements[id]) elements[id] = { ...elements[id], groupId: group.groupId }; }); });
+          } else Object.assign(elements, before);
+          return { elements, books: state.books.map(book => ({ ...book, pages: book.pages.map(p => p.id === page.id ? { ...p, elementIds: forward ? page.elementIds.filter(id => !groups.some(g => g.id === id)) : page.elementIds } : p) })), selectedElementIds: forward ? children : groups.map(g => g.id) };
+        }); get().saveToStorage();
+      };
+      apply(true);
+      useHistoryStore.getState().pushAction({ description: "Ungroup elements", undo: () => apply(false), redo: () => apply(true) });
     },
 
     smartStack: (elementIds, direction = "vertical") => {
@@ -2571,46 +2541,18 @@ export const useEditorStore = create<EditorState>((set, get) => {
         return;
       }
 
-      const elementsList = targetIds.map((id) => get().elements[id]).filter(Boolean);
+      const roots = [...new Set(targetIds.map(id => selectionRoot(id, get().elements)))];
+      const elementsList = roots.map(id => get().elements[id]).filter(Boolean);
+      if (elementsList.length < 2) return;
+      if (elementTree(roots, get().elements).some(el => isElementLocked(el.id, get().elements))) {
+        useUiStore.getState().showToast({ type: "warning", title: "Unlock elements before stacking" });
+        return;
+      }
+      const before = elementTree(roots, get().elements);
       const { childrenTransforms } = solveSmartStack(elementsList, direction, 16);
-
-      const prevTransforms: Record<string, ElementTransform> = {};
-      elementsList.forEach((el) => {
-        prevTransforms[el.id] = { ...el.transform };
-      });
-
-      const nextElements = { ...get().elements };
-      Object.entries(childrenTransforms).forEach(([id, t]) => {
-        if (nextElements[id]) {
-          nextElements[id] = {
-            ...nextElements[id],
-            transform: {
-              ...nextElements[id].transform,
-              ...t,
-            },
-          };
-        }
-      });
-
-      set({ elements: nextElements });
-
-      useHistoryStore.getState().pushAction({
-        description: `Smart Stack (${direction})`,
-        undo: () => {
-          const revertElements = { ...get().elements };
-          Object.entries(prevTransforms).forEach(([id, t]) => {
-            if (revertElements[id]) {
-              revertElements[id] = { ...revertElements[id], transform: t };
-            }
-          });
-          set({ elements: revertElements });
-        },
-        redo: () => {
-          get().smartStack(targetIds, direction);
-        },
-      });
-
-      get().saveToStorage();
+      Object.entries(childrenTransforms).forEach(([id, transform]) => get().updateElementTransform(id, transform));
+      get().commitTransformGesture(before);
+      get().evaluateActivePageOverflow();
       useUiStore.getState().showToast({
         type: "success",
         title: `Stacked ${direction === "vertical" ? "Vertically" : "Horizontally"}`,
@@ -2619,7 +2561,7 @@ export const useEditorStore = create<EditorState>((set, get) => {
 
     setElementLayoutMode: (elementId, mode) => {
       const el = get().elements[elementId];
-      if (!el) return;
+      if (!el || isElementLocked(elementId, get().elements)) return;
 
       set((state) => ({
         elements: {
@@ -2647,7 +2589,8 @@ export const useEditorStore = create<EditorState>((set, get) => {
 
     autoArrangeActivePage: (style = "balanced") => {
       const book=get().getActiveBook(),page=get().getActivePage();if(!book||!page)return;
-      const result=composePage(get().getActivePageElements(),book.dimensions,page.overrideMargins||book.margins,style);
+      const compositionElements=get().getActivePageElements().filter(el=>!el.groupId).map(el=>el.childElementIds?.length ? {...el, locked:true, category:"media" as const} : el);
+      const result=composePage(compositionElements,book.dimensions,pageMarginsFor(book,page),style);
       if(!result.count)return;
       if(!result.fits){useUiStore.getState().showToast({type:"warning",title:"This layout needs more space",message:"Move some content to a new page before applying this composition. Text has not been shrunk or cropped."});return;}
       const before=Object.keys(result.transforms).map(id=>get().elements[id]);
@@ -2763,7 +2706,8 @@ export const useEditorStore = create<EditorState>((set, get) => {
 
       const oldDim = book.dimensions;
       const newDim = STANDARD_PAGE_SIZES[newPageSize] || oldDim;
-      const allElements = Object.values(get().elements);
+      const ownedIds = new Set(book.pages.flatMap(page => page.elementIds));
+      const allElements = Object.values(get().elements).filter(el => ownedIds.has(el.id));
 
       const adaptedTransforms = adaptPageToDimensions(
         allElements,
@@ -2773,6 +2717,9 @@ export const useEditorStore = create<EditorState>((set, get) => {
         adaptationMode
       );
 
+      if (adaptationMode === 'adapt') for (const el of allElements) {
+        if (el.constraints) adaptedTransforms[el.id] = solveElementConstraint(el.transform, el.constraints, oldDim, newDim, book.margins, book.margins);
+      }
       const nextElements = { ...get().elements };
       Object.entries(adaptedTransforms).forEach(([id, t]) => {
         if (nextElements[id]) {
@@ -2819,8 +2766,10 @@ export const useEditorStore = create<EditorState>((set, get) => {
       const beforeElements = structuredClone(get().elements);
       const beforeTheme = book.themeId;
       const nextElements = { ...get().elements };
-      Object.keys(nextElements).forEach((id) => {
+      const ownedIds = new Set(book.pages.flatMap(page => page.elementIds));
+      ownedIds.forEach((id) => {
         const el = nextElements[id];
+        if (!el) return;
         const design = el.content?.design;
         if (design?.composition) {
           const tokens = tokensFromTheme(themeId, design.familyId);
@@ -3068,47 +3017,18 @@ export const useEditorStore = create<EditorState>((set, get) => {
       if (!page || selectedElementIds.length === 0) return;
 
       const offset = customOffset || useUiStore.getState().lastDuplicateOffset || { dx: 16, dy: 16 };
-      const newElements: Record<string, PageElement> = {};
-      const newIds: string[] = [];
-
-      selectedElementIds.forEach((id) => {
-        const source = elements[id];
-        if (source) {
-          const newId = `el-${Math.random().toString(36).substring(2, 9)}`;
-          newElements[newId] = {
-            ...source,
-            id: newId,
-            transform: {
-              ...source.transform,
-              x: source.transform.x + offset.dx,
-              y: source.transform.y + offset.dy,
-              zIndex: source.transform.zIndex + 1,
-            },
-          };
-          newIds.push(newId);
-        }
-      });
-
-      set((state) => ({
-        elements: { ...state.elements, ...newElements },
-        books: state.books.map((b) =>
-          b.id === state.activeBookId
-            ? {
-                ...b,
-                pages: b.pages.map((p) =>
-                  p.id === page.id ? { ...p, elementIds: [...p.elementIds, ...newIds] } : p
-                ),
-              }
-            : b
-        ),
-        selectedElementIds: newIds,
-      }));
-
-      get().saveToStorage();
-      useUiStore.getState().showToast({
-        type: "success",
-        title: `Smart Duplicate (${offset.dx}pt, ${offset.dy}pt)`,
-      });
+      const { elements: newElements, roots } = cloneElementTree(elementTree(selectedElementIds, elements), page.id, offset);
+      const newIds = Object.keys(newElements);
+      const apply = (forward: boolean) => {
+        set(state => {
+          const elements = { ...state.elements };
+          if (forward) Object.assign(elements, newElements); else newIds.forEach(id => delete elements[id]);
+          return { elements, books: state.books.map(book => ({ ...book, pages: book.pages.map(p => p.id === page.id ? { ...p, elementIds: forward ? [...p.elementIds, ...newIds] : p.elementIds.filter(id => !newIds.includes(id)) } : p) })), selectedElementIds: forward ? roots : selectedElementIds };
+        }); get().saveToStorage();
+      };
+      apply(true);
+      useHistoryStore.getState().pushAction({ description: "Duplicate elements", undo: () => apply(false), redo: () => apply(true) });
+      useUiStore.getState().showToast({ type: "success", title: "Selection duplicated" });
     },
 
     savePageAsPreset: (name, category, tags = []) => {
@@ -3161,7 +3081,7 @@ export const useEditorStore = create<EditorState>((set, get) => {
         elementId,
         newHeightPt,
         activeElements,
-        page.overrideMargins || book.margins,
+        pageMarginsFor(book,page),
         book.dimensions
       );
 
@@ -3203,7 +3123,7 @@ export const useEditorStore = create<EditorState>((set, get) => {
       const activeElements = get().getActivePageElements();
       const overflowStatus = detectPageOverflow(
         activeElements,
-        page.overrideMargins || book.margins,
+        pageMarginsFor(book,page),
         book.dimensions
       );
 
@@ -3235,7 +3155,7 @@ export const useEditorStore = create<EditorState>((set, get) => {
       if (!book) return;
       let page = get().getActivePage();
       if (!page) return;
-      const margins = page.overrideMargins || book.margins;
+      const margins = pageMarginsFor(book,page);
       const activeElements = get().getActivePageElements();
       const bottom = activeElements.reduce(
         (y, el) => (el.category === "decorative" || el.hidden ? y : Math.max(y, el.transform.y + el.transform.height + 18)),
@@ -3285,6 +3205,227 @@ export const useEditorStore = create<EditorState>((set, get) => {
       const apply=(forward:boolean)=>{set(state=>{const elements={...state.elements};if(forward)elements[el.id]=el;else delete elements[el.id];return {elements,books:state.books.map(b=>b.id===book.id?{...b,pages:b.pages.map(p=>p.id===page.id?{...p,elementIds:forward?[...p.elementIds.filter(id=>id!==el.id),el.id]:p.elementIds.filter(id=>id!==el.id)}:p)}:b),selectedElementIds:forward?[el.id]:[]};});get().saveToStorage();};
       apply(true);useHistoryStore.getState().pushAction({description:`Insert ${el.displayName}`,undo:()=>apply(false),redo:()=>apply(true)});
     },
+    insertElement: (element) => {
+      get().insertPublicationElement(element);
+    },
+
+    createCustomLayoutFromSelection: (name, category = "general", description = "", placeholders) => {
+      const selectedIds = get().selectedElementIds;
+      if (selectedIds.length === 0) return null;
+      const allElements = get().elements;
+      const page = get().getActivePage();
+      const book = get().getActiveBook();
+      if (!page || !book) return null;
+
+      const targetElements: PageElement[] = [];
+      selectedIds.forEach((id) => {
+        const el = allElements[id];
+        if (!el) return;
+        if (el.type === "group" && el.childElementIds?.length) {
+          el.childElementIds.forEach((cId) => {
+            if (allElements[cId]) targetElements.push(allElements[cId]);
+          });
+        } else {
+          targetElements.push(el);
+        }
+      });
+
+      if (targetElements.length === 0) return null;
+
+      const minX = Math.min(...targetElements.map((el) => el.transform.x));
+      const minY = Math.min(...targetElements.map((el) => el.transform.y));
+
+      const autoPlaceholders: CustomLayoutPlaceholder[] = placeholders || [];
+      if (!placeholders || placeholders.length === 0) {
+        targetElements.forEach((el, idx) => {
+          if (el.type === "heading" || el.type === "chapter-title") {
+            autoPlaceholders.push({
+              elementId: el.id,
+              key: `heading_${idx}`,
+              label: el.displayName || "Heading Text",
+              type: "text",
+              defaultValue: el.content.text || "",
+            });
+          } else if (el.type === "body" || el.type === "body-text" || el.type === "quote") {
+            autoPlaceholders.push({
+              elementId: el.id,
+              key: `body_${idx}`,
+              label: el.displayName || "Body Text",
+              type: "text",
+              defaultValue: el.content.text || "",
+            });
+          } else if (el.type === "image" || el.type === "illustration") {
+            autoPlaceholders.push({
+              elementId: el.id,
+              key: `image_${idx}`,
+              label: el.displayName || "Image",
+              type: "image",
+              defaultValue: el.content.url || el.content.src || "",
+            });
+          }
+        });
+      }
+
+      const normalizedElements = targetElements.map((el) => ({
+        ...structuredClone(el),
+        transform: {
+          ...el.transform,
+          x: el.transform.x - minX,
+          y: el.transform.y - minY,
+        },
+      }));
+
+      const layoutId = `layout-custom-${Date.now()}`;
+      const layoutDef: CustomLayoutDefinition = {
+        id: layoutId,
+        name: name.trim() || "Custom Layout",
+        category,
+        description: description.trim(),
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        pageDimensions: {
+          widthPt: book.dimensions.widthPt,
+          heightPt: book.dimensions.heightPt,
+        },
+        elements: normalizedElements,
+        placeholders: autoPlaceholders,
+        tags: [category, "custom"],
+      };
+
+      set((state) => ({
+        userCustomLayouts: {
+          ...state.userCustomLayouts,
+          [layoutId]: layoutDef,
+        },
+      }));
+
+      get().saveToStorage();
+      useUiStore.getState().showToast({
+        type: "success",
+        title: "Layout Created",
+        message: `Saved "${layoutDef.name}" to Layout Library with ${normalizedElements.length} elements`,
+      });
+
+      return layoutDef;
+    },
+
+    insertCustomLayout: (layoutId, targetX, targetY) => {
+      const layout = get().userCustomLayouts[layoutId];
+      if (!layout || layout.elements.length === 0) return [];
+      const page = get().getActivePage();
+      const book = get().getActiveBook();
+      if (!page || !book) return [];
+
+      const layoutWidth = Math.max(...layout.elements.map((el) => el.transform.x + el.transform.width));
+      const layoutHeight = Math.max(...layout.elements.map((el) => el.transform.y + el.transform.height));
+
+      const posX = targetX ?? Math.max(54, Math.round((book.dimensions.widthPt - layoutWidth) / 2));
+      const posY = targetY ?? Math.max(100, Math.round((book.dimensions.heightPt - layoutHeight) / 2));
+
+      const idMap: Record<string, string> = {};
+      const newElements: Record<string, PageElement> = {};
+      const newElementIds: string[] = [];
+      const activeElements = get().getActivePageElements();
+      const baseZ = activeElements.reduce((max, el) => Math.max(max, el.transform.zIndex), 0);
+
+      layout.elements.forEach((sourceEl, idx) => {
+        const newId = `el-${Math.random().toString(36).substring(2, 9)}`;
+        idMap[sourceEl.id] = newId;
+        newElementIds.push(newId);
+
+        newElements[newId] = {
+          ...structuredClone(sourceEl),
+          id: newId,
+          pageId: page.id,
+          transform: {
+            ...sourceEl.transform,
+            x: posX + sourceEl.transform.x,
+            y: posY + sourceEl.transform.y,
+            zIndex: baseZ + 1 + idx,
+          },
+        };
+      });
+
+      newElementIds.forEach((id) => {
+        const el = newElements[id];
+        if (el.groupId && idMap[el.groupId]) {
+          el.groupId = idMap[el.groupId];
+        }
+        if (el.childElementIds?.length) {
+          el.childElementIds = el.childElementIds.map((cId) => idMap[cId] || cId);
+        }
+      });
+
+      const apply = (forward: boolean) => {
+        set((state) => {
+          const els = { ...state.elements };
+          if (forward) {
+            Object.assign(els, newElements);
+          } else {
+            newElementIds.forEach((id) => delete els[id]);
+          }
+          return {
+            elements: els,
+            books: state.books.map((b) =>
+              b.id === book.id
+                ? {
+                    ...b,
+                    pages: b.pages.map((p) =>
+                      p.id === page.id
+                        ? {
+                            ...p,
+                            elementIds: forward
+                              ? [...p.elementIds, ...newElementIds]
+                              : p.elementIds.filter((id) => !newElementIds.includes(id)),
+                          }
+                        : p
+                    ),
+                  }
+                : b
+            ),
+            selectedElementIds: forward ? newElementIds : [],
+          };
+        });
+        get().saveToStorage();
+      };
+
+      apply(true);
+      useHistoryStore.getState().pushAction({
+        description: `Insert layout ${layout.name}`,
+        undo: () => apply(false),
+        redo: () => apply(true),
+      });
+
+      useUiStore.getState().showToast({
+        type: "success",
+        title: "Layout Inserted",
+        message: `Placed "${layout.name}" (${newElementIds.length} elements)`,
+      });
+
+      return newElementIds;
+    },
+
+    deleteCustomLayout: (layoutId) => {
+      set((state) => {
+        const next = { ...state.userCustomLayouts };
+        delete next[layoutId];
+        return { userCustomLayouts: next };
+      });
+      get().saveToStorage();
+      useUiStore.getState().showToast({
+        type: "info",
+        title: "Layout Removed",
+      });
+    },
+    fitRenderedBlockHeight: (id, height) => {
+      const el = get().elements[id];
+      if (!el?.smartBlockData || el.groupId || isElementLocked(id, get().elements) || !Number.isFinite(height) || height <= el.transform.height + 1) return;
+      const transform = { ...el.transform, height };
+      set(state => ({ elements: { ...state.elements, [id]: { ...el, transform, smartBlockData: { ...el.smartBlockData!, transform } } } }));
+      get().saveToStorage();
+      get().evaluateActivePageOverflow();
+    },
+
     commitTransformGesture: (before) => {
       const after=before.map(el=>get().elements[el.id]).filter(Boolean);
       if(!after.some((el,i)=>JSON.stringify(el.transform)!==JSON.stringify(before[i].transform)))return;
@@ -3328,7 +3469,7 @@ export const useEditorStore = create<EditorState>((set, get) => {
         smartBlock.gradeBand = options.grade as GradeBand;
       }
 
-      const margins = page.overrideMargins || book.margins;
+      const margins = pageMarginsFor(book,page);
       const fullWidth = book.dimensions.widthPt - margins.insidePt - margins.outsidePt;
       smartBlock.transform.width = fullWidth;
       const height = buildPublicationScene({ ...smartBlock, transform: { ...smartBlock.transform, height: 0 } }).height;
@@ -3544,7 +3685,7 @@ export const useEditorStore = create<EditorState>((set, get) => {
     },
 
     shuffleEducationalBlockStyle: (elementId) => {
-      const el=get().elements[elementId]; if(!el?.smartBlockData || el.locked || el.smartBlockData.isLockedDesign)return;
+      const el=get().elements[elementId]; if(!el?.smartBlockData || isElementLocked(elementId, get().elements) || el.smartBlockData.isLockedDesign)return;
       if (el.smartBlockData.curriculum) { reshuffleCurriculumBlock(el); return; }
       const presets=getPresetsByArchetype(el.smartBlockData.archetypeId);
       const index=presets.findIndex(p=>p.id===el.smartBlockData!.presetId);
@@ -3552,7 +3693,7 @@ export const useEditorStore = create<EditorState>((set, get) => {
     },
     setEducationalBlockPreset: (elementId, presetId) => {
       const el=get().elements[elementId],def=EDUCATIONAL_BLOCK_REGISTRY[presetId];
-      if(!el?.smartBlockData || !def || el.locked || el.smartBlockData.isLockedDesign || def.archetypeId!==el.smartBlockData.archetypeId)return;
+      if(!el?.smartBlockData || !def || isElementLocked(elementId, get().elements) || el.smartBlockData.isLockedDesign || def.archetypeId!==el.smartBlockData.archetypeId)return;
       if (el.smartBlockData.curriculum) { if (presetId.startsWith("curriculum-")) convertBlock(el,presetId.slice(11)); return; }
       const kept=(el.smartBlockData.styleOverrides.motifs||[]).filter(motif=>motif.role==="plate"||motif.role==="photo"||motif.role==="illustration");
       const block:SmartBlockInstance={...el.smartBlockData,presetId,family:def.family,transform:{...el.transform,height:0},styleOverrides:{...el.smartBlockData.styleOverrides,layoutVariant:undefined,motifs:kept}};
@@ -3560,21 +3701,31 @@ export const useEditorStore = create<EditorState>((set, get) => {
       get().updateElement(elementId,{smartBlockData:block,presetId,displayName:def.name,transform:{...el.transform,height}});
     },
     reSkinEducationalBlock: (elementId, subject) => {
-      const el=get().elements[elementId];if(!el?.smartBlockData || el.locked || el.smartBlockData.isLockedDesign)return;
+      const el=get().elements[elementId];if(!el?.smartBlockData || isElementLocked(elementId, get().elements) || el.smartBlockData.isLockedDesign)return;
       get().updateElement(elementId,{smartBlockData:reSkinBlockSubject(el.smartBlockData,subject)});
     },
     updateSmartBlockContent: (elementId, partialContent) => {
-      const el=get().elements[elementId];if(!el?.smartBlockData || el.locked || el.smartBlockData.isLockedContent)return;
+      const el=get().elements[elementId];if(!el?.smartBlockData || isElementLocked(elementId, get().elements) || el.smartBlockData.isLockedContent)return;
+      const chapter = el.smartBlockData.curriculum?.chapterId ? get().getActiveBook()?.chapters.find(c => c.id === el.smartBlockData!.curriculum!.chapterId) : undefined;
+      if (chapter?.framework || el.smartBlockData.styleOverrides.referenceElement || el.smartBlockData.curriculum?.type === "lesson-schema" || el.smartBlockData.curriculum?.type === "learning-outcomes") {
+        editCurriculumBlock(el, "Edit curriculum content", b => ({ ...b, semanticContent: { ...b.semanticContent, ...partialContent } }));
+        return;
+      }
       const block={...el.smartBlockData,transform:{...el.transform,height:0},semanticContent:{...el.smartBlockData.semanticContent,...partialContent}};
       get().updateElement(elementId,{smartBlockData:block,transform:{...el.transform,height:buildPublicationScene(block).height}});
     },
     updateSmartBlockStyle: (elementId, partialStyle) => {
-      const el=get().elements[elementId];if(!el?.smartBlockData || el.locked || el.smartBlockData.isLockedDesign)return;
+      const el=get().elements[elementId];if(!el?.smartBlockData || isElementLocked(elementId, get().elements) || el.smartBlockData.isLockedDesign)return;
+      const chapter = el.smartBlockData.curriculum?.chapterId ? get().getActiveBook()?.chapters.find(c => c.id === el.smartBlockData!.curriculum!.chapterId) : undefined;
+      if (chapter?.framework || el.smartBlockData.styleOverrides.referenceElement || el.smartBlockData.curriculum?.type === "lesson-schema" || el.smartBlockData.curriculum?.type === "learning-outcomes") {
+        editCurriculumBlock(el, "Edit curriculum style", b => ({ ...b, styleOverrides: { ...b.styleOverrides, ...partialStyle } }));
+        return;
+      }
       const block={...el.smartBlockData,transform:{...el.transform,height:0},styleOverrides:{...el.smartBlockData.styleOverrides,...partialStyle}};
       get().updateElement(elementId,{smartBlockData:block,transform:{...el.transform,height:buildPublicationScene(block).height}});
     },
     setBlockMotifs: (elementId, motifs) => {
-      const el=get().elements[elementId];if(!el?.smartBlockData || el.locked || el.smartBlockData.isLockedDesign)return;
+      const el=get().elements[elementId];if(!el?.smartBlockData || isElementLocked(elementId, get().elements) || el.smartBlockData.isLockedDesign)return;
       const block={...el.smartBlockData,transform:{...el.transform,height:0},styleOverrides:{...el.smartBlockData.styleOverrides,motifs}};
       const height=buildPublicationScene(block).height;
       block.transform={...el.transform,height};
@@ -3595,7 +3746,7 @@ export const useEditorStore = create<EditorState>((set, get) => {
     detachEducationalBlock: (elementId: string) => {
       const page = get().getActivePage();
       const element = get().elements[elementId];
-      if (!page || !element || !element.smartBlockData || element.locked || element.smartBlockData.isLockedDesign || element.smartBlockData.isLockedContent) return [];
+      if (!page || !element || !element.smartBlockData || isElementLocked(elementId, get().elements)) return [];
       if (element.smartBlockData.curriculum?.chapterId) {
         unlockCurriculumLayers(element);
         return Object.values(get().elements).filter(el => el.content.curriculumBlockId === (element.smartBlockData!.curriculum!.sourceBlockId || element.id)).map(el => el.id);
@@ -3760,6 +3911,13 @@ export const useEditorStore = create<EditorState>((set, get) => {
 });
 
 if (typeof window !== "undefined") {
+  useUiStore.subscribe((state, previous) => {
+    if (state.userGuides === previous.userGuides) return;
+    const editor = useEditorStore.getState(), book = editor.getActiveBook();
+    if (!book || book.userGuides === state.userGuides) return;
+    useEditorStore.setState({ books: editor.books.map(item => item.id === book.id ? { ...item, userGuides: state.userGuides } : item) });
+    useEditorStore.getState().saveToStorage();
+  });
   useHistoryStore.subscribe((state, previous) => {
     if(previous.isApplying && !state.isApplying) useEditorStore.getState().saveToStorage();
   });

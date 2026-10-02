@@ -1,7 +1,9 @@
 "use client";
 
 import { publicationPreflight } from "../../editor/educational/publicationPreflight";
-import React, { useMemo } from "react";
+import { runFullPreflightScan, ComprehensivePreflightReport } from "../../editor/publishing/preflightEngine";
+import { scanPreflightInBackground } from "../../editor/publishing/backgroundPreflight";
+import React, { useState, useEffect } from "react";
 import { useUiStore } from "../../editor/stores/uiStore";
 import { useEditorStore } from "../../editor/stores/editorStore";
 import { PreflightIssue, PreflightReport } from "../../domain/publishing/types";
@@ -22,134 +24,17 @@ export const PreflightModal: React.FC = () => {
 
   const book = books.find((b) => b.id === activeBookId);
 
-  // Compute preflight report
-  const report: PreflightReport = useMemo(() => {
-    if (!book) {
-      return {
-        timestamp: new Date().toISOString(),
-        isValidForPrint: false,
-        errorCount: 0,
-        warningCount: 0,
-        issues: [],
-        metrics: {
-          totalPages: 0,
-          totalElements: 0,
-          imageCount: 0,
-          lowDpiImageCount: 0,
-          textOverflowCount: 0,
-          elementsOutsideBleedCount: 0,
-          emptyPagesCount: 0,
-        },
-      };
-    }
-
-    const issues: PreflightIssue[] = publicationPreflight(book,elements);
-    let imageCount = 0;
-    let lowDpiImageCount = 0;
-    let emptyPagesCount = 0;
-
-    book.pages.forEach((page, pageIdx) => {
-      // 1. Check for empty pages
-      if (page.elementIds.length === 0) {
-        emptyPagesCount++;
-        issues.push({
-          id: `empty-page-${page.id}`,
-          severity: "warning",
-          category: "structure",
-          title: `Empty Page ${page.displayNumber}`,
-          message: "Page has no content or elements assigned.",
-          pageIndex: pageIdx,
-          pageId: page.id,
-          remediation: "Add content or delete blank page before sending to press.",
-        });
-      }
-
-      // 2. Check each element on this page
-      page.elementIds.forEach((elId) => {
-        const el = elements[elId];
-        if (!el || el.hidden) return;
-
-        // Image DPI verification
-        if (el.type === "image") {
-          imageCount++;
-          if (el.content.rawWidthPx) {
-            const dpi = calculateEffectiveDpi(el.content.rawWidthPx, el.transform.width);
-            if (dpi < PRINT_DPI_CRITICAL) {
-              issues.push({
-                id: `dpi-critical-${el.id}`,
-                severity: "error",
-                category: "resolution",
-                title: `Critical Image Pixelation (${dpi} DPI)`,
-                message: `Image '${el.displayName}' is ${dpi} DPI, which is below the 120 DPI press minimum.`,
-                pageIndex: pageIdx,
-                pageId: page.id,
-                elementId: el.id,
-                elementName: el.displayName,
-                remediation: "Replace with higher resolution image asset (300 DPI recommended).",
-              });
-            } else if (dpi < PRINT_DPI_MINIMUM) {
-              lowDpiImageCount++;
-              issues.push({
-                id: `dpi-low-${el.id}`,
-                severity: "warning",
-                category: "resolution",
-                title: `Suboptimal Print Resolution (${dpi} DPI)`,
-                message: `Image '${el.displayName}' is ${dpi} DPI. Standard offset printing targets 300 DPI.`,
-                pageIndex: pageIdx,
-                pageId: page.id,
-                elementId: el.id,
-                elementName: el.displayName,
-                remediation: "Scale image container smaller on page or provide 300 DPI version.",
-              });
-            }
-          }
-        }
-
-        // Geometry & Bleed verification
-        if (
-          el.transform.x < -book.bleed.leftPt ||
-          el.transform.y < -book.bleed.topPt ||
-          el.transform.x + el.transform.width > book.dimensions.widthPt + book.bleed.rightPt ||
-          el.transform.y + el.transform.height > book.dimensions.heightPt + book.bleed.bottomPt
-        ) {
-          issues.push({
-            id: `bleed-out-${el.id}`,
-            severity: "warning",
-            category: "geometry",
-            title: `Object Outside Bleed Box`,
-            message: `Element '${el.displayName}' extends past physical print bleed boundary.`,
-            pageIndex: pageIdx,
-            pageId: page.id,
-            elementId: el.id,
-            elementName: el.displayName,
-            remediation: "Adjust coordinates inside bleed allowance to prevent accidental trim cut.",
-          });
-        }
-      });
-    });
-
-    const errorCount = issues.filter((i) => i.severity === "error").length;
-    const warningCount = issues.filter((i) => i.severity === "warning").length;
-
-    return {
-      timestamp: new Date().toISOString(),
-      isValidForPrint: errorCount === 0,
-      errorCount,
-      warningCount,
-      issues,
-      metrics: {
-        totalPages: book.pages.length,
-        totalElements: Object.keys(elements).length,
-        imageCount,
-        lowDpiImageCount,
-        textOverflowCount: issues.filter(i=>i.category === "text" && i.severity === "error").length,
-        elementsOutsideBleedCount: issues.filter((i) => i.category === "geometry").length,
-        emptyPagesCount,
-      },
-    };
-  }, [book, elements]);
-
-  if (!preflightModalOpen || !book) return null;
+  const [report, setReport] = useState<ComprehensivePreflightReport | null>(null);
+  const [error, setError] = useState('');
+  useEffect(() => {
+    if (!preflightModalOpen || !book) return;
+    const controller = new AbortController();
+    setReport(null); setError('');
+    scanPreflightInBackground(book, elements, controller.signal).then(setReport).catch(error => { if (error.name !== 'AbortError') setError(error.message); });
+    return () => controller.abort();
+  }, [preflightModalOpen, book, elements]);
+  if (preflightModalOpen && book && !report) return <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4"><div role="status" className="rounded-2xl border border-white/10 bg-slate-900 p-6 text-slate-200"><p>{error || `Checking ${book.pages.length} pages…`}</p><button className="mt-4 min-h-11 rounded-lg px-4 bg-white/10" onClick={() => setPreflightModalOpen(false)}>{error ? 'Close' : 'Cancel scan'}</button></div></div>;
+  if (!preflightModalOpen || !book || !report) return null;
 
   const navigateToIssue = (issue: PreflightIssue) => {
     if (issue.pageIndex !== undefined) {
@@ -167,7 +52,7 @@ export const PreflightModal: React.FC = () => {
       onClick={() => setPreflightModalOpen(false)}
     >
       <div
-        className="w-full max-w-2xl bg-[#111827] border border-white/10 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[85vh]"
+        role="dialog" aria-modal="true" aria-label="Preflight" className="w-full max-w-2xl bg-[#111827] border border-white/10 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[85vh]"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -184,6 +69,7 @@ export const PreflightModal: React.FC = () => {
             </div>
           </div>
           <button
+            aria-label="Close preflight"
             onClick={() => setPreflightModalOpen(false)}
             className="text-slate-400 hover:text-white p-1 rounded-lg"
           >

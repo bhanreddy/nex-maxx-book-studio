@@ -1,0 +1,126 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="600" height="900" viewBox="0 0 600 900"><title>Scholar wave · editable page border and background</title>
+<rect data-graphic="Paper" opacity="1" x="0" y="0" width="600" height="900" rx="0" fill="#FFFEFC" />
+<path data-graphic="Top peach ribbon" opacity="0.38" d="M 0 0 L 600 0 L 600 94 C 555 55 523 61 489 65 C 367 87 305 22 181 14 C 105 9 40 40 0 80 Z" fill="#F5C79A" />
+<path data-graphic="Top burgundy wave" opacity="1" d="M 0 0 L 600 0 L 600 47 C 553 1 528 27 484 40 C 357 91 301 8 185 5 C 106 2 40 14 0 55 Z" fill="#79253E" />
+<path data-graphic="Top wave highlight" opacity="0.7" d="M 0 13 C 91 0 158 1 213 12 C 345 35 385 68 488 34 C 535 18 564 7 600 10" fill="none" stroke="#B9586C" stroke-width="0.8"/>
+<path data-graphic="Right peach wash" opacity="0.32" d="M 600 46 C 551 80 607 146 586 219 C 566 268 610 300 590 346 C 620 385 584 450 588 506 C 558 550 614 557 592 617 C 554 680 561 711 600 743 Z" fill="#F5C79A" />
+<path data-graphic="Left rose wash" opacity="0.12" d="M 0 175 C 41 169 2 202 36 231 C 85 269 0 290 20 345 C 65 414 12 464 5 514 C 0 552 56 571 35 612 C 13 646 36 681 0 699 Z" fill="#B9586C" />
+<path data-graphic="Bottom peach ribbon" opacity="0.32" d="M 0 733 C 55 769 28 846 112 824 C 236 768 269 899 372 863 C 458 845 457 764 521 759 C 565 747 580 779 600 772 L 600 900 L 0 900 Z" fill="#F5C79A" />
+<path data-graphic="Bottom burgundy wave" opacity="1" d="M 0 753 C 54 764 36 862 112 850 C 216 820 250 901 354 881 C 435 864 488 826 600 856 L 600 900 L 0 900 Z" fill="#79253E" />
+<path data-graphic="Bottom rose fold" opacity="0.52" d="M 0 835 C 46 912 161 869 225 875 C 372 858 416 919 600 878 L 600 900 L 0 900 Z" fill="#B9586C" />
+<path data-graphic="Bottom wave highlight" opacity="0.8" d="M 0 768 C 51 779 39 867 116 857 C 220 835 255 906 355 887 C 457 865 523 839 600 867" fill="none" stroke="#F5C79A" stroke-width="0.8"/>
+<path data-graphic="Top stitch 1" opacity="0.65" d="M 139 15 L 146 16" fill="none" stroke="#D5A29F" stroke-width="0.65"/>
+<path data-graphic="Top stitch 2" opacity="0.65" d="M 161 15.458900384590082 L 168 16.45890038459008" fill="none" stroke="#D5A29F" stroke-width="0.65"/>
+<path data-graphic="Top stitch 3" opacity="0.65" d="M 183 16.81554538950538 L 190 17.81554538950538" fill="none" stroke="#D5A29F" stroke-width="0.65"/>
+<path data-graphic="Top stitch 4" opacity="0.65" d="M 205 19.010643118126104 L 212 20.010643118126104" fill="none" stroke="#D5A29F" stroke-width="0.65"/>
+<path data-graphic="Top stitch 5" opacity="0.65" d="M 227 21.948257266463976 L 234 22.948257266463976" fill="none" stroke="#D5A29F" stroke-width="0.65"/>
+<path data-graphic="Top stitch 6" opacity="0.65" d="M 249 25.5 L 256 26.5" fill="none" stroke="#D5A29F" stroke-width="0.65"/>
+<path data-graphic="Top stitch 7" opacity="0.65" d="M 271 29.510643118126104 L 278 30.510643118126104" fill="none" stroke="#D5A29F" stroke-width="0.65"/>
+<path data-graphic="Top stitch 8" opacity="0.65" d="M 293 33.80490227137928 L 300 34.80490227137928" fill="none" stroke="#D5A29F" stroke-width="0.65"/>
+<path data-graphic="Top stitch 9" opacity="0.65" d="M 315 38.19509772862072 L 322 39.19509772862072" fill="none" stroke="#D5A29F" stroke-width="0.65"/>
+<path data-graphic="Top stitch 10" opacity="0.65" d="M 337 42.489356881873896 L 344 43.489356881873896" fill="none" stroke="#D5A29F" stroke-width="0.65"/>
+<path data-graphic="Top stitch 11" opacity="0.65" d="M 359 46.5 L 366 47.5" fill="none" stroke="#D5A29F" stroke-width="0.65"/>
+<path data-graphic="Top stitch 12" opacity="0.65" d="M 381 50.05174273353602 L 388 51.05174273353602" fill="none" stroke="#D5A29F" stroke-width="0.65"/>
+<path data-graphic="Top stitch 13" opacity="0.65" d="M 403 52.98935688187389 L 410 53.98935688187389" fill="none" stroke="#D5A29F" stroke-width="0.65"/>
+<path data-graphic="Top stitch 14" opacity="0.65" d="M 425 55.184454610494626 L 432 56.184454610494626" fill="none" stroke="#D5A29F" stroke-width="0.65"/>
+<path data-graphic="Top stitch 15" opacity="0.65" d="M 447 56.54109961540991 L 454 57.54109961540991" fill="none" stroke="#D5A29F" stroke-width="0.65"/>
+<path data-graphic="Top stitch 16" opacity="0.65" d="M 469 57 L 476 58" fill="none" stroke="#D5A29F" stroke-width="0.65"/>
+<path data-graphic="Right stitch 1" opacity="0.75" d="M 579 118 C 581 122 581 126 580 130" fill="none" stroke="#D5A29F" stroke-width="0.65"/>
+<path data-graphic="Right stitch 2" opacity="0.75" d="M 586.8835978399077 161 C 588.8835978399077 165 588.8835978399077 169 587.8835978399077 173" fill="none" stroke="#D5A29F" stroke-width="0.65"/>
+<path data-graphic="Right stitch 3" opacity="0.75" d="M 581.6799052012473 204 C 583.6799052012473 208 583.6799052012473 212 582.6799052012473 216" fill="none" stroke="#D5A29F" stroke-width="0.65"/>
+<path data-graphic="Right stitch 4" opacity="0.75" d="M 572.0273938206913 247 C 574.0273938206913 251 574.0273938206913 255 573.0273938206913 259" fill="none" stroke="#D5A29F" stroke-width="0.65"/>
+<path data-graphic="Right stitch 5" opacity="0.75" d="M 573.9498668970215 290 C 575.9498668970215 294 575.9498668970215 298 574.9498668970215 302" fill="none" stroke="#D5A29F" stroke-width="0.65"/>
+<path data-graphic="Right stitch 6" opacity="0.75" d="M 584.2558927897503 333 C 586.2558927897503 337 586.2558927897503 341 585.2558927897503 345" fill="none" stroke="#D5A29F" stroke-width="0.65"/>
+<path data-graphic="Right stitch 7" opacity="0.75" d="M 585.8367912647062 376 C 587.8367912647062 380 587.8367912647062 384 586.8367912647062 388" fill="none" stroke="#D5A29F" stroke-width="0.65"/>
+<path data-graphic="Right stitch 8" opacity="0.75" d="M 576.0681669659846 419 C 578.0681669659846 423 578.0681669659846 427 577.0681669659846 431" fill="none" stroke="#D5A29F" stroke-width="0.65"/>
+<path data-graphic="Right stitch 9" opacity="0.75" d="M 571.1665781667895 462 C 573.1665781667895 466 573.1665781667895 470 572.1665781667895 474" fill="none" stroke="#D5A29F" stroke-width="0.65"/>
+<path data-graphic="Right stitch 10" opacity="0.75" d="M 579.2689843777691 505 C 581.2689843777691 509 581.2689843777691 513 580.2689843777691 517" fill="none" stroke="#D5A29F" stroke-width="0.65"/>
+<path data-graphic="Right stitch 11" opacity="0.75" d="M 586.924858845559 548 C 588.924858845559 552 588.924858845559 556 587.924858845559 560" fill="none" stroke="#D5A29F" stroke-width="0.65"/>
+<path data-graphic="Right stitch 12" opacity="0.75" d="M 581.4249468539656 591 C 583.4249468539656 595 583.4249468539656 599 582.4249468539656 603" fill="none" stroke="#D5A29F" stroke-width="0.65"/>
+<path data-graphic="Right stitch 13" opacity="0.75" d="M 571.899463731348 634 C 573.899463731348 638 573.899463731348 642 572.899463731348 646" fill="none" stroke="#D5A29F" stroke-width="0.65"/>
+<path data-graphic="Right stitch 14" opacity="0.75" d="M 574.1613374207498 677 C 576.1613374207498 681 576.1613374207498 685 575.1613374207498 689" fill="none" stroke="#D5A29F" stroke-width="0.65"/>
+<path data-graphic="Left stitch 1" opacity="0.6" d="M 16 288 L 14 297" fill="none" stroke="#D5A29F" stroke-width="0.65"/>
+<path data-graphic="Left stitch 2" opacity="0.6" d="M 23.320739543104363 326 L 21.320739543104363 335" fill="none" stroke="#D5A29F" stroke-width="0.65"/>
+<path data-graphic="Left stitch 3" opacity="0.6" d="M 24.51670078918673 364 L 22.51670078918673 373" fill="none" stroke="#D5A29F" stroke-width="0.65"/>
+<path data-graphic="Left stitch 4" opacity="0.6" d="M 18.587302111082902 402 L 16.587302111082902 411" fill="none" stroke="#D5A29F" stroke-width="0.65"/>
+<path data-graphic="Left stitch 5" opacity="0.6" d="M 10.49327898151553 440 L 8.49327898151553 449" fill="none" stroke="#D5A29F" stroke-width="0.65"/>
+<path data-graphic="Left stitch 6" opacity="0.6" d="M 7.006364899221598 478 L 5.006364899221598 487" fill="none" stroke="#D5A29F" stroke-width="0.65"/>
+<path data-graphic="Left stitch 7" opacity="0.6" d="M 11.043830116621255 516 L 9.043830116621255 525" fill="none" stroke="#D5A29F" stroke-width="0.65"/>
+<path data-graphic="Left stitch 8" opacity="0.6" d="M 19.227794681435196 554 L 17.227794681435196 563" fill="none" stroke="#D5A29F" stroke-width="0.65"/>
+<path data-graphic="Left stitch 9" opacity="0.6" d="M 24.711277048283378 592 L 22.711277048283378 601" fill="none" stroke="#D5A29F" stroke-width="0.65"/>
+<path data-graphic="Left stitch 10" opacity="0.6" d="M 22.906610411807396 630 L 20.906610411807396 639" fill="none" stroke="#D5A29F" stroke-width="0.65"/>
+<path data-graphic="Top foliage stem" opacity="0.9" d="M 66 62 C 81 42 75 13 97 -11" fill="none" stroke="#547B67" stroke-width="1.2"/>
+<path data-graphic="Top foliage leaf 1" opacity="1" d="M 75 50 C 77 35 94 30 98 30 C 100 45 83 52 75 50 Z" fill="#F5C79A" />
+<path data-graphic="Top foliage leaf vein 1" opacity="0.35" d="M 75 50 L 93 35" fill="none" stroke="#FFFEFC" stroke-width="0.5"/>
+<path data-graphic="Top foliage leaf 2" opacity="1" d="M 80 35 C 78 20 61 15 57 15 C 55 30 72 37 80 35 Z" fill="#547B67" />
+<path data-graphic="Top foliage leaf vein 2" opacity="0.35" d="M 80 35 L 62 20" fill="none" stroke="#FFFEFC" stroke-width="0.5"/>
+<path data-graphic="Top foliage leaf 3" opacity="1" d="M 85 20 C 87 5 104 0 108 0 C 110 15 93 22 85 20 Z" fill="#F5C79A" />
+<path data-graphic="Top foliage leaf vein 3" opacity="0.35" d="M 85 20 L 103 5" fill="none" stroke="#FFFEFC" stroke-width="0.5"/>
+<path data-graphic="Top foliage leaf 4" opacity="1" d="M 90 5 C 88 -10 71 -15 67 -15 C 65 0 82 7 90 5 Z" fill="#547B67" />
+<path data-graphic="Top foliage leaf vein 4" opacity="0.35" d="M 90 5 L 72 -10" fill="none" stroke="#FFFEFC" stroke-width="0.5"/>
+<path data-graphic="Bottom foliage stem" opacity="0.9" d="M 514 828 C 499 808 505 779 483 755" fill="none" stroke="#547B67" stroke-width="1.2"/>
+<path data-graphic="Bottom foliage leaf 1" opacity="1" d="M 505 816 C 503 801 486 796 482 796 C 480 811 497 818 505 816 Z" fill="#F5C79A" />
+<path data-graphic="Bottom foliage leaf vein 1" opacity="0.35" d="M 505 816 L 487 801" fill="none" stroke="#FFFEFC" stroke-width="0.5"/>
+<path data-graphic="Bottom foliage leaf 2" opacity="1" d="M 500 801 C 502 786 519 781 523 781 C 525 796 508 803 500 801 Z" fill="#547B67" />
+<path data-graphic="Bottom foliage leaf vein 2" opacity="0.35" d="M 500 801 L 518 786" fill="none" stroke="#FFFEFC" stroke-width="0.5"/>
+<path data-graphic="Bottom foliage leaf 3" opacity="1" d="M 495 786 C 493 771 476 766 472 766 C 470 781 487 788 495 786 Z" fill="#F5C79A" />
+<path data-graphic="Bottom foliage leaf vein 3" opacity="0.35" d="M 495 786 L 477 771" fill="none" stroke="#FFFEFC" stroke-width="0.5"/>
+<path data-graphic="Bottom foliage leaf 4" opacity="1" d="M 490 771 C 492 756 509 751 513 751 C 515 766 498 773 490 771 Z" fill="#547B67" />
+<path data-graphic="Bottom foliage leaf vein 4" opacity="0.35" d="M 490 771 L 508 756" fill="none" stroke="#FFFEFC" stroke-width="0.5"/>
+<path data-graphic="Left foliage stem" opacity="0.9" d="M 45 828 C 60 808 54 779 76 755" fill="none" stroke="#547B67" stroke-width="1.2"/>
+<path data-graphic="Left foliage leaf 1" opacity="1" d="M 54 816 C 56 801 73 796 77 796 C 79 811 62 818 54 816 Z" fill="#F5C79A" />
+<path data-graphic="Left foliage leaf vein 1" opacity="0.35" d="M 54 816 L 72 801" fill="none" stroke="#FFFEFC" stroke-width="0.5"/>
+<path data-graphic="Left foliage leaf 2" opacity="1" d="M 59 801 C 57 786 40 781 36 781 C 34 796 51 803 59 801 Z" fill="#547B67" />
+<path data-graphic="Left foliage leaf vein 2" opacity="0.35" d="M 59 801 L 41 786" fill="none" stroke="#FFFEFC" stroke-width="0.5"/>
+<path data-graphic="Left foliage leaf 3" opacity="1" d="M 64 786 C 66 771 83 766 87 766 C 89 781 72 788 64 786 Z" fill="#F5C79A" />
+<path data-graphic="Left foliage leaf vein 3" opacity="0.35" d="M 64 786 L 82 771" fill="none" stroke="#FFFEFC" stroke-width="0.5"/>
+<path data-graphic="Left foliage leaf 4" opacity="1" d="M 69 771 C 67 756 50 751 46 751 C 44 766 61 773 69 771 Z" fill="#547B67" />
+<path data-graphic="Left foliage leaf vein 4" opacity="0.35" d="M 69 771 L 51 756" fill="none" stroke="#FFFEFC" stroke-width="0.5"/>
+<path data-graphic="Open book cover" opacity="1" d="M 0 58 C 21 33 39 32 59 42 C 79 25 102 16 126 19 L 119 57 C 95 52 80 59 59 67 C 36 53 17 68 0 84 Z" fill="#79253E" />
+<path data-graphic="Open book pages" opacity="1" d="M 0 50 C 21 30 41 25 61 39 C 81 18 106 8 127 9 L 117 49 C 94 47 76 51 59 62 C 36 44 14 62 0 74 Z" fill="#FFFEFC" stroke="#D5A29F" stroke-width="0.8"/>
+<path data-graphic="Open book spine" opacity="1" d="M 61 39 L 59 62" fill="none" stroke="#D5A29F" stroke-width="0.8"/>
+<path data-graphic="Open book left page lines" opacity="0.65" d="M 4 49 C 27 36 40 36 53 44 M 4 55 C 26 41 39 42 51 48" fill="none" stroke="#D5A29F" stroke-width="0.8"/>
+<path data-graphic="Open book right page lines" opacity="0.65" d="M 70 40 C 86 26 103 22 119 22 M 68 46 C 88 34 101 29 116 29" fill="none" stroke="#D5A29F" stroke-width="0.8"/>
+<rect data-graphic="Book 1 cover" opacity="1" x="495" y="850" width="118" height="24" rx="5" fill="#79253E" stroke="#B9586C" stroke-width="1"/>
+<rect data-graphic="Book 1 pages" opacity="1" x="502" y="855" width="112" height="14" rx="2" fill="#FFFEFC" stroke="#D5A29F" stroke-width="0.5"/>
+<path data-graphic="Book 1 page line" opacity="0.65" d="M 507 862 L 600 862" fill="none" stroke="#D5A29F" stroke-width="0.5"/>
+<path data-graphic="Book 1 bookmark" opacity="1" d="M 523 850 L 531 850 L 531 864 L 527 861 L 523 864 Z" fill="#B9586C" />
+<rect data-graphic="Book 2 cover" opacity="1" x="506" y="825" width="118" height="24" rx="5" fill="#F5C79A" stroke="#B9586C" stroke-width="1"/>
+<rect data-graphic="Book 2 pages" opacity="1" x="513" y="830" width="112" height="14" rx="2" fill="#FFFEFC" stroke="#D5A29F" stroke-width="0.5"/>
+<path data-graphic="Book 2 page line" opacity="0.65" d="M 518 837 L 600 837" fill="none" stroke="#D5A29F" stroke-width="0.5"/>
+<path data-graphic="Book 2 bookmark" opacity="1" d="M 534 825 L 542 825 L 542 839 L 538 836 L 534 839 Z" fill="#B9586C" />
+<rect data-graphic="Book 3 cover" opacity="1" x="517" y="800" width="118" height="24" rx="5" fill="#79253E" stroke="#B9586C" stroke-width="1"/>
+<rect data-graphic="Book 3 pages" opacity="1" x="524" y="805" width="112" height="14" rx="2" fill="#FFFEFC" stroke="#D5A29F" stroke-width="0.5"/>
+<path data-graphic="Book 3 page line" opacity="0.65" d="M 529 812 L 600 812" fill="none" stroke="#D5A29F" stroke-width="0.5"/>
+<path data-graphic="Book 3 bookmark" opacity="1" d="M 545 800 L 553 800 L 553 814 L 549 811 L 545 814 Z" fill="#B9586C" />
+<path data-graphic="Paper plane" opacity="0.65" d="M 539 86 L 493 99 L 510 105 L 516 126 Z M 510 105 L 539 86 L 505 116 L 510 105" fill="none" stroke="#D5A29F" stroke-width="1.4"/>
+<path data-graphic="Plane trail" opacity="0.5" d="M 519 133 C 521 153 567 170 564 147 C 557 124 536 165 568 177" fill="none" stroke="#D5A29F" stroke-width="1.2"/>
+<path data-graphic="Outline star" opacity="0.65" d="M 556 197 L 560 189 L 563 197 L 572 198 L 565 204 L 567 213 L 559 208 L 552 213 L 553 204 L 547 199 Z" fill="none" stroke="#D5A29F" stroke-width="1.4"/>
+<path data-graphic="Margin book doodle" opacity="0.5" d="M 568 288 C 554 286 549 291 546 295 L 558 323 C 568 315 573 312 582 315 L 594 309 L 583 283 C 576 282 572 284 568 288 Z M 568 288 L 582 315 M 552 296 L 561 294 M 555 301 L 564 299 M 558 306 L 567 304" fill="none" stroke="#D5A29F" stroke-width="1.3"/>
+<path data-graphic="Idea bulb" opacity="0.6" d="M 554 426 C 539 412 550 396 563 399 C 582 401 576 419 569 426 L 571 438 L 559 441 Z M 558 441 L 570 438 M 560 445 L 569 442 M 563 433 L 558 415 L 565 420 L 568 413 L 567 432 M 548 399 L 544 394 M 565 393 L 566 387 M 580 405 L 586 404 M 546 417 L 540 420" fill="none" stroke="#D5A29F" stroke-width="1.3"/>
+<ellipse data-graphic="Accent dot 1" opacity="0.65" cx="142" cy="34" rx="8" ry="8" fill="#F5C79A" />
+<ellipse data-graphic="Accent dot 2" opacity="0.65" cx="569" cy="110" rx="6" ry="6" fill="#B9586C" />
+<ellipse data-graphic="Accent dot 3" opacity="0.65" cx="577" cy="486" rx="5" ry="5" fill="#F5C79A" />
+<ellipse data-graphic="Accent dot 4" opacity="0.65" cx="383" cy="830" rx="5" ry="5" fill="#B9586C" />
+<ellipse data-graphic="Accent dot 5" opacity="0.65" cx="18" cy="642" rx="4" ry="4" fill="#F5C79A" />
+<ellipse data-graphic="Accent dot 6" opacity="0.65" cx="508" cy="762" rx="4" ry="4" fill="#B9586C" />
+<ellipse data-graphic="Dot grid 1.1" opacity="0.4" cx="4" cy="120" rx="2.2" ry="2.2" fill="#D5A29F" />
+<ellipse data-graphic="Dot grid 1.2" opacity="0.4" cx="13" cy="120" rx="2.2" ry="2.2" fill="#D5A29F" />
+<ellipse data-graphic="Dot grid 1.3" opacity="0.4" cx="22" cy="120" rx="2.2" ry="2.2" fill="#D5A29F" />
+<ellipse data-graphic="Dot grid 2.1" opacity="0.4" cx="4" cy="130" rx="2.2" ry="2.2" fill="#D5A29F" />
+<ellipse data-graphic="Dot grid 2.2" opacity="0.4" cx="13" cy="130" rx="2.2" ry="2.2" fill="#D5A29F" />
+<ellipse data-graphic="Dot grid 2.3" opacity="0.4" cx="22" cy="130" rx="2.2" ry="2.2" fill="#D5A29F" />
+<ellipse data-graphic="Dot grid 3.1" opacity="0.4" cx="4" cy="140" rx="2.2" ry="2.2" fill="#D5A29F" />
+<ellipse data-graphic="Dot grid 3.2" opacity="0.4" cx="13" cy="140" rx="2.2" ry="2.2" fill="#D5A29F" />
+<ellipse data-graphic="Dot grid 3.3" opacity="0.4" cx="22" cy="140" rx="2.2" ry="2.2" fill="#D5A29F" />
+<ellipse data-graphic="Dot grid 4.1" opacity="0.4" cx="4" cy="150" rx="2.2" ry="2.2" fill="#D5A29F" />
+<ellipse data-graphic="Dot grid 4.2" opacity="0.4" cx="13" cy="150" rx="2.2" ry="2.2" fill="#D5A29F" />
+<ellipse data-graphic="Dot grid 4.3" opacity="0.4" cx="22" cy="150" rx="2.2" ry="2.2" fill="#D5A29F" />
+<ellipse data-graphic="Dot grid 5.1" opacity="0.4" cx="4" cy="160" rx="2.2" ry="2.2" fill="#D5A29F" />
+<ellipse data-graphic="Dot grid 5.2" opacity="0.4" cx="13" cy="160" rx="2.2" ry="2.2" fill="#D5A29F" />
+<ellipse data-graphic="Dot grid 5.3" opacity="0.4" cx="22" cy="160" rx="2.2" ry="2.2" fill="#D5A29F" />
+<path data-graphic="Top number badge" opacity="1" d="M 600 12 C 578 9 548 17 542 36 C 537 55 553 61 570 66 C 588 73 600 64 600 53 Z" fill="#79253E" stroke="#B9586C" stroke-width="1.2"/>
+<text data-graphic="Top page number" opacity="1" x="572" y="49" font-family="Arial, sans-serif" font-size="27" font-weight="700" text-anchor="middle" fill="#FFFEFC">3</text>
+<ellipse data-graphic="Bottom number badge" opacity="1" cx="38" cy="853" rx="22" ry="22" fill="#FFFEFC" />
+<text data-graphic="Bottom page number" opacity="1" x="38" y="862" font-family="Arial, sans-serif" font-size="25" font-weight="700" text-anchor="middle" fill="#79253E">3</text>
+</svg>

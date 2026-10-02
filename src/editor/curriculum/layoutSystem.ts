@@ -23,6 +23,7 @@ export const isTeachingLayout = (layout: string): layout is TeachingLayout => la
 
 /** Compatibility is based on teaching purpose, never on the selected subject. */
 export function teachingLayouts(def: CurriculumBlockDefinition): CurriculumLayout[] {
+  if (def.id === "lesson-schema" || def.id === "study-skills" || def.id === "learning-outcomes" || def.id === "topic-banner" || def.id === "fact-zone" || def.id === "life-connect") return def.layouts;
   const key = def.id + " " + def.archetype;
   let choices: TeachingLayout[];
   if (def.id === "chapter-hero") choices = ["picture-top", "picture-side", "big-idea"];
@@ -39,6 +40,12 @@ export function teachingLayouts(def: CurriculumBlockDefinition): CurriculumLayou
 
 /** Explain fallback rendering without suppressing or modifying any content. */
 export function layoutNote(block: SmartBlockInstance, layout: CurriculumLayout): string {
+  if (block.curriculum?.type === "lesson-schema") return "Add or delete topics in Content. Empty boxes are preserved. Extra topics create additional maps with the same central chapter name.";
+  if (block.curriculum?.type === "study-skills") return "Fully editable study skills card with glowing badge, topic header, interactive items, and customizable write-in empty spaces.";
+  if (block.curriculum?.type === "learning-outcomes") return "Add or delete learning outcomes. Empty spaces create custom write-in lines. Custom icons and colors are preserved.";
+  if (block.curriculum?.type === "topic-banner") return "3D wavy organic ribbon banner with layered fluid waves and puffy typography. Completely editable.";
+  if (block.curriculum?.type === "fact-zone") return "3D pill container with glowing lightbulb tab, editable fact content, and 3D books medallion badge. Completely editable.";
+  if (block.curriculum?.type === "life-connect") return "3D folded ribbon banner with teardrop planting boy medallion badge and real-world connection prompt. Completely editable.";
   const c = block.semanticContent;
   if (layout === "compare-panels" && (c.items?.length || 0) % 2) return "The final unpaired point spans the full width. All other content follows below.";
   if (layout === "reading-focus" && !c.passage) return "Your explanation fills the reading panel. Add a passage in Content for longer reading.";

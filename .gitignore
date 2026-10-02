@@ -37,6 +37,7 @@ yarn-error.log*
 # scratch and test outputs
 /scratch/
 /output/
+/tmp/
 
 # cloudflare / open-next
 /.open-next/

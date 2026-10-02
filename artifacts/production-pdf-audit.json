@@ -1,0 +1,239 @@
+{
+  "selected": {
+    "pages": 3,
+    "fonts": [
+      {
+        "name": "/AAAAAA+Inter-Regular_Bold",
+        "type": "/Type3",
+        "embedded": true,
+        "unicodeMap": true
+      },
+      {
+        "name": "/AAAAAA+Inter-Regular_Bold",
+        "type": "/Type3",
+        "embedded": true,
+        "unicodeMap": true
+      },
+      {
+        "name": "/AAAAAA+Inter-Regular_Bold",
+        "type": "/Type3",
+        "embedded": true,
+        "unicodeMap": true
+      },
+      {
+        "name": "/BAAAAA+Outfit-Thin_Regular",
+        "type": "/Type3",
+        "embedded": true,
+        "unicodeMap": true
+      },
+      {
+        "name": "/BAAAAA+Outfit-Thin_Regular",
+        "type": "/Type3",
+        "embedded": true,
+        "unicodeMap": true
+      },
+      {
+        "name": "/CAAAAA+Inter-Regular",
+        "type": "/Type3",
+        "embedded": true,
+        "unicodeMap": true
+      },
+      {
+        "name": "/CAAAAA+Inter-Regular",
+        "type": "/Type3",
+        "embedded": true,
+        "unicodeMap": true
+      },
+      {
+        "name": "/CAAAAA+Inter-Regular",
+        "type": "/Type3",
+        "embedded": true,
+        "unicodeMap": true
+      },
+      {
+        "name": "/CAAAAA+Inter-Regular",
+        "type": "/Type3",
+        "embedded": true,
+        "unicodeMap": true
+      },
+      {
+        "name": "/CAAAAA+Inter-Regular",
+        "type": "/Type3",
+        "embedded": true,
+        "unicodeMap": true
+      },
+      {
+        "name": "/DAAAAA+Inter-Regular_Bold",
+        "type": "/Type3",
+        "embedded": true,
+        "unicodeMap": true
+      },
+      {
+        "name": "/EAAAAA+Inter-Regular",
+        "type": "/Type3",
+        "embedded": true,
+        "unicodeMap": true
+      },
+      {
+        "name": "/EAAAAA+Inter-Regular",
+        "type": "/Type3",
+        "embedded": true,
+        "unicodeMap": true
+      },
+      {
+        "name": "/EAAAAA+Inter-Regular",
+        "type": "/Type3",
+        "embedded": true,
+        "unicodeMap": true
+      },
+      {
+        "name": "/EAAAAA+Inter-Regular",
+        "type": "/Type3",
+        "embedded": true,
+        "unicodeMap": true
+      },
+      {
+        "name": "/FAAAAA+NotoSans-Bold",
+        "type": "/Type3",
+        "embedded": true,
+        "unicodeMap": true
+      },
+      {
+        "name": "/GAAAAA+NotoSans-Bold",
+        "type": "/Type3",
+        "embedded": true,
+        "unicodeMap": true
+      },
+      {
+        "name": "/HAAAAA+NotoSans-Regular",
+        "type": "/Type3",
+        "embedded": true,
+        "unicodeMap": true
+      }
+    ],
+    "pageSizePt": [
+      0.0,
+      0.0,
+      612.95996,
+      859.91998
+    ]
+  },
+  "chapter": {
+    "pages": 20,
+    "fonts": [
+      {
+        "name": "/AAAAAA+Outfit-Thin_Regular",
+        "type": "/Type3",
+        "embedded": true,
+        "unicodeMap": true
+      },
+      {
+        "name": "/AAAAAA+Outfit-Thin_Regular",
+        "type": "/Type3",
+        "embedded": true,
+        "unicodeMap": true
+      },
+      {
+        "name": "/BAAAAA+Inter-Regular",
+        "type": "/Type3",
+        "embedded": true,
+        "unicodeMap": true
+      },
+      {
+        "name": "/BAAAAA+Inter-Regular",
+        "type": "/Type3",
+        "embedded": true,
+        "unicodeMap": true
+      },
+      {
+        "name": "/BAAAAA+Inter-Regular",
+        "type": "/Type3",
+        "embedded": true,
+        "unicodeMap": true
+      },
+      {
+        "name": "/BAAAAA+Inter-Regular",
+        "type": "/Type3",
+        "embedded": true,
+        "unicodeMap": true
+      },
+      {
+        "name": "/BAAAAA+Inter-Regular",
+        "type": "/Type3",
+        "embedded": true,
+        "unicodeMap": true
+      },
+      {
+        "name": "/CAAAAA+NotoSans-Regular",
+        "type": "/Type3",
+        "embedded": true,
+        "unicodeMap": true
+      }
+    ],
+    "pageSizePt": [
+      0.0,
+      0.0,
+      612.95996,
+      859.91998
+    ]
+  },
+  "complete": {
+    "pages": 220,
+    "fonts": [
+      {
+        "name": "/AAAAAA+Outfit-Thin_Regular",
+        "type": "/Type3",
+        "embedded": true,
+        "unicodeMap": true
+      },
+      {
+        "name": "/AAAAAA+Outfit-Thin_Regular",
+        "type": "/Type3",
+        "embedded": true,
+        "unicodeMap": true
+      },
+      {
+        "name": "/BAAAAA+Inter-Regular",
+        "type": "/Type3",
+        "embedded": true,
+        "unicodeMap": true
+      },
+      {
+        "name": "/BAAAAA+Inter-Regular",
+        "type": "/Type3",
+        "embedded": true,
+        "unicodeMap": true
+      },
+      {
+        "name": "/BAAAAA+Inter-Regular",
+        "type": "/Type3",
+        "embedded": true,
+        "unicodeMap": true
+      },
+      {
+        "name": "/BAAAAA+Inter-Regular",
+        "type": "/Type3",
+        "embedded": true,
+        "unicodeMap": true
+      },
+      {
+        "name": "/BAAAAA+Inter-Regular",
+        "type": "/Type3",
+        "embedded": true,
+        "unicodeMap": true
+      },
+      {
+        "name": "/CAAAAA+NotoSans-Regular",
+        "type": "/Type3",
+        "embedded": true,
+        "unicodeMap": true
+      }
+    ],
+    "pageSizePt": [
+      0.0,
+      0.0,
+      612.95996,
+      859.91998
+    ]
+  }
+}

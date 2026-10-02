@@ -4,7 +4,7 @@ import { buildPublicationScene } from "../educational/publicationScene";
 import { autoArrangePage } from "./layoutSolver";
 export type PageCompositionStyle = "balanced" | "visual" | "reading" | "compact" | "playful";
 export function composePage(elements:PageElement[], dimensions:Book["dimensions"], margins:Book["margins"], style:PageCompositionStyle) {
-  const movable=elements.filter(el=>!el.locked&&!el.hidden&&!el.smartBlockData?.isLockedDesign&&el.category!=="decorative"&&!el.content.publicationPrimitive);
+  const movable=elements.filter(el=>!el.locked&&!el.hidden&&el.category!=="decorative"&&!el.content.publicationPrimitive);
   const transforms:Record<string,ElementTransform>={};
   const suggested=autoArrangePage(movable,dimensions,margins,style);
   const placed=elements.filter(el=>!movable.includes(el)&&!el.hidden&&el.category!=="decorative").map(el=>el.transform);

@@ -35,6 +35,7 @@ import {
   Check,
   LayoutGrid,
   Unlink2,
+  LayoutTemplate,
 } from "lucide-react";
 
 interface SmartQuickActionBarProps {
@@ -51,6 +52,7 @@ export const SmartQuickActionBar: React.FC<SmartQuickActionBarProps> = ({
     updateElementTransform,
     setElementLayoutMode,
     groupSelectedElements,
+    groupAndLockSelectedElements,
     ungroupSelectedElements,
     deleteSelectedElements,
     duplicateSelectedElementsWithOffset,
@@ -271,6 +273,101 @@ export const SmartQuickActionBar: React.FC<SmartQuickActionBarProps> = ({
         <span>Duplicate</span>
       </button>
 
+      {/* MULTI-SELECTION: GROUP & GROUP AND LOCK */}
+      {isMulti && (
+        <>
+          <button
+            onClick={() => groupSelectedElements()}
+            className="flex items-center gap-1 px-2 py-1 rounded-lg text-slate-300 hover:text-white hover:bg-white/10 transition-all font-medium"
+            title="Group Elements (⌘G)"
+          >
+            <FolderPlus className="w-3.5 h-3.5 text-indigo-400" />
+            <span>Group</span>
+          </button>
+          <button
+            onClick={() => groupAndLockSelectedElements()}
+            className="flex items-center gap-1 px-2 py-1 rounded-lg text-amber-300 hover:text-amber-100 bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30 transition-all font-medium"
+            title="Group and Lock Elements in one step (⌘⇧L)"
+          >
+            <Lock className="w-3.5 h-3.5 text-amber-400" />
+            <span>Group & Lock</span>
+          </button>
+        </>
+      )}
+
+      {/* SINGLE GROUP SELECTION: UNGROUP */}
+      {single && Boolean(single.childElementIds?.length) && (
+        <button
+          onClick={() => ungroupSelectedElements()}
+          className="flex items-center gap-1 px-2 py-1 rounded-lg text-slate-300 hover:text-white hover:bg-white/10 transition-all"
+          title="Ungroup Elements (⇧⌘G)"
+        >
+          <FolderMinus className="w-3.5 h-3.5 text-slate-400" />
+          <span>Ungroup</span>
+        </button>
+      )}
+
+      {/* QUICK LOCK / UNLOCK TOGGLE */}
+      <button
+        onClick={() => {
+          selectedElements.forEach((el) => {
+            useEditorStore.getState().updateElement(el.id, { locked: !allLocked });
+          });
+        }}
+        className={`flex items-center gap-1 px-2 py-1 rounded-lg transition-all ${
+          allLocked
+            ? "bg-amber-500/20 text-amber-300 hover:bg-amber-500/30 border border-amber-500/40"
+            : "text-slate-300 hover:text-white hover:bg-white/10"
+        }`}
+        title={allLocked ? "Unlock Selection (⌘L)" : "Lock Selection (⌘L)"}
+      >
+        {allLocked ? (
+          <>
+            <Unlock className="w-3.5 h-3.5 text-amber-400" />
+            <span className="font-semibold text-amber-300">Unlock</span>
+          </>
+        ) : (
+          <>
+            <Lock className="w-3.5 h-3.5 text-slate-400" />
+            <span>Lock</span>
+          </>
+        )}
+      </button>
+
+      {/* WORKBOOK CONTENT SPACE CONTROLS FOR WRITING LINES & ANSWER AREAS */}
+      {single && (single.type === "writingLines" || single.type === "answer-area") && (
+        <div className="flex items-center gap-1 bg-white/10 rounded-lg px-2 py-0.5 text-[7.5pt]">
+          <span className="text-slate-400">Lines:</span>
+          <button
+            onClick={() => {
+              const current = (single.content.lineCount as number) || (single.type === "writingLines" ? 4 : 6);
+              if (current > 1) {
+                useEditorStore.getState().updateElementContent(single.id, { lineCount: current - 1 });
+              }
+            }}
+            className="text-slate-300 hover:text-white font-mono px-1 hover:bg-white/10 rounded"
+            title="Decrease lines"
+          >
+            -
+          </button>
+          <span className="font-mono text-[8pt] font-bold text-indigo-300 min-w-[14px] text-center">
+            {(single.content.lineCount as number) || (single.type === "writingLines" ? 4 : 6)}
+          </span>
+          <button
+            onClick={() => {
+              const current = (single.content.lineCount as number) || (single.type === "writingLines" ? 4 : 6);
+              if (current < 20) {
+                useEditorStore.getState().updateElementContent(single.id, { lineCount: current + 1 });
+              }
+            }}
+            className="text-slate-300 hover:text-white font-mono px-1 hover:bg-white/10 rounded"
+            title="Add line / space for content"
+          >
+            +
+          </button>
+        </div>
+      )}
+
       {/* 3. LAYER DROPDOWN */}
       <div className="relative">
         <button
@@ -467,15 +564,14 @@ export const SmartQuickActionBar: React.FC<SmartQuickActionBarProps> = ({
             <span>Shuffle</span>
           </button>
 
-          {/* Detach Block into Individual Editable Elements */}
+          {/* Detach Block into Individual Movable Elements */}
           <button
-            disabled={single.smartBlockData?.isLockedDesign}
             onClick={() => detachEducationalBlock(single.id)}
-            className="flex items-center gap-1 px-2 py-1 rounded-lg bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/30 transition-all font-medium"
-            title="Detach into individual editable canvas elements (shapes, text frames, images)"
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-200 border border-amber-500/40 hover:border-amber-400 transition-all font-medium cursor-pointer shadow-sm active:scale-95"
+            title="Make every text and image in this block completely movable as independent canvas layers"
           >
-            <Unlink2 className="w-3 h-3 text-rose-400" />
-            <span>Detach</span>
+            <Unlink2 className="w-3.5 h-3.5 text-amber-400" />
+            <span>Make Text & Images Movable</span>
           </button>
         </>
       )}
@@ -604,21 +700,35 @@ export const SmartQuickActionBar: React.FC<SmartQuickActionBarProps> = ({
         {activeMenu === "more" && (
           <div className="absolute right-0 top-full mt-1.5 w-48 bg-[#10141D] border border-white/10 rounded-xl shadow-2xl p-1.5 z-50 animate-float-in text-[8pt]">
             {isMulti && (
-              <button
-                onClick={() => {
-                  groupSelectedElements();
-                  setActiveMenu(null);
-                }}
-                className="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-white/10 text-slate-200 flex items-center justify-between"
-              >
-                <span className="flex items-center gap-2">
-                  <FolderPlus className="w-3.5 h-3.5 text-slate-400" /> Group
-                </span>
-                <span className="text-[7pt] text-slate-500 font-mono">⌘G</span>
-              </button>
+              <>
+                <button
+                  onClick={() => {
+                    groupSelectedElements();
+                    setActiveMenu(null);
+                  }}
+                  className="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-white/10 text-slate-200 flex items-center justify-between"
+                >
+                  <span className="flex items-center gap-2">
+                    <FolderPlus className="w-3.5 h-3.5 text-slate-400" /> Group
+                  </span>
+                  <span className="text-[7pt] text-slate-500 font-mono">⌘G</span>
+                </button>
+                <button
+                  onClick={() => {
+                    groupAndLockSelectedElements();
+                    setActiveMenu(null);
+                  }}
+                  className="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-amber-500/20 text-amber-300 flex items-center justify-between font-medium"
+                >
+                  <span className="flex items-center gap-2">
+                    <Lock className="w-3.5 h-3.5 text-amber-400" /> Group & Lock
+                  </span>
+                  <span className="text-[7pt] text-amber-500/80 font-mono">⌘⇧L</span>
+                </button>
+              </>
             )}
 
-            {single && single.type === "group" && (
+            {single && Boolean(single.childElementIds?.length) && (
               <button
                 onClick={() => {
                   ungroupSelectedElements();
@@ -630,6 +740,21 @@ export const SmartQuickActionBar: React.FC<SmartQuickActionBarProps> = ({
                   <FolderMinus className="w-3.5 h-3.5 text-slate-400" /> Ungroup
                 </span>
                 <span className="text-[7pt] text-slate-500 font-mono">⇧⌘G</span>
+              </button>
+            )}
+
+            {(isMulti || (single && (single.type === "group" || Boolean(single.childElementIds?.length)))) && (
+              <button
+                onClick={() => {
+                  useUiStore.getState().setCreateLayoutModalOpen(true);
+                  setActiveMenu(null);
+                }}
+                className="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-amber-500/20 text-amber-300 flex items-center justify-between font-medium"
+              >
+                <span className="flex items-center gap-2">
+                  <LayoutTemplate className="w-3.5 h-3.5 text-amber-400" /> Create Layout
+                </span>
+                <span className="text-[7pt] text-amber-500/80 font-mono">Preset</span>
               </button>
             )}
 
@@ -663,7 +788,7 @@ export const SmartQuickActionBar: React.FC<SmartQuickActionBarProps> = ({
                 ) : (
                   <Lock className="w-3.5 h-3.5 text-slate-400" />
                 )}
-                {allLocked ? "Unlock" : "Lock Position"}
+                {allLocked ? "Unlock" : "Lock"}
               </span>
               <span className="text-[7pt] text-slate-500 font-mono">⌘L</span>
             </button>

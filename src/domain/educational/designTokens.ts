@@ -1,6 +1,20 @@
 import { SubjectDomain, GradeBand, DesignFamily } from "./blockSchema";
 import type { ChapterPersonality, CurriculumGrade, FrameworkStage } from "./curriculum";
 
+/** Lesson schema clay palette: dark ink, pastel capsules, and print-safe accents. */
+export const LESSON_SCHEMA_TOKENS = {
+  ink: "#13254F", paper: "#FAF8FC", white: "#FFFFFF", shadow: "#DAD4E3", muted: "#64748B",
+  tones: [
+    { name: "Lavender", accent: "#70549C", fill: "#E5DBF7" },
+    { name: "Sky", accent: "#326B99", fill: "#D5EBF7" },
+    { name: "Coral", accent: "#AD4E50", fill: "#F9D9DC" },
+    { name: "Mint", accent: "#26756B", fill: "#D7EEE6" },
+    { name: "Sand", accent: "#966B33", fill: "#F4E6D1" },
+    { name: "Rose", accent: "#934564", fill: "#F4D8E5" },
+    { name: "Periwinkle", accent: "#3F60A3", fill: "#DFE5FC" },
+  ],
+} as const;
+
 /**
  * NEX MAXX Book Studio - Educational Design Tokens & Color Psychology
  * Formulated specifically for professional educational textbook publishing.
@@ -293,6 +307,80 @@ export const PUBLICATION_PALETTES = {
   ink: { name: "Ink & Terracotta", primary: "#25374A", secondary: "#A84432", accent: "#C89B52", surface: "#FBF7F0", text: "#242A31", border: "#DFD7C9" },
   marigold: { name: "Marigold & Ink", primary: "#92400E", secondary: "#1D4ED8", accent: "#E8B931", surface: "#FFF8E8", text: "#2A2116", border: "#E6D3A8" },
   apricot: { name: "Apricot & Plum", primary: "#9A3412", secondary: "#7E2254", accent: "#E8896A", surface: "#FFF4EE", text: "#2C1B16", border: "#F0D2C6" },
+  maroon: { name: "NEX Signature Maroon", primary: "#6A1B3A", secondary: "#A93C68", accent: "#EDAF44", surface: "#FFFFFF", text: "#192032", border: "#E4E7EE" },
+  teal: { name: "Discovery Teal", primary: "#137F83", secondary: "#188A89", accent: "#EDAF44", surface: "#FFFFFF", text: "#192032", border: "#D4EEED" },
+  gold: { name: "Curiosity Gold", primary: "#B07C20", secondary: "#BD8429", accent: "#6A1B3A", surface: "#FFFFFF", text: "#192032", border: "#F3E4C2" },
+} as const;
+
+export const NEX_MAXX_BRAND = {
+  ink: "#192032",
+  maroon: "#6A1B3A",
+  maroonSecondary: "#A93C68",
+  teal: "#137F83",
+  gold: "#EDAF44",
+  paper: "#FFFFFF",
+  muted: "#778093",
+  border: "#E4E7EE",
+  wash: "#F4F6FA",
+  washMaroon: "#FFF0F5",
+  washTeal: "#EAFAF9",
+  washGold: "#FFF9EB",
+  washIndigo: "#F1F2FF",
+} as const;
+
+export const NEX_MAXX_PRESETS = {
+  editorial: {
+    id: "editorial",
+    name: "Signature Editorial",
+    radiusPt: 10,
+    cardRadiusPt: 12,
+    fontHeading: "Georgia, 'Noto Serif Telugu', 'Noto Serif Devanagari', serif",
+    fontBody: "Inter, 'Noto Sans Telugu', 'Noto Sans Devanagari', sans-serif",
+    accent: "#6A1B3A",
+    wash: "#FFF0F5",
+    missionGradient: "linear-gradient(110deg, #721c3f, #a43868 65%, #b75881)",
+    shadow: "0 3px 11px rgba(19, 43, 56, 0.07)",
+    showArtwork: true,
+  },
+  explorer: {
+    id: "explorer",
+    name: "Playful Explorer",
+    radiusPt: 16,
+    cardRadiusPt: 21,
+    fontHeading: "Outfit, 'Noto Sans Telugu', 'Noto Sans Devanagari', sans-serif",
+    fontBody: "Inter, 'Noto Sans Telugu', 'Noto Sans Devanagari', sans-serif",
+    accent: "#137F83",
+    wash: "#FFF6E9",
+    missionGradient: "linear-gradient(106deg, #80274b, #cd8760)",
+    shadow: "0 6px 18px rgba(32, 35, 48, 0.08)",
+    showArtwork: true,
+  },
+  academy: {
+    id: "academy",
+    name: "Modern Academy",
+    radiusPt: 6,
+    cardRadiusPt: 8,
+    fontHeading: "Georgia, 'Noto Serif Telugu', 'Noto Serif Devanagari', serif",
+    fontBody: "Inter, 'Noto Sans Telugu', 'Noto Sans Devanagari', sans-serif",
+    accent: "#495DA7",
+    wash: "#F5F7FF",
+    missionGradient: "linear-gradient(110deg, #273246, #3b4861)",
+    shadow: "0 1px 3px rgba(34, 51, 68, 0.08)",
+    showArtwork: true,
+  },
+  workbook: {
+    id: "workbook",
+    name: "Practice Workbook",
+    radiusPt: 6,
+    cardRadiusPt: 8,
+    fontHeading: "Inter, 'Noto Sans Telugu', 'Noto Sans Devanagari', sans-serif",
+    fontBody: "Inter, 'Noto Sans Telugu', 'Noto Sans Devanagari', sans-serif",
+    accent: "#6B193B",
+    wash: "#F4F6FA",
+    missionGradient: "#6B193B",
+    shadow: "none",
+    showArtwork: false,
+  },
 } as const;
 
 /** Editorial intent, not a promise of psychological outcomes. Labels carry meaning too. */
@@ -307,6 +395,9 @@ export const PALETTE_INTENT: Record<keyof typeof PUBLICATION_PALETTES, string> =
   ink: "Warm paper and quiet ink for sustained reading and teacher resources.",
   marigold: "Warm highlights for checkpoints, curiosity, and key takeaways.",
   apricot: "Welcoming warm surfaces for playful prompts and early learning.",
+  maroon: "NEX signature deep maroon identity with warm gold accents.",
+  teal: "Discovery teal surfaces with energetic highlights.",
+  gold: "Curiosity warm gold and amber for investigative and lab work.",
 };
 
 /** Curriculum tokens extend the publication system; studio chrome uses its existing CSS tokens. */
@@ -324,6 +415,13 @@ export const CLASS_TYPOGRAPHY: Record<CurriculumGrade, { body: number; heading: 
   3: { body: 14, heading: 22, display: 38, gap: 18, illustration: .43 },
   4: { body: 13, heading: 21, display: 36, gap: 16, illustration: .38 },
   5: { body: 12, heading: 20, display: 34, gap: 14, illustration: .32 },
+  6: { body: 11.5, heading: 19, display: 32, gap: 13, illustration: .3 },
+  7: { body: 11, heading: 18.5, display: 30, gap: 12, illustration: .28 },
+  8: { body: 10.5, heading: 18, display: 28, gap: 12, illustration: .26 },
+  9: { body: 10, heading: 17.5, display: 26, gap: 11, illustration: .24 },
+  10: { body: 10, heading: 17, display: 26, gap: 10, illustration: .22 },
+  11: { body: 9.5, heading: 16.5, display: 24, gap: 10, illustration: .2 },
+  12: { body: 9.5, heading: 16, display: 24, gap: 10, illustration: .2 },
 };
 export const CURRICULUM_TEXT_STYLES = {
   "Chapter Number": { scale: 2.8, weight: 800 }, "Chapter Title": { scale: 2.5, weight: 700 },
@@ -371,3 +469,14 @@ export function teachingTokens(p: { primary: string; secondary: string; accent: 
     display: style === "storybook" ? "serif" as const : "sans" as const,
   };
 }
+
+/** Editorial media extension; QR ink/white are fixed for decoder-tested contrast. */
+export const MEDIA_QR_TOKENS = {paper:'#FAF8F5',white:'#FFFFFF',ink:'#29262B',muted:'#69636B',accent:'#651F34',border:'#E4DDE0'} as const;
+
+/** Editable ribbon/worksheet collection inspired by the chapter element references. */
+export const REFERENCE_ELEMENT_TOKENS = {
+  navy: "#102653", plum: "#85234F", coral: "#EF806E", teal: "#367F8B",
+  lilac: "#B69BCB", paper: "#FFF9F0", aqua: "#EAF8F8", white: "#FFFFFF",
+  ink: "#14244E", shadow: "#DAD3DD", rule: "#AAA8AD",
+  radius: 18, padding: 22, gap: 12,
+} as const;

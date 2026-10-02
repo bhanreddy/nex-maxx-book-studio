@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { useEditorStore } from "../../editor/stores/editorStore";
 import { useUiStore, EditorTool, StudioMode } from "../../editor/stores/uiStore";
 import { useHistoryStore } from "../../editor/stores/historyStore";
@@ -24,6 +24,11 @@ import { DataMergeModal } from "../publishing/DataMergeModal";
 import { TextStylesModal } from "../palette/TextStylesModal";
 import { AIStudioPanel } from "../ai/AIStudioPanel";
 import { LayoutGalleryModal } from "../panels/LayoutGalleryModal";
+import { CreateLayoutModal } from "../panels/CreateLayoutModal";
+import { MasterPagesModal } from "../palette/MasterPagesModal";
+import { DesignTokensModal } from "../palette/DesignTokensModal";
+import { BookStructureModal } from "../palette/BookStructureModal";
+import { PageBorderModal } from '../panels/PageBorderModal';
 import { PerformanceDiagnostics } from "./PerformanceDiagnostics";
 import { LayoutPartnerPanel } from "../layoutPartner/LayoutPartnerPanel";
 import { SmartChapterBuilder } from "../curriculum/SmartChapterBuilder";
@@ -41,11 +46,15 @@ export const BookEditorWorkspace: React.FC<BookEditorWorkspaceProps> = ({
     getActiveBook,
     getActivePage,
     selectedElementIds,
+    clearSelection,
     updateElementTransform,
     deleteSelectedElements,
     duplicateSelectedElements,
     copySelection,
     pasteSelection,
+    groupSelectedElements,
+    groupAndLockSelectedElements,
+    ungroupSelectedElements,
     elements,
     loadFromStorage,
   } = useEditorStore();
@@ -107,9 +116,11 @@ export const BookEditorWorkspace: React.FC<BookEditorWorkspaceProps> = ({
     }
   }, [themeMode]);
 
+  const [recovering, setRecovering] = useState(true);
   // Load from local storage on mount
   useEffect(() => {
-    loadFromStorage();
+    let active = true;
+    void loadFromStorage().finally(() => { if (active) setRecovering(false); });
     retryPendingCloudChanges();
     const beforeLeave = (event: BeforeUnloadEvent) => {
       flushPendingPersistence();
@@ -118,6 +129,7 @@ export const BookEditorWorkspace: React.FC<BookEditorWorkspaceProps> = ({
     window.addEventListener('beforeunload', beforeLeave);
     window.addEventListener('online', retryPendingCloudChanges);
     return () => {
+      active = false;
       window.removeEventListener('beforeunload', beforeLeave);
       window.removeEventListener('online', retryPendingCloudChanges);
     };
@@ -138,12 +150,43 @@ export const BookEditorWorkspace: React.FC<BookEditorWorkspaceProps> = ({
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       // Ignore if user is currently typing in an input or contentEditable
-      const target = e.target as HTMLElement;
-      if (target.closest('[role="dialog"][aria-modal="true"]')) return;
+      const target = e.target as HTMLElement | null;
+      if (target?.closest('[role="dialog"][aria-modal="true"]')) return;
+      const activeEl = typeof document !== "undefined" ? (document.activeElement as HTMLElement | null) : null;
+      // Escape key: release element selection and reset node/crop/text tools
+      if (e.key === "Escape") {
+        const hasSelection = selectedElementIds.length > 0;
+        const uiState = useUiStore.getState();
+        const hasNodeSelection = uiState.selectedNodeIds.length > 0;
+        const hasCrop = uiState.cropElementId !== null;
+        const hasTextEdit = uiState.editingTextElementId !== null;
+
+        if (hasSelection || hasNodeSelection || hasCrop || hasTextEdit) {
+          e.preventDefault();
+          e.stopPropagation();
+          if (target && typeof target.blur === "function") {
+            target.blur();
+          }
+          if (activeEl && typeof activeEl.blur === "function") {
+            activeEl.blur();
+          }
+          clearSelection();
+          if (hasNodeSelection) uiState.setSelectedNodeIds([]);
+          if (hasCrop) uiState.setCropElementId(null);
+          if (hasTextEdit) uiState.setEditingTextElementId(null);
+          return;
+        }
+      }
+
       if (
-        target.tagName === "INPUT" ||
-        target.tagName === "TEXTAREA" ||
-        target.isContentEditable
+        target?.tagName === "INPUT" ||
+        target?.tagName === "TEXTAREA" ||
+        target?.isContentEditable ||
+        Boolean(target?.closest?.('[contenteditable="true"]')) ||
+        activeEl?.tagName === "INPUT" ||
+        activeEl?.tagName === "TEXTAREA" ||
+        activeEl?.isContentEditable ||
+        Boolean(activeEl?.closest?.('[contenteditable="true"]'))
       ) {
         return;
       }
@@ -206,6 +249,12 @@ export const BookEditorWorkspace: React.FC<BookEditorWorkspaceProps> = ({
         return;
       }
 
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "a") {
+        e.preventDefault();
+        useEditorStore.getState().selectAllOnActivePage();
+        return;
+      }
+
       // Copy / Paste
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "c") {
         e.preventDefault();
@@ -222,6 +271,29 @@ export const BookEditorWorkspace: React.FC<BookEditorWorkspaceProps> = ({
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "d") {
         e.preventDefault();
         duplicateSelectedElements();
+        return;
+      }
+
+      // Group (Cmd + G) and Ungroup (Cmd + Shift + G)
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "g") {
+        e.preventDefault();
+        if (e.shiftKey) {
+          ungroupSelectedElements();
+        } else {
+          groupSelectedElements();
+        }
+        return;
+      }
+
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "l") {
+        e.preventDefault();
+        if (e.shiftKey && selectedElementIds.length > 1) {
+          groupAndLockSelectedElements();
+          return;
+        }
+        const store = useEditorStore.getState();
+        const locked = store.selectedElementIds.every(id => store.elements[id]?.locked);
+        store.selectedElementIds.forEach(id => store.updateElement(id, { locked: !locked }));
         return;
       }
 
@@ -295,6 +367,7 @@ export const BookEditorWorkspace: React.FC<BookEditorWorkspaceProps> = ({
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [
     selectedElementIds,
+    clearSelection,
     elements,
     commandPaletteOpen,
     setCommandPaletteOpen,
@@ -313,8 +386,9 @@ export const BookEditorWorkspace: React.FC<BookEditorWorkspaceProps> = ({
   const book = getActiveBook();
   const activePage = getActivePage();
 
+  if (recovering) return <div role="status" className="h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950 text-slate-600 dark:text-slate-300"><div className="space-y-3"><div className="h-2 w-48 rounded-full bg-indigo-500/20 animate-pulse"/><p className="text-sm">Opening your local workspace…</p></div></div>;
   if (!book || !activePage) {
-    return (
+  return (
       <div className="h-screen w-screen bg-[#f4f6fa] dark:bg-[#0b0f17] flex items-center justify-center text-slate-700 dark:text-slate-300">
         Loading Book Publishing Workspace...
       </div>
@@ -395,8 +469,13 @@ export const BookEditorWorkspace: React.FC<BookEditorWorkspaceProps> = ({
       <TextStylesModal />
       <AIStudioPanel />
       <LayoutGalleryModal />
+      <CreateLayoutModal />
       <PerformanceDiagnostics />
       <LayoutPartnerPanel />
+      <MasterPagesModal />
+      <DesignTokensModal />
+      <BookStructureModal />
+      <PageBorderModal />
 
       {/* Toast Notifications */}
       <div className="fixed bottom-28 right-6 z-50 flex flex-col gap-2 pointer-events-none">

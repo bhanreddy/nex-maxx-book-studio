@@ -10,13 +10,29 @@ import { backgroundPatternNodes } from "../educational/publicationScene";
 import { subjectArtwork } from "./subjectArtwork";
 import { isTeachingLayout } from "./layoutSystem";
 import { renderTeachingLayout } from "./teachingRenderer";
+import { renderLessonSchema } from "./renderLessonSchema";
+import { renderStudySkills } from "./renderStudySkills";
+import { renderLearningOutcomes } from "./renderLearningOutcomes";
+import { renderReferenceElement } from "./renderReferenceElement";
+import { renderUniversalBlockScene } from "./renderUniversalScene";
 
 /** One scene pipeline serves canvas, thumbnails, independent layers and print export. */
 export function renderCurriculum(block: SmartBlockInstance, h: AtelierHelpers, options: { teacher?: boolean } = {}): PublicationScene {
+  if (block.styleOverrides.referenceElement) return renderReferenceElement(block, h, options);
+  if (block.curriculum?.type === "lesson-schema") return renderLessonSchema(block, h);
+  if (block.curriculum?.type === "study-skills") return renderStudySkills(block, h);
+  if (block.curriculum?.type === "learning-outcomes" || block.curriculum?.type === "learning-mission") return renderLearningOutcomes(block, h);
   const m = block.curriculum!;
   const c = block.semanticContent, o = block.styleOverrides;
   const def = CURRICULUM_BLOCK_MAP[m.type];
   const variant = (o.layoutVariant || def?.layouts[0] || "editorial") as CurriculumLayout;
+  if (
+    variant.startsWith("universal-") ||
+    m.type.startsWith("universal-") ||
+    (["editorial", "explorer", "academy", "workbook"] as string[]).includes(String(o.blockStyle))
+  ) {
+    return renderUniversalBlockScene(block, h, options);
+  }
   if (isTeachingLayout(variant)) return renderTeachingLayout(block, variant, h, options);
   const p = h.resolvePublicationPalette(block), t = curriculumTokens(p, m.frameworkStage);
   const g = CLASS_TYPOGRAPHY[m.grade] || CLASS_TYPOGRAPHY[3];

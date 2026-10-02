@@ -17,9 +17,9 @@ const base=()=>structuredClone(useEditorStore.getState().getActiveBook());
 function build(config){const book=base();book.pages=[];const chapter={id:crypto.randomUUID(),unitId:'unit',number:1,title:config.title,learningObjectives:config.learningOutcomes,pageIds:[]};chapter.framework=engine.generateFramework(config,chapter.id);book.chapters=[chapter];return engine.composeChapter(book,chapter,{});}
 
 test('all requested block families have usable previews and independent instances',()=>{
- assert.equal(catalog.CURRICULUM_BLOCKS.length,219);
+ assert.equal(catalog.CURRICULUM_BLOCKS.length,224);
  assert.equal(catalog.CURRICULUM_BLOCKS.filter(b=>b.isNew).length,72);
- assert.equal(new Set(catalog.CURRICULUM_BLOCKS.map(b=>b.id)).size,219);
+ assert.equal(new Set(catalog.CURRICULUM_BLOCKS.map(b=>b.id)).size,224);
  for(const def of catalog.CURRICULUM_BLOCKS){
   const block=engine.makeCurriculumBlock(def.id,engine.DEFAULT_CHAPTER_CONFIG);
   for(const layout of def.layouts){const scene=buildPublicationScene(engine.changeBlockLayout(block,layout));assert.ok(scene.height>60,`${def.id}/${layout}`);assert.ok(text(scene).includes(block.semanticContent.title)||text(scene).replaceAll(' ','').includes(block.semanticContent.title.replaceAll(' ','')),def.id);for(const n of scene.nodes)for(const k of ['x','y','w','h','size'])if(k in n)assert.ok(Number.isFinite(n[k]),`${def.id}: ${k}`);}
@@ -188,7 +188,7 @@ test('library names stay plain and every element has its own purpose',()=>{
  const generic=Object.fromEntries(SIMPLE_CHAPTER_STAGES.map(stage=>[stage.id,stage.purpose]));
  assert.equal(catalog.CURRICULUM_BLOCK_MAP['chapter-hero'].name,'Chapter Title');
  assert.equal(catalog.CURRICULUM_BLOCK_MAP['learning-mission'].name,'Learning Goals');
- assert.equal(catalog.CURRICULUM_BLOCKS.length,219);
+ assert.equal(catalog.CURRICULUM_BLOCKS.length,224);
  for(const block of catalog.CURRICULUM_BLOCKS){
   assert.equal(/chapter hero|learning mission/i.test(block.name),false,block.id);
   assert.ok(block.purpose.length>20 && block.purpose.length<130,block.id);

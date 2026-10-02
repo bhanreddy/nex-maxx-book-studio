@@ -168,6 +168,15 @@ interface UiState {
   manuscriptImportOpen: boolean;
   dataMergeModalOpen: boolean;
   textStylesModalOpen: boolean;
+  createLayoutModalOpen: boolean;
+  masterPagesModalOpen: boolean;
+  designTokensModalOpen: boolean;
+  bookStructureModalOpen: boolean;
+  pageBorderModalOpen: boolean;
+
+  // Professional Grid System
+  columnGrid: { enabled: boolean; columns: number; gutterPt: number };
+  baselineGrid: { enabled: boolean; stepPt: number };
 
   cropElementId: string | null;
   setCropElementId: (id: string | null) => void;
@@ -249,6 +258,13 @@ interface UiState {
   setManuscriptImportOpen: (open: boolean) => void;
   setDataMergeModalOpen: (open: boolean) => void;
   setTextStylesModalOpen: (open: boolean) => void;
+  setCreateLayoutModalOpen: (open: boolean) => void;
+  setMasterPagesModalOpen: (open: boolean) => void;
+  setDesignTokensModalOpen: (open: boolean) => void;
+  setBookStructureModalOpen: (open: boolean) => void;
+  setPageBorderModalOpen: (open: boolean) => void;
+  setColumnGrid: (grid: Partial<{ enabled: boolean; columns: number; gutterPt: number }>) => void;
+  setBaselineGrid: (grid: Partial<{ enabled: boolean; stepPt: number }>) => void;
 
   setSaveStatus: (status: "Saved" | "Saving..." | "Changes pending" | "Recovered" | "Local backup only") => void;
   setLastSavedAt: (timestamp: string) => void;
@@ -327,6 +343,14 @@ export const useUiStore = create<UiState>((set, get) => ({
   manuscriptImportOpen: false,
   dataMergeModalOpen: false,
   textStylesModalOpen: false,
+  createLayoutModalOpen: false,
+  masterPagesModalOpen: false,
+  designTokensModalOpen: false,
+  bookStructureModalOpen: false,
+  pageBorderModalOpen: false,
+
+  columnGrid: { enabled: false, columns: 2, gutterPt: 16 },
+  baselineGrid: { enabled: false, stepPt: 12 },
 
   cropElementId: null,
   setCropElementId: (id) => set({ cropElementId: id }),
@@ -454,6 +478,13 @@ export const useUiStore = create<UiState>((set, get) => ({
   setManuscriptImportOpen: (open) => set({ manuscriptImportOpen: open }),
   setDataMergeModalOpen: (open) => set({ dataMergeModalOpen: open }),
   setTextStylesModalOpen: (open) => set({ textStylesModalOpen: open }),
+  setCreateLayoutModalOpen: (open) => set({ createLayoutModalOpen: open }),
+  setMasterPagesModalOpen: (open) => set({ masterPagesModalOpen: open }),
+  setDesignTokensModalOpen: (open) => set({ designTokensModalOpen: open }),
+  setBookStructureModalOpen: (open) => set({ bookStructureModalOpen: open }),
+  setPageBorderModalOpen: (open) => set({ pageBorderModalOpen: open }),
+  setColumnGrid: (grid) => set((s) => ({ columnGrid: { ...s.columnGrid, ...grid } })),
+  setBaselineGrid: (grid) => set((s) => ({ baselineGrid: { ...s.baselineGrid, ...grid } })),
 
   setSaveStatus: (status) => set({ saveStatus: status }),
   setLastSavedAt: (timestamp) => set({ lastSavedAt: timestamp }),

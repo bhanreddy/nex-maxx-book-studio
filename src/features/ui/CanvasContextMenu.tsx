@@ -18,6 +18,7 @@ import {
   Shapes,
   Maximize2,
   Wand2,
+  LayoutTemplate,
 } from "lucide-react";
 import { useEditorStore } from "../../editor/stores/editorStore";
 import { useUiStore } from "../../editor/stores/uiStore";
@@ -51,6 +52,7 @@ export const CanvasContextMenu: React.FC<CanvasContextMenuProps> = ({
     bringForward,
     sendBackward,
     groupSelectedElements,
+    groupAndLockSelectedElements,
     ungroupSelectedElements,
     updateElement,
     addTextFrame,
@@ -94,7 +96,7 @@ export const CanvasContextMenu: React.FC<CanvasContextMenuProps> = ({
   const hasSelection = selectedElementIds.length > 0;
   const singleElement =
     selectedElementIds.length === 1 ? elements[selectedElementIds[0]] : null;
-  const isLocked = singleElement?.locked || false;
+  const isLocked = selectedElementIds.length > 0 && selectedElementIds.every(id => elements[id]?.locked);
 
   // Viewport clamping
   const menuWidth = 210;
@@ -211,20 +213,35 @@ export const CanvasContextMenu: React.FC<CanvasContextMenuProps> = ({
 
           {/* Group / Lock */}
           {selectedElementIds.length > 1 ? (
-            <button
-              onClick={() => {
-                groupSelectedElements();
-                onClose();
-              }}
-              className="w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg hover:bg-white/10 hover:text-white transition-colors"
-            >
-              <span className="flex items-center gap-2">
-                <Group className="w-3.5 h-3.5 text-slate-400" />
-                <span>Group Elements</span>
-              </span>
-              <span className="text-[10px] text-slate-500 font-mono">⌘G</span>
-            </button>
-          ) : singleElement?.type === "group" ? (
+            <>
+              <button
+                onClick={() => {
+                  groupSelectedElements();
+                  onClose();
+                }}
+                className="w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg hover:bg-white/10 hover:text-white transition-colors"
+              >
+                <span className="flex items-center gap-2">
+                  <Group className="w-3.5 h-3.5 text-slate-400" />
+                  <span>Group Elements</span>
+                </span>
+                <span className="text-[10px] text-slate-500 font-mono">⌘G</span>
+              </button>
+              <button
+                onClick={() => {
+                  groupAndLockSelectedElements();
+                  onClose();
+                }}
+                className="w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg hover:bg-amber-500/20 text-amber-300 hover:text-amber-200 transition-colors"
+              >
+                <span className="flex items-center gap-2">
+                  <Lock className="w-3.5 h-3.5 text-amber-400" />
+                  <span>Group & Lock</span>
+                </span>
+                <span className="text-[10px] text-amber-500/80 font-mono">⌘⇧L</span>
+              </button>
+            </>
+          ) : singleElement?.childElementIds?.length ? (
             <button
               onClick={() => {
                 ungroupSelectedElements();
@@ -239,6 +256,22 @@ export const CanvasContextMenu: React.FC<CanvasContextMenuProps> = ({
               <span className="text-[10px] text-slate-500 font-mono">⇧⌘G</span>
             </button>
           ) : null}
+
+          {(selectedElementIds.length > 1 || singleElement?.type === "group" || Boolean(singleElement?.childElementIds?.length)) && (
+            <button
+              onClick={() => {
+                useUiStore.getState().setCreateLayoutModalOpen(true);
+                onClose();
+              }}
+              className="w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg hover:bg-amber-500/20 text-amber-300 transition-colors font-medium"
+            >
+              <span className="flex items-center gap-2">
+                <LayoutTemplate className="w-3.5 h-3.5 text-amber-400" />
+                <span>Create Layout from Selection</span>
+              </span>
+              <span className="text-[10px] text-amber-500/80 font-mono">Preset</span>
+            </button>
+          )}
 
           <button
             onClick={() => {

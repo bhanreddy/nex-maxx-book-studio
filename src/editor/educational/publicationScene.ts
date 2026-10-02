@@ -4,6 +4,7 @@ import { COLLECTIONS, PUBLICATION_PALETTES, GRADE_SCALES } from "../../domain/ed
 import { EDUCATIONAL_BLOCK_REGISTRY } from "./blockRegistry";
 import { toGrayHex } from "../design/contrast";
 import { renderAtelier } from "./atelier/render";
+import { renderReferenceElement } from "../curriculum/renderReferenceElement";
 import { renderCurriculum } from "../curriculum/render";
 import { sliceScene } from "../curriculum/pagination";
 
@@ -13,7 +14,7 @@ export type SceneNode =
   | ({ kind: "ellipse"; x: number; y: number; rx: number; ry: number; fill: string; stroke?: string; strokeWidth?: number } & SceneMark)
   | ({ kind: "line"; x: number; y: number; x2: number; y2: number; stroke: string; strokeWidth?: number } & SceneMark)
   | ({ kind: "polygon"; points: number[][]; fill: string; stroke?: string; strokeWidth?: number } & SceneMark)
-  | ({ kind: "text"; x: number; y: number; text: string; size: number; fill: string; bold?: boolean; font?: "sans" | "serif"; fontFamily?: string; align?: "start" | "middle" | "end" } & SceneMark)
+  | ({ kind: "text"; x: number; y: number; text: string; size: number; fill: string; bold?: boolean; italic?: boolean; underline?: boolean; strike?: boolean; letterSpacing?: number; textLength?: number; font?: "sans" | "serif"; fontFamily?: string; align?: "start" | "middle" | "end" } & SceneMark)
   | ({ kind: "image"; x: number; y: number; w: number; h: number; src: string; alt: string; focalX: number; focalY: number; scale: number; sourceWidth?: number; sourceHeight?: number } & SceneMark & ImageTreatment)
   | ({ kind: "path"; d: string; fill: string; stroke?: string; strokeWidth?: number } & SceneMark)
   | { kind: "gradient"; id: string; x1: number; y1: number; x2: number; y2: number; from: string; to: string }
@@ -141,8 +142,13 @@ export function backgroundPatternNodes(pattern:string,w:number,h:number,p:Public
   return nodes;
 }
 export function buildPublicationScene(block: SmartBlockInstance, options: { teacher?: boolean } = {}): PublicationScene {
-  if (block.curriculum) {
-    const scene = renderCurriculum(block, { wrapText, textWidth, artworkNodes, resolvePublicationPalette }, options);
+  const scene = buildScene(block, options);
+  const family = block.styleOverrides.fontFamily;
+  return family ? { ...scene, nodes: scene.nodes.map(node => node.kind === 'text' ? { ...node, fontFamily: family } : node) } : scene;
+}
+function buildScene(block: SmartBlockInstance, options: { teacher?: boolean } = {}): PublicationScene {
+  if (block.curriculum || block.styleOverrides.referenceElement) {
+    const scene = block.curriculum ? renderCurriculum(block, { wrapText, textWidth, artworkNodes, resolvePublicationPalette }, options) : renderReferenceElement(block, { wrapText, textWidth, artworkNodes, resolvePublicationPalette }, options);
     if (block.styleOverrides.printMode === "grayscale") scene.nodes = scene.nodes.map(node => {
       const n = { ...node };
       if ("fill" in n) n.fill = toGrayHex(n.fill);
@@ -161,12 +167,12 @@ export function buildPublicationScene(block: SmartBlockInstance, options: { teac
   const raw = block.styleOverrides.layoutVariant || def?.reflowRules.layoutVariant || "checklist";
   const variant = aliases[raw] || raw;
   const p = resolvePublicationPalette(block), c = block.semanticContent, o = block.styleOverrides;
-  const w = Math.max(180, block.transform.width), pad = 18, gap = 12, inner = w-pad*2;
+  const w = Math.max(180, block.transform.width), pad = Math.max(4, Math.min(w / 4, o.paddingPt ?? 18)), gap = Math.max(0, o.spacingPt ?? 12), inner = w-pad*2;
   const size = Math.max(10.5, GRADE_SCALES[block.gradeBand]?.bodyPt || 12) * Math.max(1, o.fontSizeScale || 1);
   const serif = block.family === "nex-editorial";
   const radius = o.cornerRadiusPt ?? (block.family === "nex-play" ? 16 : serif ? 2 : 10);
   const nodes: SceneNode[] = [], warnings: string[] = [];
-  const rect=(x:number,y:number,rw:number,rh:number,fill:string,stroke?:string,r=radius)=>nodes.push({kind:"rect",x,y,w:rw,h:rh,fill,stroke,radius:r,strokeWidth:.65});
+  const rect=(x:number,y:number,rw:number,rh:number,fill:string,stroke?:string,r=radius)=>nodes.push({kind:"rect",x,y,w:rw,h:rh,fill,stroke,radius:r,strokeWidth:o.borderWidthPt ?? .65});
   const line=(x:number,y:number,x2:number,y2:number,stroke=p.border,strokeWidth=.7)=>nodes.push({kind:"line",x,y,x2,y2,stroke,strokeWidth});
   const text=(value:string|undefined,x:number,y:number,tw:number,fs=size,bold=false,fill=p.text,fontSerif=false):number=> {
     if(!value) return y;

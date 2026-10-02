@@ -1,17 +1,19 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useEditorStore } from "../../editor/stores/editorStore";
 import { useCloudChapterStore } from "../../editor/stores/cloudChapterStore";
 import { useUiStore, StudioType } from "../../editor/stores/uiStore";
 import { useHistoryStore } from "../../editor/stores/historyStore";
 import { useLayoutPartnerStore } from "../../editor/layoutPartner/layoutPartnerStore";
 import { useCurriculumUi } from "../../editor/curriculum/uiState";
+import { commitDocumentChange } from "../../editor/core/documentTransaction";
+import { repaginateFromPage } from "../../editor/core/paginationEngine";
+import { PublisherLogo } from '../ui/PublisherLogo';
 import {
   Undo2,
   Redo2,
   Box,
-  BookOpen,
   FileSpreadsheet,
   FileUp,
   Sparkles,
@@ -69,9 +71,24 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ onOpenDashboard }) => {
     toggleThemeMode,
     isFullscreen,
     toggleFullscreen,
+    setMasterPagesModalOpen,
+    setDesignTokensModalOpen,
+    setBookStructureModalOpen,
+    setPreflightModalOpen,
+    columnGrid,
+    setColumnGrid,
+    baselineGrid,
+    setBaselineGrid,
+    showToast,
   } = useUiStore();
 
   const [activeMenu, setActiveMenu] = useState<string | null>(null);
+  const [mounted, setMounted] = useState(false);
+  const [online, setOnline] = useState(true);
+  useEffect(() => { const update = () => setOnline(navigator.onLine); update(); window.addEventListener("online", update); window.addEventListener("offline", update); return () => { window.removeEventListener("online", update); window.removeEventListener("offline", update); }; }, []);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
   const partnerOpen = useLayoutPartnerStore((s) => s.partnerPanelOpen);
   const setPartnerOpen = useLayoutPartnerStore((s) => s.setPartnerPanelOpen);
 
@@ -81,6 +98,19 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ onOpenDashboard }) => {
 
   const closeMenu = () => setActiveMenu(null);
 
+  const handleAutoPaginate = () => {
+    const editor = useEditorStore.getState();
+    const activeBook = editor.getActiveBook();
+    if (!activeBook) return;
+    const res = repaginateFromPage(activeBook, editor.elements, editor.activePageIndex);
+    if (res.affectedPageIds.length) commitDocumentChange('Auto paginate', { ...activeBook, pages: res.updatedPages }, res.updatedElements);
+    showToast({
+      type: res.overflowResolved ? 'success' : 'warning',
+      title: res.overflowResolved ? 'Pagination checked' : 'Layout needs attention',
+      message: res.overflowResolved ? `${res.pagesCreated} continuation pages; ${res.elementsMovedCount} elements moved. Manual artwork preserved.` : `${res.unresolvedElementIds.length} blocks cannot fit safely. Resize them or use their chapter flow controls.`,
+    });
+  };
+
   return (
     <header className="h-[52px] w-full bg-white/95 dark:bg-[#080b11]/92 supports-[backdrop-filter]:bg-white/80 dark:supports-[backdrop-filter]:bg-[#080b11]/80 supports-[backdrop-filter]:backdrop-blur-xl border-b border-slate-200/90 dark:border-white/[0.08] px-3 flex items-center justify-between text-slate-700 dark:text-slate-200 z-30 select-none font-sans text-[13px] transition-colors">
       <div className="flex items-center gap-2 min-w-0">
@@ -88,13 +118,9 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ onOpenDashboard }) => {
           onClick={onOpenDashboard}
           className="flex items-center gap-2 min-h-9 pr-1 rounded-lg active:scale-[0.97] transition-transform"
           title="Back to Book Dashboard"
+          aria-label="NEX MAXX — Back to Book Dashboard"
         >
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-indigo-600 to-violet-500 flex items-center justify-center shadow-[inset_0_1px_0_rgba(255,255,255,0.28),0_4px_12px_rgba(79,70,229,0.22)]">
-            <BookOpen className="w-4 h-4 text-white" />
-          </div>
-          <span className="font-semibold tracking-wide text-slate-900 dark:text-slate-100 hidden sm:inline">
-            NEX<span className="text-indigo-600 dark:text-indigo-300">MAXX</span>
-          </span>
+          <PublisherLogo className="h-11 w-auto" />
         </button>
 
         <div className="hidden lg:flex items-center gap-0.5 text-slate-500 dark:text-slate-400 relative">
@@ -276,6 +302,93 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ onOpenDashboard }) => {
                 >
                   Toggle Snapping
                 </button>
+                <div className="h-px bg-slate-200 dark:bg-white/10 my-1" />
+                <button
+                  onClick={() => {
+                    setColumnGrid({ enabled: !columnGrid.enabled });
+                    closeMenu();
+                  }}
+                  className={menuItemClass}
+                >
+                  {columnGrid.enabled ? "Hide Column Grid" : "Show Column Grid (Guides)"}
+                </button>
+                <button
+                  onClick={() => {
+                    setBaselineGrid({ enabled: !baselineGrid.enabled });
+                    closeMenu();
+                  }}
+                  className={menuItemClass}
+                >
+                  {baselineGrid.enabled ? "Hide Baseline Grid" : "Show Baseline Grid (12pt)"}
+                </button>
+              </div>
+            )}
+          </div>
+
+          <div className="relative">
+            <button
+              onClick={() => setActiveMenu(activeMenu === "layout" ? null : "layout")}
+              className={`min-h-9 px-2.5 rounded-lg hover:bg-slate-100 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-slate-100 transition-colors ${
+                activeMenu === "layout" ? "bg-slate-100 dark:bg-white/10 text-slate-900 dark:text-white" : ""
+              }`}
+            >
+              Layout
+            </button>
+            {activeMenu === "layout" && (
+              <div
+                className="absolute left-0 top-11 w-64 bg-white dark:bg-[#0f1422] border border-slate-200 dark:border-white/10 rounded-xl shadow-xl dark:shadow-2xl p-1.5 z-50 flex flex-col"
+                onMouseLeave={closeMenu}
+              >
+                <button onClick={() => { useUiStore.getState().setPageBorderModalOpen(true); closeMenu(); }} className={menuItemClass}>Page borders...</button>
+                <button
+                  onClick={() => {
+                    setMasterPagesModalOpen(true);
+                    closeMenu();
+                  }}
+                  className={menuItemClass}
+                >
+                  Master Pages & Presets...
+                </button>
+                <button
+                  onClick={() => {
+                    setDesignTokensModalOpen(true);
+                    closeMenu();
+                  }}
+                  className={menuItemClass}
+                >
+                  Global Styles & Design Tokens...
+                </button>
+                <button
+                  onClick={() => {
+                    setBookStructureModalOpen(true);
+                    closeMenu();
+                  }}
+                  className={menuItemClass}
+                >
+                  Book Structure & TOC...
+                </button>
+                <div className="h-px bg-slate-200 dark:bg-white/10 my-1" />
+                <button
+                  onClick={() => {
+                    handleAutoPaginate();
+                    closeMenu();
+                  }}
+                  className={`${menuItemClass} text-indigo-600 dark:text-indigo-400 font-medium`}
+                >
+                  Run Smart Auto-Pagination
+                </button>
+                <button role="menuitemcheckbox" aria-checked={!!book.autoPagination} title="Flow growing reading text automatically. Artwork and semantic chapter layouts retain their own layout controls." onClick={() => { updateActiveBook({ autoPagination: !book.autoPagination }); closeMenu(); }} className={menuItemClass}>
+                  {book.autoPagination ? '✓ Auto-flow edited text' : 'Enable auto-flow edited text'}
+                </button>
+                <button
+                  onClick={() => {
+                    setPreflightModalOpen(true);
+                    closeMenu();
+                  }}
+                  className={`${menuItemClass} text-amber-600 dark:text-amber-400 font-medium`}
+                >
+                  Preflight Print Scan...
+                </button>
               </div>
             )}
           </div>
@@ -293,7 +406,7 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ onOpenDashboard }) => {
           />
           <div className="hidden sm:flex items-center gap-1.5 px-2 min-h-7 rounded-full bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 text-xs text-emerald-700 dark:text-emerald-300">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-            <span>{centralStatus ? `Content: ${centralStatus}` : saveStatus || "Local backup only"}</span>
+            <span title="Books save on this device. Linked cloud changes retry when connectivity returns.">{!online ? `Offline · ${saveStatus}` : centralStatus ? `Local: ${saveStatus} · Sync: ${centralStatus}` : saveStatus || "Local backup only"}</span>
           </div>
         </div>
       </div>
@@ -430,10 +543,13 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ onOpenDashboard }) => {
         <button
           onClick={toggleThemeMode}
           className="w-8 h-8 rounded-lg inline-flex items-center justify-center transition-all active:scale-[0.97] bg-slate-100 dark:bg-[#10151f] border border-slate-200/90 dark:border-white/[0.08] hover:bg-white dark:hover:bg-white/10 text-slate-700 dark:text-amber-300 shadow-xs"
-          title={themeMode === "light" ? "Switch to Dark Mode" : "Switch to Light Mode"}
+          title={!mounted ? "Toggle theme mode" : themeMode === "light" ? "Switch to Dark Mode" : "Switch to Light Mode"}
           aria-label="Toggle theme mode"
+          suppressHydrationWarning
         >
-          {themeMode === "light" ? (
+          {!mounted ? (
+            <span className="w-4 h-4 inline-block" />
+          ) : themeMode === "light" ? (
             <Moon className="w-4 h-4 text-slate-600" />
           ) : (
             <Sun className="w-4 h-4 text-amber-300" />

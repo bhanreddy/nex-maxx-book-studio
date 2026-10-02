@@ -21,6 +21,7 @@ import { useLayoutPartnerStore, LayoutPartnerTab } from "../../editor/layoutPart
 import { useEditorStore } from "../../editor/stores/editorStore";
 import { useHistoryStore } from "../../editor/stores/historyStore";
 import { TextWrapMode } from "../../domain/creative/types";
+import { effectiveTextWrap } from "../../editor/layoutPartner/textWrapLayout";
 import { ElementPositionMode } from "../../domain/element/types";
 import {
   generateLayoutVariations,
@@ -456,7 +457,7 @@ export const LayoutPartnerPanel: React.FC = () => {
                       { mode: "through", label: "Through" },
                     ].map(({ mode, label }) => {
                       const currentMode =
-                        singleElement.textWrap?.mode || singleElement.style.textWrap?.mode || "none";
+                        effectiveTextWrap(singleElement)?.mode || "none";
                       const isActive = currentMode === mode;
                       return (
                         <button
@@ -482,11 +483,11 @@ export const LayoutPartnerPanel: React.FC = () => {
                         type="number"
                         min="0"
                         max="72"
-                        defaultValue={singleElement.textWrap?.wrapMarginPt || 12}
+                        value={effectiveTextWrap(singleElement)?.offsetPt ?? effectiveTextWrap(singleElement)?.wrapMarginPt ?? 12}
                         onChange={(e) => {
                           const val = parseFloat(e.target.value) || 0;
                           applyTextWrapToSelection(
-                            singleElement.textWrap?.mode || "square",
+                            effectiveTextWrap(singleElement)?.mode || "square",
                             val
                           );
                         }}

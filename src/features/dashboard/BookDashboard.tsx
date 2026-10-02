@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import { useEditorStore } from "../../editor/stores/editorStore";
 import { useUiStore } from "../../editor/stores/uiStore";
+import { PublisherLogo } from '../ui/PublisherLogo';
 import {
   BookOpen,
   Plus,
@@ -39,12 +40,9 @@ export const BookDashboard: React.FC<BookDashboardProps> = ({ onOpenBook }) => {
       {/* Dashboard Glass Header */}
       <header className="h-16 border-b border-slate-200 dark:border-white/10 bg-white/80 dark:bg-[#0f141f]/80 backdrop-blur-xl px-8 flex items-center justify-between sticky top-0 z-30">
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-indigo-600 via-indigo-500 to-emerald-400 flex items-center justify-center shadow-lg shadow-indigo-500/20">
-            <BookOpen className="w-5 h-5 text-white" />
-          </div>
+          <PublisherLogo className="h-12 w-auto" />
           <div>
             <div className="flex items-center gap-2">
-              <span className="font-extrabold text-sm tracking-wider text-slate-900 dark:text-white">NEX MAXX</span>
               <span className="text-[10px] px-2 py-0.5 rounded-full bg-indigo-500/10 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-300 font-mono font-semibold">
                 BOOK STUDIO
               </span>

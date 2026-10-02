@@ -4,7 +4,7 @@ export interface ArrangeBounds { x: number; y: number; width: number; height: nu
 
 /** Position only: preserve reading size and object dimensions. */
 export function arrangeElements(elements: PageElement[], bounds: ArrangeBounds, mode: ArrangeMode, gap = 18, columns = 2): Record<string, ElementTransform> {
-  const items = elements.filter(el => !el.locked && !el.hidden && !el.smartBlockData?.isLockedDesign);
+  const items = elements.filter(el => !el.locked && !el.hidden);
   if (!items.length) return {};
   const output = Object.fromEntries(items.map(el => [el.id, {...el.transform}]));
   const spacing = Math.max(0, Number.isFinite(gap) ? gap : 18);

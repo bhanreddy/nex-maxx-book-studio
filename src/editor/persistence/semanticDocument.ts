@@ -27,6 +27,48 @@ export interface SemanticDocument {
   blocks: Record<string, SemanticBlock>;
 }
 
+/** Store the extension in the existing metadata contract; old servers stay compatible. */
+function encodeSemanticContent(content: SmartBlockInstance["semanticContent"]): SmartBlockInstance["semanticContent"] {
+  const copy = structuredClone(content);
+  if (copy.lessonSchemaTopics !== undefined) {
+    copy.metadata = { ...copy.metadata, lessonSchema: { topics: copy.lessonSchemaTopics, hadMetadata: content.metadata !== undefined } };
+    delete copy.lessonSchemaTopics;
+  }
+  if (copy.studySkillTopics !== undefined || copy.badgeLabel !== undefined) {
+    copy.metadata = { ...copy.metadata, studySkills: { topics: copy.studySkillTopics, badgeLabel: copy.badgeLabel, hadMetadata: content.metadata !== undefined } };
+    delete copy.studySkillTopics;
+    delete copy.badgeLabel;
+  }
+  if (copy.learningOutcomeTopics !== undefined) {
+    copy.metadata = { ...copy.metadata, learningOutcomes: { topics: copy.learningOutcomeTopics, hadMetadata: content.metadata !== undefined } };
+    delete copy.learningOutcomeTopics;
+  }
+  return copy;
+}
+function decodeSemanticContent(content: SmartBlockInstance["semanticContent"]): SmartBlockInstance["semanticContent"] {
+  const copy = structuredClone(content);
+  const schema = copy.metadata?.lessonSchema as { topics?: unknown; hadMetadata?: boolean } | undefined;
+  if (schema && Array.isArray(schema.topics)) {
+    copy.lessonSchemaTopics = schema.topics as NonNullable<typeof copy.lessonSchemaTopics>;
+    delete copy.metadata!.lessonSchema;
+    if (!schema.hadMetadata && !Object.keys(copy.metadata!).length) delete copy.metadata;
+  }
+  const skills = copy.metadata?.studySkills as { topics?: unknown; badgeLabel?: string; hadMetadata?: boolean } | undefined;
+  if (skills) {
+    if (Array.isArray(skills.topics)) copy.studySkillTopics = skills.topics as NonNullable<typeof copy.studySkillTopics>;
+    if (skills.badgeLabel) copy.badgeLabel = skills.badgeLabel;
+    delete copy.metadata!.studySkills;
+    if (!skills.hadMetadata && !Object.keys(copy.metadata!).length) delete copy.metadata;
+  }
+  const outcomes = copy.metadata?.learningOutcomes as { topics?: unknown; hadMetadata?: boolean } | undefined;
+  if (outcomes && Array.isArray(outcomes.topics)) {
+    copy.learningOutcomeTopics = outcomes.topics as NonNullable<typeof copy.learningOutcomeTopics>;
+    delete copy.metadata!.learningOutcomes;
+    if (!outcomes.hadMetadata && !Object.keys(copy.metadata!).length) delete copy.metadata;
+  }
+  return copy;
+}
+
 export function upgradeSemanticDocument(document: SemanticDocument): SemanticDocument {
   const version = document.schemaVersion ?? document.version;
   if (version !== 1 && version !== 2) throw new Error(`Unsupported chapter schema version ${version}. Update Book Studio before opening it.`);
@@ -71,7 +113,7 @@ export function toSemanticDocument(framework: ChapterFramework, centralChapterId
               : undefined,
           }
         : undefined,
-      semanticContent: { ...block.semanticContent, items: block.semanticContent.items ? [...block.semanticContent.items] : undefined },
+      semanticContent: encodeSemanticContent({ ...block.semanticContent, items: block.semanticContent.items ? [...block.semanticContent.items] : undefined }),
     };
   }
   return {
@@ -111,7 +153,7 @@ export function applySemanticDocument(framework: ChapterFramework, document: Sem
       ...existing,
       id: semantic.id,
       archetypeId: semantic.archetypeId,
-      semanticContent: structuredClone(semantic.semanticContent),
+      semanticContent: decodeSemanticContent(semantic.semanticContent),
       curriculum: semantic.curriculum
         ? {
             ...(existing.curriculum as CurriculumMetadata),
@@ -152,7 +194,7 @@ export function restoreSemanticFramework(document: SemanticDocument, chapterId: 
     }
     blocks[id] = { ...block, id: semantic.id, archetypeId: semantic.archetypeId,
       subject: semantic.subject ?? block.subject, gradeBand: semantic.gradeBand ?? block.gradeBand,
-      semanticContent: structuredClone(semantic.semanticContent),
+      semanticContent: decodeSemanticContent(semantic.semanticContent),
       curriculum: semantic.curriculum ? { ...block.curriculum!, ...semantic.curriculum,
         assessmentMetadata: semantic.curriculum.assessmentMetadata, digitalExtension: semantic.curriculum.digitalExtension } : undefined };
   }

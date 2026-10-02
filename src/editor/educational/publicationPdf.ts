@@ -1,3 +1,4 @@
+import {smartQrScene} from "../media/smartQr";
 import { detachedSceneForElement } from "./detachScene";
 import { imageFilter, imageMaskPath } from "./imageTreatment";
 import { imagePlacement } from "./publicationScene";
@@ -7,8 +8,20 @@ import type { PublicationScene, SceneNode } from "./publicationScene";
 import { artworkNodes, buildPublicationScene, textWidth } from "./publicationScene";
 import { PUBLICATION_PALETTES } from "../../domain/educational/designTokens";
 import { toGrayHex } from "../design/contrast";
+import { textFlowScene } from "../layoutPartner/textWrapLayout";
 
-export function publicationSceneForElement(el:PageElement):PublicationScene|null {
+const sceneCache = new Map<PageElement, PublicationScene | null>();
+export function publicationSceneForElement(el:PageElement,pageElements?:PageElement[]):PublicationScene|null {
+  if (pageElements) return uncachedPublicationScene(el, pageElements); // Wrap depends on surrounding objects.
+  if (sceneCache.has(el)) { const scene = sceneCache.get(el)!; sceneCache.delete(el); sceneCache.set(el, scene); return scene; }
+  const scene = uncachedPublicationScene(el);
+  sceneCache.set(el, scene);
+  if (sceneCache.size > 96) sceneCache.delete(sceneCache.keys().next().value!);
+  return scene;
+}
+function uncachedPublicationScene(el:PageElement,pageElements?:PageElement[]):PublicationScene|null {
+  if(pageElements){const flow=textFlowScene(el,pageElements);if(flow)return flow;}
+  if(el.type==="smart-media-qr")return smartQrScene(el);
   const detached=detachedSceneForElement(el);if(detached)return detached;
   if(el.smartBlockData)return buildPublicationScene({...el.smartBlockData,transform:el.transform});
   if(el.content.artwork) {const p=PUBLICATION_PALETTES[el.content.artwork.paletteId as keyof typeof PUBLICATION_PALETTES]||PUBLICATION_PALETTES.indigo;return {width:el.transform.width,height:el.transform.height,nodes:artworkNodes(el.content.artwork.kind,0,0,el.transform.width,el.transform.height,p),variant:el.content.artwork.kind,warnings:[]};}
@@ -110,7 +123,7 @@ export async function renderPublicationPdf(doc:jsPDF,scene:PublicationScene,el:P
       const paintable=(value?:string)=>!!value&&value!=="none"&&value.startsWith("#");
       if("fill"in n&&paintable(n.fill))doc.setFillColor(...color(n.fill));
       if("stroke"in n&&n.stroke&&paintable(n.stroke))doc.setDrawColor(...color(n.stroke));
-      if("strokeWidth"in n)doc.setLineWidth(n.strokeWidth||.65);
+      if("strokeWidth"in n)doc.setLineWidth(n.strokeWidth??.65);
       if(n.kind==="rect"&&n.gradientId){
         const g=scene.nodes.find(node=>node.kind==="gradient"&&node.id===n.gradientId);
         if(g&&g.kind==="gradient"){const bands=28,vertical=Math.abs(g.y2-g.y1)>Math.abs(g.x2-g.x1);for(let b=0;b<bands;b++){doc.setFillColor(...color(mixHex(g.from,g.to,b/Math.max(1,bands-1))));if(vertical)doc.rect(n.x,n.y+n.h*b/bands,n.w,n.h/bands+.2,"F");else doc.rect(n.x+n.w*b/bands,n.y,n.w/bands+.2,n.h,"F");}}
@@ -121,7 +134,13 @@ export async function renderPublicationPdf(doc:jsPDF,scene:PublicationScene,el:P
       else if(n.kind==="line")doc.line(n.x,n.y,n.x2,n.y2);
       else if(n.kind==="polygon") {doc.path(n.points.map((point,index)=>({op:index?"l":"m",c:point})).concat([{op:"h",c:[]}]));doc.fill();}
       else if(n.kind==="path"){const commands=svgPathToPdf(n.d);if(commands.length){doc.path(commands);const filled=paintable(n.fill),stroked=paintable(n.stroke);if(filled&&stroked)doc.fillStroke();else if(filled)doc.fill();else doc.stroke();}}
-      else if(n.kind==="text") {doc.setTextColor(...color(n.fill));doc.setFont(n.font==="serif"?"times":"helvetica",n.bold?"bold":"normal");doc.setFontSize(n.size);const shift=n.align==="middle"?textWidth(n.text,n.size,!!n.bold,n.font==="serif")/2:n.align==="end"?textWidth(n.text,n.size,!!n.bold,n.font==="serif"):0;doc.text(n.text.replaceAll("−","-"),n.x-shift,n.y);}
+      else if(n.kind==="text") {
+        doc.setTextColor(...color(n.fill));doc.setFont(n.font==="serif"?"times":"helvetica",n.bold?(n.italic?"bolditalic":"bold"):(n.italic?"italic":"normal"));doc.setFontSize(n.size);
+        const width=n.textLength??textWidth(n.text,n.size,!!n.bold,n.font==="serif"),shift=n.align==="middle"?width/2:n.align==="end"?width:0;
+        const text=n.text.replaceAll("−","-"),charSpace=n.textLength!==undefined&&text.length>1?(n.textLength-doc.getTextWidth(text))/(text.length-1):(n.letterSpacing||0);
+        doc.text(text,n.x-shift,n.y,{charSpace});
+        if(n.underline||n.strike){doc.setDrawColor(...color(n.fill));doc.setLineWidth(n.size*.045);if(n.underline)doc.line(n.x-shift,n.y+n.size*.12,n.x-shift+width,n.y+n.size*.12);if(n.strike)doc.line(n.x-shift,n.y-n.size*.3,n.x-shift+width,n.y-n.size*.3);}
+      }
       else if(n.kind==="image")doc.addImage(images.get(i)!,"PNG",n.x,n.y,n.w,n.h);
       doc.restoreGraphicsState();
     });

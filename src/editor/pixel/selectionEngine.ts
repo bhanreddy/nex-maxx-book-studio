@@ -2,6 +2,8 @@
  * Pixel Selection and Automated Foreground/Background Segmentation Engine
  */
 
+import { removeBackgroundRgba } from "./backgroundRemoval";
+
 export interface SelectionRegion {
   type: "marquee" | "ellipse" | "lasso" | "wand";
   bounds: { x: number; y: number; width: number; height: number };
@@ -40,107 +42,63 @@ export function getSelectionAntsPath(selection: SelectionRegion): string {
 }
 
 /**
- * Automated Non-destructive Background Removal.
- * Identifies background pixels (sampling corner pixels and luminance contrast)
- * and generates a high-contrast alpha mask data URL without deleting source pixels.
+ * Removes the backdrop from an uploaded photo or a preset picture.
+ * The original pixels stay available to the caller; this returns a transparent
+ * cutout and a matching foreground mask.
  */
 export async function generateBackgroundRemovalMask(
   imageSrc: string,
   tolerance: number = 28
-): Promise<{ maskDataUrl: string; maskedPreviewUrl: string }> {
-  return new Promise((resolve, reject) => {
-    if (typeof window === "undefined") {
-      resolve({ maskDataUrl: "", maskedPreviewUrl: imageSrc });
-      return;
-    }
+): Promise<{ maskDataUrl: string; maskedPreviewUrl: string; changed: boolean }> {
+  if (typeof window === "undefined") {
+    return { maskDataUrl: "", maskedPreviewUrl: imageSrc, changed: false };
+  }
 
+  const img = await loadImage(imageSrc);
+  await new Promise(resolve => setTimeout(resolve, 0));
+  const w = img.width;
+  const h = img.height;
+  const canvas = document.createElement("canvas");
+  canvas.width = w;
+  canvas.height = h;
+  const ctx = canvas.getContext("2d", { willReadFrequently: true });
+  if (!ctx) throw new Error("Failed to create canvas context for background removal");
+
+  ctx.drawImage(img, 0, 0);
+  const image = ctx.getImageData(0, 0, w, h);
+  const cut = removeBackgroundRgba(image.data, w, h, { tolerance });
+  image.data.set(cut.rgba);
+  ctx.putImageData(image, 0, 0);
+
+  const maskCanvas = document.createElement("canvas");
+  maskCanvas.width = w;
+  maskCanvas.height = h;
+  const maskContext = maskCanvas.getContext("2d");
+  if (!maskContext) throw new Error("Failed to create canvas context for background removal");
+  const maskImage = maskContext.createImageData(w, h);
+  for (let i = 0; i < cut.mask.length; i++) {
+    const alpha = cut.mask[i];
+    const offset = i * 4;
+    maskImage.data[offset] = alpha;
+    maskImage.data[offset + 1] = alpha;
+    maskImage.data[offset + 2] = alpha;
+    maskImage.data[offset + 3] = 255;
+  }
+  maskContext.putImageData(maskImage, 0, 0);
+
+  return {
+    maskDataUrl: maskCanvas.toDataURL("image/png"),
+    maskedPreviewUrl: canvas.toDataURL("image/png"),
+    changed: cut.changed,
+  };
+}
+
+function loadImage(src: string) {
+  return new Promise<HTMLImageElement>((resolve, reject) => {
     const img = new Image();
     img.crossOrigin = "anonymous";
-    img.onload = () => {
-      const w = img.width;
-      const h = img.height;
-
-      const canvas = document.createElement("canvas");
-      canvas.width = w;
-      canvas.height = h;
-      const ctx = canvas.getContext("2d");
-      if (!ctx) {
-        reject(new Error("Failed to create canvas context for background removal"));
-        return;
-      }
-
-      ctx.drawImage(img, 0, 0);
-      const imgData = ctx.getImageData(0, 0, w, h);
-      const data = imgData.data;
-
-      // Sample 4 corners to detect background color
-      const corners = [
-        0,                                   // Top-left
-        (w - 1) * 4,                         // Top-right
-        (h - 1) * w * 4,                     // Bottom-left
-        ((h - 1) * w + (w - 1)) * 4,         // Bottom-right
-      ];
-
-      let bgR = 0, bgG = 0, bgB = 0;
-      corners.forEach((idx) => {
-        bgR += data[idx];
-        bgG += data[idx + 1];
-        bgB += data[idx + 2];
-      });
-      bgR = Math.round(bgR / 4);
-      bgG = Math.round(bgG / 4);
-      bgB = Math.round(bgB / 4);
-
-      // Create mask canvas
-      const maskCanvas = document.createElement("canvas");
-      maskCanvas.width = w;
-      maskCanvas.height = h;
-      const mCtx = maskCanvas.getContext("2d");
-      if (!mCtx) return;
-
-      const maskImgData = mCtx.createImageData(w, h);
-      const mData = maskImgData.data;
-
-      for (let i = 0; i < data.length; i += 4) {
-        const r = data[i];
-        const g = data[i + 1];
-        const b = data[i + 2];
-        const a = data[i + 3];
-
-        const diff = Math.sqrt(
-          Math.pow(r - bgR, 2) + Math.pow(g - bgG, 2) + Math.pow(b - bgB, 2)
-        );
-
-        if (a < 20 || diff < tolerance) {
-          // Background -> black in mask (0 opacity)
-          mData[i] = 0;
-          mData[i + 1] = 0;
-          mData[i + 2] = 0;
-          mData[i + 3] = 255;
-          // In original preview, make transparent
-          data[i + 3] = 0;
-        } else {
-          // Foreground -> white in mask (255 opacity)
-          mData[i] = 255;
-          mData[i + 1] = 255;
-          mData[i + 2] = 255;
-          mData[i + 3] = 255;
-        }
-      }
-
-      mCtx.putImageData(maskImgData, 0, 0);
-      ctx.putImageData(imgData, 0, 0);
-
-      resolve({
-        maskDataUrl: maskCanvas.toDataURL("image/png"),
-        maskedPreviewUrl: canvas.toDataURL("image/png"),
-      });
-    };
-
-    img.onerror = () => {
-      reject(new Error("Failed to load image for background removal"));
-    };
-
-    img.src = imageSrc;
+    img.onload = () => resolve(img);
+    img.onerror = () => reject(new Error("Failed to load image for background removal"));
+    img.src = src;
   });
 }
