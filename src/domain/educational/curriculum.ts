@@ -43,7 +43,8 @@ export type UniversalBlockArchetype =
   | "teacher-note"
   | "assessment-cards"
   | "infographic-stats";
-export type CurriculumLayout = TeachingLayout | "lesson-schema" | "lesson-schema-stacked" | "study-skills" | "learning-outcomes" | "fact-zone" | "topic-banner" | "life-connect" | "panorama" | "asymmetric" | "editorial" | "visual-first" | "split" | "journey" | "constellation" | "steps" | "notebook" | "workmat" | "conversation" | "question" | "progression" | "snapshot" | "confidence" | "digital" | "comparison-table" | "timeline" | "writing-sheet" | "reading-page" | "experiment-sheet" | "sorting-board" | "universal-cover" | "universal-concept" | "universal-practice" | "universal-explore" | "universal-assessment";
+export type PremiumBlockLayout = "premium-editorial" | "premium-clay" | "premium-studio";
+export type CurriculumLayout = TeachingLayout | PremiumBlockLayout | "lesson-schema" | "lesson-schema-stacked" | "study-skills" | "learning-outcomes" | "fact-zone" | "topic-banner" | "life-connect" | "panorama" | "asymmetric" | "editorial" | "visual-first" | "split" | "journey" | "constellation" | "steps" | "notebook" | "workmat" | "conversation" | "question" | "progression" | "snapshot" | "confidence" | "digital" | "comparison-table" | "timeline" | "writing-sheet" | "reading-page" | "experiment-sheet" | "sorting-board" | "universal-cover" | "universal-concept" | "universal-practice" | "universal-explore" | "universal-assessment";
 
 export interface ChapterBuilderConfig {
   grade: CurriculumGrade;

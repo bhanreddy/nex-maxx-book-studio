@@ -25,7 +25,6 @@ export function BlockContentEditor({ element, selected = false, zoom = 1 }: { el
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
-  const rootRef = useRef<HTMLDivElement>(null);
   const drag = useRef<{
     id: string; pointerId: number; group: SVGGElement; inverse: DOMMatrix;
     start: DOMPoint; dx: number; dy: number; frame: number; moved: boolean;
@@ -117,15 +116,15 @@ export function BlockContentEditor({ element, selected = false, zoom = 1 }: { el
     if (active?.kind === "text" && draft !== active.text) save(activeId, { text: draft });
   }
 
-  const artboard = rootRef.current?.closest('[id^="page-artboard"]');
-  const tools = canMove && active && <div className="block-content-tools" style={{ left: artboard ? `${element.transform.x + element.transform.width / 2}pt` : "50%", top: artboard ? `${element.transform.y + element.transform.height}pt` : undefined, bottom: artboard ? "auto" : 12 / zoom, transform: `${artboard ? "translate(-50%, -100%)" : "translateX(-50%)"} scale(${1 / zoom})`, transformOrigin: "bottom center", zIndex: 60 }} onClick={event => event.stopPropagation()} onMouseDown={event => event.stopPropagation()} onPointerDown={event => event.stopPropagation()} onKeyDown={event => event.stopPropagation()}>
+  const artboard = typeof document !== "undefined" ? document.getElementById(`page-controls-${element.pageId}`) : null;
+  const tools = canMove && active && <div data-canvas-controls className="block-content-tools pointer-events-auto" style={{ left: artboard ? `${element.transform.x + element.transform.width / 2}pt` : "50%", top: artboard ? `${element.transform.y + element.transform.height}pt` : undefined, bottom: artboard ? "auto" : 12 / zoom, transform: `${artboard ? "translate(-50%, -100%)" : "translateX(-50%)"} scale(${1 / zoom})`, transformOrigin: "bottom center", zIndex: 60 }} onClick={event => event.stopPropagation()} onMouseDown={event => event.stopPropagation()} onPointerDown={event => event.stopPropagation()} onKeyDown={event => event.stopPropagation()}>
     <span><Move size={14}/>{active.kind === "text" ? "Text" : "Image"}</span>
     {canEdit && (active.kind === "text" ? <button type="button" onClick={() => editText(active)} title="Edit selected text"><Pencil size={14}/>Edit text</button> : <button type="button" onClick={() => fileRef.current?.click()} title="Replace selected image"><ImagePlus size={14}/>Replace image</button>)}
     <button type="button" onClick={() => save(activeId!, { dx: 0, dy: 0 })} title="Restore this item's original position"><RotateCcw size={14}/>Reset position</button>
     {zoom >= 0.65 && <small>↑↓←→ nudge · Shift ×10</small>}
   </div>;
 
-  return <div ref={rootRef} className="block-content-editor" data-block-content-editor>
+  return <div className="block-content-editor" data-block-content-editor>
     <PublicationSceneView scene={scene} label={`${block.semanticContent.title} — editable contents`} viewBox={block.styleOverrides.resizeFrame ? `0 0 ${block.styleOverrides.resizeFrame.width} ${block.styleOverrides.resizeFrame.height}` : undefined} preserveAspectRatio={block.styleOverrides.resizeFrame ? "none" : "xMidYMid meet"} overflow="visible" wrapNode={canMove ? (painted, node) => {
       if (node.kind !== "text" && node.kind !== "image") return painted;
       const id = node.contentId!;

@@ -196,3 +196,22 @@ export function calculateResize(
 
   return { x, y, width, height };
 }
+
+/** Resize in the element's local axes, keeping the opposite handle fixed on the page. */
+export function calculateRotatedResize(
+  initial: Rect, rotation: number, handle: HandleType, dx: number, dy: number,
+  lockAspect = false, minWidth = 20, minHeight = 20,
+): Rect {
+  const local = rotatePoint(dx, dy, 0, 0, -rotation);
+  const next = calculateResize(initial, handle, local.x, local.y, lockAspect, minWidth, minHeight);
+  const cx = initial.x + initial.width / 2, cy = initial.y + initial.height / 2;
+  const center = rotatePoint(next.x + next.width / 2, next.y + next.height / 2, cx, cy, rotation);
+  return { ...next, x: center.x - next.width / 2, y: center.y - next.height / 2 };
+}
+
+/** Map each member from the original selection bounds, never from the previous frame. */
+export function resizeSelectionMember(rect: Rect, initial: Rect, next: Rect): Rect {
+  const sx = next.width / initial.width, sy = next.height / initial.height;
+  return { x: next.x + (rect.x - initial.x) * sx, y: next.y + (rect.y - initial.y) * sy,
+    width: rect.width * sx, height: rect.height * sy };
+}

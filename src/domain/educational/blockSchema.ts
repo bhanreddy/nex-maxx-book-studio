@@ -276,6 +276,9 @@ export interface SmartBlockInstance {
       items: Record<string, { base: string; dx: number; dy: number; text?: string; src?: string }>;
     };
     layoutVariant?: string;
+    /** Premium treatments preserve the authored layout beneath them. */
+    premiumBaseLayout?: string;
+    premiumBaseContentLayout?: boolean;
     /** Independent presentation treatment. Missing values preserve older books. */
     blockStyle?: import("./curriculum").BlockVisualStyle;
     customPalette?: {

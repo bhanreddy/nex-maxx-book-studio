@@ -1,6 +1,13 @@
 import { SubjectDomain, GradeBand, DesignFamily } from "./blockSchema";
 import type { ChapterPersonality, CurriculumGrade, FrameworkStage } from "./curriculum";
 
+/** Print-safe premium treatments share the existing publication token system. */
+export const PREMIUM_BLOCK_TOKENS = {
+  "premium-editorial": { paper: "#FFFCF5", card: "#F4EFE4", ink: "#242B34", muted: "#59616A", edge: "#D7CDB9", accent: "#946B2D", radius: 3, stroke: .7, shadow: "#E4DDD0" },
+  "premium-clay": { paper: "#FAF8FF", card: "#EEE8FA", ink: "#282944", muted: "#596078", edge: "#D4CCE7", accent: "#655096", radius: 20, stroke: .8, shadow: "#DDD5EB" },
+  "premium-studio": { paper: "#F7FAFC", card: "#EAF3F4", ink: "#172D39", muted: "#52636D", edge: "#CFDFE4", accent: "#116B70", radius: 8, stroke: .8, shadow: "#DFE9EE" },
+} as const;
+
 /** Lesson schema clay palette: dark ink, pastel capsules, and print-safe accents. */
 export const LESSON_SCHEMA_TOKENS = {
   ink: "#13254F", paper: "#FAF8FC", white: "#FFFFFF", shadow: "#DAD4E3", muted: "#64748B",

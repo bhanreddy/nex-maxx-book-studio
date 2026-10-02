@@ -7,7 +7,11 @@ export const IMAGE_TYPES = new Set(["image", "picture-frame", "pictureFrame", "a
 export const FLOW_FONT_FAMILY = 'Inter, -apple-system, system-ui, "Segoe UI", Roboto, sans-serif';
 export function effectiveTextWrap(element: PageElement): TextWrapConfig | undefined {
   return element.textWrap ?? element.style.textWrap ??
-    { mode: isFlowText(element) || ["borderFrame", "adjustment-layer", "live-filter"].includes(element.type) ? "none" : "square", offsetPt: 8 };
+    { mode: isFlowText(element) ||
+            element.content?.publicationPrimitive ||
+            element.category === "decorative" ||
+            ["body", "body-text", "quote", "sidebar", "callout", "borderFrame", "adjustment-layer", "live-filter"].includes(element.type)
+            ? "none" : "square", offsetPt: 8 };
 }
 export function wrapsText(element: PageElement): boolean {
   const wrap = effectiveTextWrap(element);
@@ -137,14 +141,22 @@ export function textWrapObstacles(frame: PageElement, elements: PageElement[]): 
     if (element.id === frame.id || element.pageId !== frame.pageId || element.hidden ||
       frameParents.has(element.id) || !wrap || !wrapsText(element)) return [];
     // A text box placed above artwork must remain readable on that artwork.
-    // Only an explicitly chosen wrap can exclude text from a lower layer.
-    if (!element.textWrap && !element.style.textWrap && element.transform.zIndex < f.zIndex) return [];
+    // Only an explicitly chosen wrap can exclude text from a lower or equal layer,
+    // and unconfigured decorative or primitive elements never exclude text frames.
+    if (!element.textWrap && !element.style.textWrap) {
+      if (element.transform.zIndex <= f.zIndex ||
+          element.category === "decorative" ||
+          element.content?.publicationPrimitive ||
+          ["body", "body-text", "quote", "sidebar", "callout"].includes(element.type)) {
+        return [];
+      }
+    }
     // A group is one obstacle for outside text. Inside it, siblings remain independent.
     // Hidden groups and explicit No wrap apply to their children as well.
     if (parents(element).some(parent => parent.hidden || (!frameParents.has(parent.id) &&
       (wrapsText(parent) || parent.textWrap || parent.style.textWrap)))) return [];
     // Explicitly wrapping text frames use stacking order, avoiding mutual text exclusions.
-    if (isFlowText(element) && (element.transform.zIndex < f.zIndex ||
+    if (["body", "body-text", "quote", "sidebar", "callout"].includes(element.type) && (element.transform.zIndex < f.zIndex ||
       (element.transform.zIndex === f.zIndex && element.id.localeCompare(frame.id) <= 0))) return [];
     const t = element.transform, a = (t.rotation || 0) * Math.PI / 180;
     const margin = Math.max(0, wrap.offsetPt ?? wrap.wrapMarginPt ?? 8);

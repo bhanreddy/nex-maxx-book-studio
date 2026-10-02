@@ -16,8 +16,20 @@ export function withBlockTransform(element: PageElement, transform: ElementTrans
     const contentBottom = natural.nodes.reduce((bottom, node) => node.kind === "image" ? Math.max(bottom, node.y + node.h + 12) : node.kind === "text" ? Math.max(bottom, node.y + node.size * .35 + 12) : bottom, 0);
     const sourceHeight = Math.max(natural.height, contentBottom, transform.height / scaleY);
     const height = sourceHeight * scaleY;
-    // A top-edge resize keeps the bottom anchored even when it reaches the content limit.
-    transform = { ...transform, height, y: transform.y === element.transform.y ? transform.y : transform.y + transform.height - height };
+    // Keep the opposite edge anchored in the block's rotated coordinate system
+    // when the content limit prevents the requested height.
+    const old = element.transform;
+    const angle = old.rotation * Math.PI / 180;
+    const centerDx = transform.x + transform.width / 2 - old.x - old.width / 2;
+    const centerDy = transform.y + transform.height / 2 - old.y - old.height / 2;
+    const localCenterY = -Math.sin(angle) * centerDx + Math.cos(angle) * centerDy;
+    const fromTop = localCenterY * (transform.height - old.height) < 0;
+    const extra = height - transform.height;
+    const centerShift = (fromTop ? -1 : 1) * extra / 2;
+    const fixedOrigin = transform.x === old.x && transform.y === old.y;
+    transform = { ...transform, height,
+      x: fixedOrigin ? transform.x : transform.x - Math.sin(angle) * centerShift,
+      y: fixedOrigin ? transform.y : transform.y + Math.cos(angle) * centerShift - extra / 2 };
     resizeFrame = { ...resizeFrame, height: sourceHeight };
   }
   return { ...element, transform, smartBlockData: { ...block, transform, styleOverrides: { ...block.styleOverrides, ...(resizeFrame ? { resizeFrame } : {}) } } };

@@ -8,6 +8,7 @@ import type { BlockVisualStyle, CurriculumLayout } from "../../domain/educationa
 import { CURRICULUM_BLOCK_MAP, LAYOUT_NAMES } from "../../editor/curriculum/catalog";
 import { BLOCK_STYLES, TEACHING_LAYOUTS, isTeachingLayout, layoutNote } from "../../editor/curriculum/layoutSystem";
 import { PUBLICATION_PALETTES } from "../../domain/educational/designTokens";
+import { premiumLayoutOverrides, premiumShuffleOrder } from "../../editor/curriculum/premiumLayouts";
 import { CurriculumPreview } from "./CurriculumPreview";
 
 export function BlockLayoutDialog({ block, initialLayout, actionLabel = "Apply layout", onApply, onClose }: {
@@ -21,8 +22,8 @@ export function BlockLayoutDialog({ block, initialLayout, actionLabel = "Apply l
   const [palette, setPalette] = useState(block.styleOverrides.paletteId || "classroom");
   const [more, setMore] = useState(false);
   const titleId = useId(), dialogRef = useRef<HTMLDivElement>(null);
-  const preview = useMemo(() => ({ ...block, styleOverrides: { ...block.styleOverrides, sceneSlice: undefined, layoutVariant: layout, blockStyle: style, printMode: print, paletteId: palette, customPalette: palette === block.styleOverrides.paletteId ? block.styleOverrides.customPalette : undefined } }), [block, layout, style, print, palette]);
-  const layouts = more ? def.layouts : [...new Set([...def.layouts.slice(0, 5), layout])];
+  const preview = useMemo(() => ({ ...block, styleOverrides: { ...block.styleOverrides, sceneSlice: undefined, layoutVariant: layout, ...premiumLayoutOverrides(block.styleOverrides, layout), blockStyle: style, printMode: print, paletteId: palette, customPalette: palette === block.styleOverrides.paletteId ? block.styleOverrides.customPalette : undefined } }), [block, layout, style, print, palette]);
+  const layouts = more ? def.layouts : [...new Set([...premiumShuffleOrder(def.layouts).slice(0, 5), layout])];
   const closeRef = useRef(onClose);
   closeRef.current = onClose;
   useEffect(() => {

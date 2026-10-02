@@ -6,6 +6,7 @@ import type { CurriculumLayout, CurriculumGrade } from "../../domain/educational
 import { PublicationSceneView } from "../../editor/renderer/PublicationSceneView";
 import { buildPublicationScene, type PublicationScene } from "../../editor/educational/publicationScene";
 import { useCurriculumUi } from "../../editor/curriculum/uiState";
+import { premiumLayoutOverrides } from "../../editor/curriculum/premiumLayouts";
 import { makeLibraryBlock } from "../../editor/curriculum/libraryExamples";
 import type { SmartBlockInstance } from "../../domain/educational/blockSchema";
 
@@ -38,7 +39,7 @@ export const CurriculumPreview = memo(function CurriculumPreview({ type, layout,
   const scene = useMemo(() => {
     if (!mounted) return null;
     const source = block || makeLibraryBlock(type, grade, subject);
-    return buildPublicationScene({ ...source, transform: { ...source.transform, width: block ? block.transform.width : 517, height: 0 }, styleOverrides: { ...source.styleOverrides, ...(!block ? preference : {}), sceneSlice: undefined, ...(layout ? { layoutVariant: layout } : {}) } });
+    return buildPublicationScene({ ...source, transform: { ...source.transform, width: block ? block.transform.width : 517, height: 0 }, styleOverrides: { ...source.styleOverrides, ...(!block ? preference : {}), sceneSlice: undefined, ...(layout ? { layoutVariant: layout, ...premiumLayoutOverrides(source.styleOverrides, layout) } : {}) } });
   }, [type, layout, grade, subject, block, mounted, preference]);
   if (!scene) return <div className="curriculum-block-preview skeleton-preview" aria-hidden="true"/>;
   const name = block?.semanticContent.title || type;

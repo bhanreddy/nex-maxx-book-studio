@@ -16,8 +16,19 @@ import { renderLearningOutcomes } from "./renderLearningOutcomes";
 import { renderReferenceElement } from "./renderReferenceElement";
 import { renderUniversalBlockScene } from "./renderUniversalScene";
 
+import { isPremiumBlockLayout, renderPremiumTreatment } from "./premiumLayouts";
+
 /** One scene pipeline serves canvas, thumbnails, independent layers and print export. */
 export function renderCurriculum(block: SmartBlockInstance, h: AtelierHelpers, options: { teacher?: boolean } = {}): PublicationScene {
+  if (isPremiumBlockLayout(block.styleOverrides.layoutVariant)) {
+    const variant = block.styleOverrides.layoutVariant;
+    const base = block.styleOverrides.premiumBaseLayout;
+    const layout = base && !isPremiumBlockLayout(base) && CURRICULUM_BLOCK_MAP[block.curriculum!.type]?.layouts.includes(base as CurriculumLayout)
+      ? base : CURRICULUM_BLOCK_MAP[block.curriculum!.type]?.layouts[0];
+    const scene = renderCurriculum({ ...block, styleOverrides: { ...block.styleOverrides, layoutVariant: layout,
+      contentLayout: block.styleOverrides.premiumBaseContentLayout ? block.styleOverrides.contentLayout : undefined } }, h, options);
+    return renderPremiumTreatment(scene, variant, block.styleOverrides.printMode === "reduced-ink", block.styleOverrides.customPalette, h.resolvePublicationPalette(block).primary);
+  }
   if (block.styleOverrides.referenceElement) return renderReferenceElement(block, h, options);
   if (block.curriculum?.type === "lesson-schema") return renderLessonSchema(block, h);
   if (block.curriculum?.type === "study-skills") return renderStudySkills(block, h);

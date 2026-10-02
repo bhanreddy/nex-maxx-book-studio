@@ -193,3 +193,23 @@ test('changing unscaled semantic content measures naturally, while editing a res
   store.getState().updateSmartBlockStyle(el.id, { paletteId: 'ocean' });
   assert.deepEqual(store.getState().elements[el.id].transform, frame);
 });
+
+test('rotated top and bottom trims retain the opposite edge when content imposes a minimum height', () => {
+  const { calculateRotatedResize, rotatePoint, getTransformHandles } = require('../src/editor/core/geometry.ts');
+  for (const rotation of [0, 30, 90, 225]) for (const handle of ['n', 's']) {
+    const { element } = fixture();
+    element.transform = { ...element.transform, rotation, height: element.transform.height + 200 };
+    element.smartBlockData.transform = element.transform;
+    const numeric = withBlockTransform(element, { ...element.transform, height: 10 }, "trim-height");
+    assert.equal(numeric.transform.x, element.transform.x);
+    assert.equal(numeric.transform.y, element.transform.y);
+    const localDelta = handle === 'n' ? element.transform.height - 10 : 10 - element.transform.height;
+    const delta = rotatePoint(0, localDelta, 0, 0, rotation);
+    const requested = calculateRotatedResize(element.transform, rotation, handle, delta.x, delta.y, false, 60, 10);
+    const trimmed = withBlockTransform(element, { ...element.transform, ...requested }, 'trim-height');
+    assert.ok(trimmed.transform.height > requested.height);
+    const anchor = rect => getTransformHandles(rect, rotation).find(h => h.type === (handle === 'n' ? 's' : 'n'));
+    assert.ok(Math.abs(anchor(trimmed.transform).x - anchor(element.transform).x) < 1e-7);
+    assert.ok(Math.abs(anchor(trimmed.transform).y - anchor(element.transform).y) < 1e-7);
+  }
+});

@@ -176,6 +176,7 @@ export const PageCanvas: React.FC<PageCanvasProps> = ({ book, activePage }) => {
 
   // Canvas Mouse Down Handlers
   const handleMouseDown = (e: React.MouseEvent) => {
+    if ((e.target as Element).closest?.("[data-canvas-controls]")) return;
     // 1. Pan mode (Spacebar, Middle mouse, or Hand tool)
     if (isSpacePanning || e.button === 1 || activeTool === "hand") {
       e.preventDefault();
@@ -473,8 +474,8 @@ export const PageCanvas: React.FC<PageCanvasProps> = ({ book, activePage }) => {
 
           {/* Left Page (or Single Page) */}
           <div
-            id="page-artboard"
-            className="relative bg-white page-paper-shadow rounded-[2px] transition-shadow overflow-hidden ring-1 ring-black/5"
+            id={activePage.id === leftPage.id ? "page-artboard" : "page-artboard-left"}
+            className="relative isolate z-0 bg-white page-paper-shadow rounded-[2px] transition-shadow overflow-hidden ring-1 ring-black/5"
             style={{
               width: `${dimensions.widthPt}pt`,
               height: `${dimensions.heightPt}pt`,
@@ -744,6 +745,7 @@ export const PageCanvas: React.FC<PageCanvasProps> = ({ book, activePage }) => {
                   onClick={(e) => {
                     if (activeTool === "move" || !["hand", "zoom", "measure", "pen", "pencil", "shape", "table", "brush", "eraser"].includes(activeTool)) {
                       e.stopPropagation();
+                      if (activePage.id !== el.pageId) useEditorStore.getState().setActivePageIndex(book.pages.findIndex(page => page.id === el.pageId));
                       selectElement(el.id, e.shiftKey || e.metaKey);
                     }
                   }}
@@ -839,7 +841,8 @@ export const PageCanvas: React.FC<PageCanvasProps> = ({ book, activePage }) => {
           {/* Right Page (In Spread Mode) */}
           {isSpread && rightPage && (
             <div
-              className="relative bg-white shadow-[0_24px_70px_rgba(0,0,0,0.6),0_2px_8px_rgba(0,0,0,0.4)] rounded-[2px] transition-shadow overflow-hidden ring-1 ring-black/5"
+              id={activePage.id === rightPage.id ? "page-artboard" : "page-artboard-right"}
+              className="relative isolate z-0 bg-white shadow-[0_24px_70px_rgba(0,0,0,0.6),0_2px_8px_rgba(0,0,0,0.4)] rounded-[2px] transition-shadow overflow-hidden ring-1 ring-black/5"
               style={{
                 width: `${dimensions.widthPt}pt`,
                 height: `${dimensions.heightPt}pt`,
@@ -904,6 +907,7 @@ export const PageCanvas: React.FC<PageCanvasProps> = ({ book, activePage }) => {
                     onClick={(e) => {
                       if (activeTool === "move" || !["hand", "zoom", "measure", "pen", "pencil", "shape", "table", "brush", "eraser"].includes(activeTool)) {
                         e.stopPropagation();
+                        if (activePage.id !== el.pageId) useEditorStore.getState().setActivePageIndex(book.pages.findIndex(page => page.id === el.pageId));
                         selectElement(el.id, e.shiftKey || e.metaKey);
                       }
                     }}
@@ -917,23 +921,21 @@ export const PageCanvas: React.FC<PageCanvasProps> = ({ book, activePage }) => {
             </div>
           )}
 
-          {/* Interactive Transform Overlay for Selected Elements */}
-          {activeTool === "move" && (
-            <>
-              <TransformOverlay
-                selectedElements={selectedElements}
-                allPageElements={activeElements}
-                pageDimensions={dimensions}
-                margins={margins}
-                bleed={bleed}
-                zoom={zoom}
-              />
-              <SmartQuickActionBar
-                selectedElements={selectedElements}
-                zoom={zoom}
-              />
-            </>
-          )}
+          {/* Page artwork is isolated below this shared interaction layer. */}
+          {[leftPage, ...(rightPage ? [rightPage] : [])].map((page, index) => (
+            <div key={page.id} id={`page-controls-${page.id}`} data-canvas-controls
+              className="absolute top-0 z-10 pointer-events-none"
+              style={{ left: index ? `calc(${dimensions.widthPt}pt + 1rem)` : 0, width: `${dimensions.widthPt}pt`, height: `${dimensions.heightPt}pt` }}>
+              {activeTool === "move" && !isSpacePanning && <>
+                <TransformOverlay
+                  selectedElements={selectedElements.filter(el => el.pageId === page.id)}
+                  allPageElements={page.elementIds.map(id => elements[id]).filter(Boolean)}
+                  pageDimensions={dimensions} margins={pageMarginsFor(book, page)} bleed={bleed} zoom={zoom}
+                />
+                <SmartQuickActionBar selectedElements={selectedElements.filter(el => el.pageId === page.id)} zoom={zoom}/>
+              </>}
+            </div>
+          ))}
         </div>
       </div>
 

@@ -1,32 +1,17 @@
 import type { PageElement } from "../../domain/element/types";
 import type { SmartBlockInstance } from "../../domain/educational/blockSchema";
 import { buildPublicationScene, textWidth, wrapText, type SceneNode, type PublicationScene } from "./publicationScene";
+import { transformSceneNode } from "./sceneGeometry";
 
 function shiftNode(node: SceneNode, x: number, y: number): SceneNode {
-  const n = { ...node };
-  if ("x" in n) n.x -= x;
-  if ("y" in n) n.y -= y;
-  if (n.kind === "line") {
-    n.x2 -= x;
-    n.y2 -= y;
-  }
-  if (n.kind === "gradient") {
-    n.x1 -= x;
-    n.y1 -= y;
-    n.x2 -= x;
-    n.y2 -= y;
-  }
-  if (n.kind === "polygon") n.points = n.points.map(([a, b]) => [a - x, b - y]);
-  if (n.kind === "path") {
-    let coordinate = 0;
-    n.d = n.d.replace(/-?\d*\.?\d+(?:e[-+]?\d+)?/gi, (value) => String(Number(value) - (coordinate++ % 2 ? y : x)));
-  }
-  return n;
+  return transformSceneNode(node, 1, 1, -x, -y);
 }
 
 /** Decompose the actual scene, including images and decoration, rather than rebuilding a generic block. */
 export function detachPublicationScene(block: SmartBlockInstance, baseZIndex: number): PageElement[] {
-  const scene = buildPublicationScene(block);
+  const sourceScene = buildPublicationScene(block), frame = block.styleOverrides.resizeFrame;
+  const scene = frame ? { ...sourceScene, width: block.transform.width, height: block.transform.height,
+    nodes: sourceScene.nodes.map(node => transformSceneNode(node, block.transform.width / frame.width, block.transform.height / frame.height)) } : sourceScene;
   const angle = (block.transform.rotation * Math.PI) / 180;
 
   return scene.nodes.flatMap((node, index): PageElement[] => {
@@ -44,7 +29,7 @@ export function detachPublicationScene(block: SmartBlockInstance, baseZIndex: nu
       w = node.rx * 2;
       h = node.ry * 2;
     } else if (node.kind === "text") {
-      w = Math.max(6, textWidth(node.text, node.size, !!node.bold, node.font === "serif") + 4);
+      w = Math.max(6, (node.textLength ?? textWidth(node.text, node.size, !!node.bold, node.font === "serif")) + 4);
       h = node.size * 1.55;
       x = node.x - (node.align === "middle" ? w / 2 : node.align === "end" ? w : 0);
       y = node.y - node.size * 1.15;
@@ -86,6 +71,7 @@ export function detachPublicationScene(block: SmartBlockInstance, baseZIndex: nu
       displayName: node.kind === "text" ? node.text : node.kind === "image" ? node.alt : `${block.semanticContent.title} · ${node.kind}`,
       locked: false,
       hidden: false,
+      textWrap: { mode: "none", offsetPt: 0 },
       transform: {
         x: block.transform.x + scene.width / 2 + cx * Math.cos(angle) - cy * Math.sin(angle) - w / 2,
         y: block.transform.y + scene.height / 2 + cx * Math.sin(angle) + cy * Math.cos(angle) - h / 2,
@@ -161,7 +147,7 @@ export function detachedSceneForElement(el: PageElement): PublicationScene | nul
     const lineHeight = size * (el.style.lineHeight || 1.42);
     const align = el.style.textAlign === "center" ? "middle" : el.style.textAlign === "right" ? "end" : text.align || "start";
     return { width, height: Math.max(el.transform.height, size * 1.55 + (lines.length - 1) * lineHeight), variant: "editable-text", warnings: [],
-      nodes: lines.map((line, i) => ({ ...text, text: line, x: align === "middle" ? width / 2 : align === "end" ? width : text.x, y: size * 1.15 + i * lineHeight, size, align, fill: el.style.color || text.fill, bold: (el.style.fontWeight || 400) >= 600, fontFamily: el.style.fontFamily || text.fontFamily, font: el.style.fontFamily?.includes("Times") ? "serif" : "sans" })) };
+      nodes: lines.map((line, i) => ({ ...text, text: line, textLength: undefined, x: align === "middle" ? width / 2 : align === "end" ? width : text.x, y: size * 1.15 + i * lineHeight, size, align, fill: el.style.color || text.fill, bold: (el.style.fontWeight || 400) >= 600, fontFamily: el.style.fontFamily || text.fontFamily, font: el.style.fontFamily?.includes("Times") ? "serif" : "sans" })) };
   }
 
   const nodes = source.nodes.map((n): SceneNode => {

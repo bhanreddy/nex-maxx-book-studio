@@ -26,6 +26,7 @@ import { buildPublicationScene } from "../educational/publicationScene";
 import { detachedSceneForElement } from "../educational/detachScene";
 import { PublicationImage } from "./PublicationImage";
 import { PublicationSceneView } from "./PublicationSceneView";
+import { isPremiumBlockLayout } from "../curriculum/premiumLayouts";
 import { BlockContentEditor } from "./BlockContentEditor";
 import { artworkNodes, ArtworkKind } from "../educational/publicationScene";
 import { PUBLICATION_PALETTES } from "../../domain/educational/designTokens";
@@ -1319,7 +1320,7 @@ export const ElementRenderer: React.FC<ElementRendererProps> = memo(function Ele
 
       case "smart-block":
         if (element.smartBlockData) {
-          if (element.smartBlockData.styleOverrides.contentLayout?.enabled) return <BlockContentEditor element={element} selected={isSelected && !locked && !grouped} zoom={zoom}/>;
+          if (element.smartBlockData.styleOverrides.contentLayout?.enabled || isPremiumBlockLayout(element.smartBlockData.styleOverrides.layoutVariant)) return <BlockContentEditor element={element} selected={isSelected && !locked && !grouped} zoom={zoom}/>;
           if (element.smartBlockData.styleOverrides.referenceElement) return <PublicationSceneView scene={buildPublicationScene({ ...element.smartBlockData, transform: blockTransform })} viewBox={`0 0 ${blockTransform.width} ${blockTransform.height}`} preserveAspectRatio="none" overflow="visible" label={element.smartBlockData.semanticContent.title}/>;
           if (element.smartBlockData.curriculum?.type === "lesson-schema") {
             return <LessonSchemaRenderer block={{ ...element.smartBlockData, transform: blockTransform }} elementId={element.id} selected={isSelected} locked={element.locked}/>;

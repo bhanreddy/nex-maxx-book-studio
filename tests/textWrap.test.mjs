@@ -235,3 +235,55 @@ test('a drag stays one undo entry and undo/redo restore wrap geometry', () => {
   assert.deepEqual(flow(text, [useEditorStore.getState().elements[image.id]]), newLayout);
   assert.equal(useEditorStore.getState().elements[text.id].content.text, text.content.text);
 });
+
+test('text frame on page with detached decorative/primitive elements flows across full width without narrow column squeezing', () => {
+  const textFrame = frame({
+    id: 'user-text-frame',
+    transform: { x: 50, y: 40, width: 189, height: 61, rotation: 0, zIndex: 4 },
+    style: { fontSize: 10.5, lineHeight: 1.5, padding: { top: 4, right: 4, bottom: 4, left: 4 } },
+    content: {
+      text: 'Double-click to type formatted academic curriculum content. Text flows naturally within the bounding frame with full typographical kerning and leading controls.',
+    },
+  });
+
+  // Simulated detached elements from Learning Goals / decomposed smart block
+  const detachedRect = picture({
+    id: 'detached-rect',
+    type: 'shape',
+    category: 'decorative',
+    transform: { x: 61, y: 58, width: 230, height: 34, rotation: 0, zIndex: 3 },
+    content: { publicationPrimitive: { width: 230, height: 34, nodes: [] } },
+  });
+  const detachedEllipse = picture({
+    id: 'detached-ellipse',
+    type: 'shape',
+    category: 'decorative',
+    transform: { x: 66, y: 63, width: 24, height: 24, rotation: 0, zIndex: 4 },
+    content: { publicationPrimitive: { width: 24, height: 24, nodes: [] } },
+  });
+  const detachedLabel = {
+    ...frame({
+      id: 'detached-text-1',
+      transform: { x: 97, y: 67, width: 50, height: 17, rotation: 0, zIndex: 8 },
+      content: { text: 'Learning', publicationPrimitive: { width: 50, height: 17, nodes: [] } },
+    }),
+  };
+  const detachedHigherPath = picture({
+    id: 'detached-path',
+    type: 'shape',
+    category: 'decorative',
+    transform: { x: 67, y: 64, width: 18, height: 18, rotation: 0, zIndex: 17 },
+    content: { publicationPrimitive: { width: 18, height: 18, nodes: [] } },
+  });
+
+  const obstacles = textWrapObstacles(textFrame, [detachedRect, detachedEllipse, detachedLabel, detachedHigherPath]);
+  assert.equal(obstacles.length, 0, 'Detached primitive/decorative elements should not be obstacles');
+
+  const layout = layoutTextFlow(textFrame, obstacles);
+  // Full width line should be ~181pt (189 - 4 - 4), not squeezed into a ~35pt sliver
+  assert.ok(layout.fragments.length >= 3, 'Should have multiple lines of text');
+  assert.equal(layout.fragments[0].x, 4, 'Line 1 starts at left padding');
+  assert.ok(layout.fragments[0].width >= 180, 'Line 1 spans full width');
+  assert.ok(layout.fragments[0].runs.map(r => r.text).join('').startsWith('Double-click'), 'Double-click is not broken into narrow slivers');
+});
+

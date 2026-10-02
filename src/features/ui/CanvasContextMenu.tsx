@@ -107,6 +107,9 @@ export const CanvasContextMenu: React.FC<CanvasContextMenuProps> = ({
   return (
     <div
       ref={menuRef}
+      data-canvas-controls
+      onPointerDown={e => e.stopPropagation()}
+      onMouseDown={e => e.stopPropagation()}
       style={{ left: `${posX}px`, top: `${posY}px` }}
       className="fixed z-50 w-52 bg-[#0e1320]/95 backdrop-blur-2xl border border-white/12 rounded-xl shadow-2xl p-1.5 text-xs text-slate-200 select-none animate-in fade-in zoom-in-95 duration-100 font-sans"
       onClick={(e) => e.stopPropagation()}

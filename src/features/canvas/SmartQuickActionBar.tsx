@@ -104,8 +104,8 @@ export const SmartQuickActionBar: React.FC<SmartQuickActionBarProps> = ({
   if (single?.smartBlockData?.styleOverrides.contentLayout?.enabled) return null;
 
   // Flip position if near top of page (< 55pt) to avoid viewport clipping
-  const isFlippedBelow = minY < 55;
-  const barTopPt = isFlippedBelow ? maxY + 12 : minY - 44;
+  const isFlippedBelow = minY < 55 / zoom || Boolean(single?.smartBlockData);
+  const barTopPt = isFlippedBelow ? maxY + 30 / zoom : minY - 44 / zoom;
   const barLeftPt = Math.max(20, minX + width / 2);
 
   const isTextElement = (el: PageElement | null): boolean => {
@@ -165,12 +165,17 @@ export const SmartQuickActionBar: React.FC<SmartQuickActionBarProps> = ({
   return (
     <div
       ref={containerRef}
+      data-canvas-controls
       data-canvas-zoom={zoom}
       className="absolute z-50 pointer-events-auto transform -translate-x-1/2 flex items-center gap-1 px-2 py-1.5 bg-[#10141D]/95 backdrop-blur-xl text-white rounded-2xl shadow-2xl border border-white/10 text-[8.5pt] animate-float-in select-none"
       style={{
+        transform: `translateX(-50%) scale(${1 / zoom})`,
+        transformOrigin: "top center",
         top: `${barTopPt}pt`,
         left: `${barLeftPt}pt`,
       }}
+      onPointerDown={e => e.stopPropagation()}
+      onMouseDown={e => e.stopPropagation()}
       onClick={(e) => e.stopPropagation()}
     >
       {/* 1. ALIGN DROPDOWN */}

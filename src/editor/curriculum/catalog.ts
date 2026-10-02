@@ -6,6 +6,8 @@ import { ADDITIONAL_ELEMENTS } from "./additionalElements";
 
 import { teachingLayouts, TEACHING_LAYOUTS } from "./layoutSystem";
 
+import { PREMIUM_BLOCK_LAYOUTS } from "./premiumLayouts";
+
 export const FRAMEWORK_STAGES = SIMPLE_CHAPTER_STAGES;
 export const CURRICULUM_CATEGORIES: { id: CurriculumCategory | "new"; name: string }[] = [
   { id: "new", name: "New elements" }, ...FRAMEWORK_STAGES.map(s => ({ id: s.id, name: s.name })),
@@ -14,6 +16,7 @@ export const CURRICULUM_CATEGORIES: { id: CurriculumCategory | "new"; name: stri
   { id: "digital", name: "Online Resources" }, { id: "chapter-sets", name: "Chapter Templates" },
 ];
 export const LAYOUT_NAMES: Record<CurriculumLayout, string> = {
+  "premium-editorial": "Premium · Editorial", "premium-clay": "Premium · Clay", "premium-studio": "Premium · Studio",
   "topic-banner": "Topic Banner", "fact-zone": "Fact Zone", "life-connect": "Life Connect",
   ...Object.fromEntries(Object.entries(TEACHING_LAYOUTS).map(([id, layout]) => [id, layout.name])) as Record<import("../../domain/educational/curriculum").TeachingLayout, string>,
   "lesson-schema": "Connected Topic Map", "lesson-schema-stacked": "Topic Cards",
@@ -158,7 +161,7 @@ export const CURRICULUM_BLOCKS: CurriculumBlockDefinition[] = [
   LIFE_CONNECT,
   ...LEGACY_ELEMENTS.slice(1).filter(b => b.id !== "learning-outcomes" && b.id !== "study-skills" && b.id !== "topic-banner" && b.id !== "fact-zone" && b.id !== "life-connect"),
   ...ADDITIONAL_ELEMENTS
-].map(def => ({ ...def, layouts: teachingLayouts(def) }));
+].map(def => ({ ...def, layouts: [...teachingLayouts(def), ...PREMIUM_BLOCK_LAYOUTS] }));
 export const CURRICULUM_BLOCK_MAP = Object.fromEntries(CURRICULUM_BLOCKS.map(b => [b.id, b]));
 export const CHAPTER_PRESETS: { id: ChapterPreset; name: string; description: string; blocks: string[] }[] = [
   { id: "balanced", name: "Everyday chapter", description: "Clear explanations, practice, an activity, review and a test.", blocks: ["chapter-hero", "lesson-schema", "study-skills", "learning-outcomes", "recall-radar", "learning-mission", "concept-explorer", "quick-check", "concept-explorer", "guided-practice", "concept-explorer", "hands-on", "practice-path", "chapter-snapshot", "mastery-check", "my-learning"] },

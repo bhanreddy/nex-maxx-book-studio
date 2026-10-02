@@ -1,3 +1,4 @@
+import { premiumShuffleOrder, premiumLayoutOverrides } from "./premiumLayouts";
 import { withReferenceElements } from "./referenceElements";
 import { renumberBookPages, renumberPages } from "../core/pageNumbering";
 import { pageFrameFor, frameMargins, pageMarginsFor } from "../pageFrame/pageFrame";
@@ -75,6 +76,9 @@ export function curriculumSource(element: PageElement): SmartBlockInstance | und
   const canonical = chapter?.framework?.blocks[meta.sourceBlockId || element.id];
   if (!canonical) return element.smartBlockData;
   return { ...canonical, isLockedDesign: element.smartBlockData!.isLockedDesign,
+    styleOverrides: { ...canonical.styleOverrides,
+      ...(element.smartBlockData!.styleOverrides.resizeFrame ? { resizeFrame: element.smartBlockData!.styleOverrides.resizeFrame } : {}),
+      ...(element.smartBlockData!.styleOverrides.contentLayout ? { contentLayout: element.smartBlockData!.styleOverrides.contentLayout } : {}) },
     ...(!element.smartBlockData!.styleOverrides.sceneSlice ? { transform: element.transform } : {}) };
 }
 export function insertCurriculumBlock(type: string, layout?: CurriculumLayout, grade?: CurriculumGrade, subject?: string, template?: SmartBlockInstance): void {
@@ -144,8 +148,32 @@ export function editCurriculumBlock(element: PageElement, description: string, e
   const source = curriculumSource(element);
   if (!source || source.isDetached) return;
   const next = edit(structuredClone(source));
+  if (next.styleOverrides.layoutVariant !== source.styleOverrides.layoutVariant) {
+    Object.assign(next.styleOverrides, premiumLayoutOverrides(source.styleOverrides, next.styleOverrides.layoutVariant));
+  }
   if (next.curriculum) next.curriculum.frameworkStage = simpleStage(next.curriculum.frameworkStage, next.curriculum.type);
   const st = useEditorStore.getState(), book = st.getActiveBook(), chapter = book && source.curriculum?.chapterId ? book.chapters.find(c => c.id === source.curriculum!.chapterId) : undefined;
+  const resizeFrame = element.smartBlockData?.styleOverrides.resizeFrame;
+  if (resizeFrame && next.curriculum?.type === source.curriculum?.type &&
+      next.curriculum?.frameworkStage === source.curriculum?.frameworkStage &&
+      JSON.stringify(next.curriculum?.pageRules) === JSON.stringify(source.curriculum?.pageRules)) {
+    next.transform = { ...element.transform };
+    next.styleOverrides.resizeFrame = { ...resizeFrame };
+    if (book && chapter?.framework) {
+      const framework = { ...chapter.framework, compositionRevision: chapter.framework.compositionRevision + 1,
+        blocks: { ...chapter.framework.blocks, [source.id]: next } };
+      const elements = { ...st.elements };
+      for (const projection of Object.values(elements).filter(item => item.id === source.id ||
+        (item.smartBlockData?.curriculum?.chapterId === chapter.id && item.smartBlockData.curriculum.sourceBlockId === source.id))) {
+        elements[projection.id] = { ...projection, smartBlockData: { ...next, pageId: projection.pageId, transform: projection.transform,
+          curriculum: { ...next.curriculum!, sourceBlockId: source.id },
+          styleOverrides: { ...next.styleOverrides, resizeFrame: projection.smartBlockData!.styleOverrides.resizeFrame,
+            sceneSlice: projection.smartBlockData!.styleOverrides.sceneSlice } } };
+      }
+      commit({ ...book, chapters: book.chapters.map(item => item.id === chapter.id ? { ...chapter, framework } : item) }, elements, description, element.id);
+    } else st.updateElement(element.id, { smartBlockData: next, transform: next.transform, presetId: next.presetId });
+    return;
+  }
   if (book && source.curriculum?.chapterId && chapter?.framework) {
     // Free-design edits keep the author's pose. Structural edits and continuations still recompose.
     const sameStage = next.curriculum!.frameworkStage === source.curriculum.frameworkStage;
@@ -226,7 +254,7 @@ function reflowStandaloneLessonSchema(book: Book, element: PageElement, next: Sm
 export const switchCurriculumLayout = (el: PageElement, layout: CurriculumLayout) => editCurriculumBlock(el, "Change curriculum layout", b => changeBlockLayout(b, layout));
 export function reshuffleCurriculumBlock(el: PageElement) {
   const block = curriculumSource(el); if (!block) return;
-  const variants = CURRICULUM_BLOCK_MAP[block.curriculum!.type].layouts;
+  const variants = premiumShuffleOrder(CURRICULUM_BLOCK_MAP[block.curriculum!.type].layouts);
   const current = variants.indexOf(block.styleOverrides.layoutVariant as CurriculumLayout);
   switchCurriculumLayout(el, variants[(current + 1) % variants.length]);
 }

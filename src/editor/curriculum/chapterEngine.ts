@@ -15,6 +15,7 @@ import { createSchemaTopic } from "./lessonSchema";
 import { createStudySkillTopic, getSubjectStudySkillDefault } from "./studySkills";
 import { createLearningOutcomeTopic, parseLearningOutcomeText, getSubjectOutcomeDefault } from "./learningOutcomes";
 import { getSignaturePreset } from "./signatureElements";
+import { premiumLayoutOverrides } from "./premiumLayouts";
 import { sceneWindows } from "./pagination";
 
 export const DEFAULT_CHAPTER_CONFIG: ChapterBuilderConfig = {
@@ -187,7 +188,8 @@ export function orderedBlocks(framework: ChapterFramework): SmartBlockInstance[]
 export function changeBlockLayout(block: SmartBlockInstance, layout: CurriculumLayout): SmartBlockInstance {
   const def = CURRICULUM_BLOCK_MAP[block.curriculum!.type];
   if (!def.layouts.includes(layout)) throw new Error("This layout is not compatible with the selected block.");
-  return { ...block, styleOverrides: { ...block.styleOverrides, sceneSlice: undefined, layoutVariant: layout }, transform: { ...block.transform, height: 0 } };
+  return { ...block, styleOverrides: { ...block.styleOverrides, sceneSlice: undefined, layoutVariant: layout,
+    ...premiumLayoutOverrides(block.styleOverrides, layout) }, transform: { ...block.transform, height: 0 } };
 }
 export function convertCurriculumBlock(block: SmartBlockInstance, type: string): SmartBlockInstance {
   const def = CURRICULUM_BLOCK_MAP[type];
