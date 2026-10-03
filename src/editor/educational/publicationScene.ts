@@ -1,4 +1,5 @@
 import { renderEducationalLibrary } from './library/render';
+import { renderReferenceBanner } from './referenceBanners';
 import type { ImageTreatment } from "./imageTreatment";
 import type { SmartBlockInstance } from "../../domain/educational/blockSchema";
 import { COLLECTIONS, PUBLICATION_PALETTES, GRADE_SCALES, SUBJECT_PALETTES } from "../../domain/educational/designTokens";
@@ -10,13 +11,13 @@ import { renderCurriculum } from "../curriculum/render";
 import { sliceScene } from "../curriculum/pagination";
 import { transformSceneNode } from "./sceneGeometry";
 
-type SceneMark = { appearanceTarget?: "accent"; fieldPath?: string; imageSlot?: number; opacity?: number; motifId?: string; clipId?: string; contentId?: string };
+type SceneMark = { editBounds?: { x: number; y: number; w: number; h: number }; appearanceTarget?: "accent"; fieldPath?: string; imageSlot?: number; opacity?: number; motifId?: string; clipId?: string; contentId?: string };
 export type SceneNode =
   | ({ kind: "rect"; x: number; y: number; w: number; h: number; fill: string; stroke?: string; radius?: number; strokeWidth?: number; gradientId?: string } & SceneMark)
   | ({ kind: "ellipse"; x: number; y: number; rx: number; ry: number; fill: string; stroke?: string; strokeWidth?: number } & SceneMark)
   | ({ kind: "line"; x: number; y: number; x2: number; y2: number; stroke: string; strokeWidth?: number } & SceneMark)
   | ({ kind: "polygon"; points: number[][]; fill: string; stroke?: string; strokeWidth?: number } & SceneMark)
-  | ({ kind: "text"; x: number; y: number; text: string; size: number; fill: string; bold?: boolean; italic?: boolean; underline?: boolean; strike?: boolean; letterSpacing?: number; textLength?: number; font?: "sans" | "serif"; fontFamily?: string; align?: "start" | "middle" | "end"; wrapWidth?: number; lineHeight?: number; lines?: string[] } & SceneMark)
+  | ({ kind: "text"; x: number; y: number; text: string; size: number; fill: string; fontWeight?: number; gradientId?: string; stroke?: string; strokeWidth?: number; shadow?: { color: string; dx: number; dy: number; blur: number }; bold?: boolean; italic?: boolean; underline?: boolean; strike?: boolean; letterSpacing?: number; textLength?: number; font?: "sans" | "serif"; fontFamily?: string; align?: "start" | "middle" | "end"; wrapWidth?: number; lineHeight?: number; lines?: string[] } & SceneMark)
   | ({ kind: "image"; x: number; y: number; w: number; h: number; src: string; alt: string; focalX: number; focalY: number; scale: number; sourceWidth?: number; sourceHeight?: number } & SceneMark & ImageTreatment)
   | ({ kind: "path"; d: string; fill: string; stroke?: string; strokeWidth?: number } & SceneMark)
   | { kind: "gradient"; id: string; x1: number; y1: number; x2: number; y2: number; from: string; to: string }
@@ -203,6 +204,8 @@ export function buildPublicationScene(block: SmartBlockInstance, options: { teac
     ? sliceScene(result, block.styleOverrides.sceneSlice) : result;
 }
 function buildScene(block: SmartBlockInstance, options: { teacher?: boolean } = {}): PublicationScene {
+  const referenceBanner = renderReferenceBanner(block, { textWidth, wrapText });
+  if (referenceBanner) return referenceBanner;
   if (block.curriculum || block.styleOverrides.referenceElement) {
     const scene = block.curriculum ? renderCurriculum(block, { wrapText, textWidth, artworkNodes, resolvePublicationPalette }, options) : renderReferenceElement(block, { wrapText, textWidth, artworkNodes, resolvePublicationPalette }, options);
     if (block.styleOverrides.printMode === "grayscale") scene.nodes = scene.nodes.map(node => {

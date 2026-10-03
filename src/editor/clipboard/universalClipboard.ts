@@ -312,6 +312,13 @@ export async function handleFileDropOnCanvas(
 
 function readFileAsDataUrl(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
+    if (typeof FileReader === "undefined") {
+      file.arrayBuffer().then(buf => {
+        const base64 = Buffer.from(buf).toString("base64");
+        resolve(`data:${file.type || "image/png"};base64,${base64}`);
+      }).catch(reject);
+      return;
+    }
     const reader = new FileReader();
     reader.onload = () => resolve(reader.result as string);
     reader.onerror = reject;
@@ -336,3 +343,121 @@ function getImageDimensions(dataUrl: string): Promise<{ width: number; height: n
     img.src = dataUrl;
   });
 }
+
+/**
+ * Inserts a single Image File directly onto the active page.
+ */
+export async function insertImageFileOntoActivePage(
+  file: File,
+  options: UniversalPasteOptions = {}
+): Promise<boolean> {
+  const store = useEditorStore.getState();
+  const page = store.getActivePage();
+  const book = store.getActiveBook();
+  if (!page || !book) return false;
+
+  useUiStore.getState().showToast({
+    type: "info",
+    title: "Processing Image...",
+    message: "Creating instant local preview",
+  });
+
+  const dataUrl = await readFileAsDataUrl(file);
+  const dimensions = await getImageDimensions(dataUrl);
+
+  const maxWidth = Math.min(360, book.dimensions.widthPt - 80);
+  const maxHeight = Math.min(280, book.dimensions.heightPt - 120);
+
+  let finalW = dimensions.width;
+  let finalH = dimensions.height;
+  const aspect = dimensions.width / Math.max(1, dimensions.height);
+
+  if (finalW > maxWidth) {
+    finalW = maxWidth;
+    finalH = finalW / aspect;
+  }
+  if (finalH > maxHeight) {
+    finalH = maxHeight;
+    finalW = finalH * aspect;
+  }
+
+  const posX = options.pasteX ?? Math.round((book.dimensions.widthPt - finalW) / 2);
+  const posY = options.pasteY ?? Math.round((book.dimensions.heightPt - finalH) / 2);
+
+  const activeElements = store.getActivePageElements();
+  const highestZ = activeElements.reduce((max, el) => Math.max(max, el.transform.zIndex), 0);
+
+  const newElement: PageElement = {
+    id: `el-img-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+    pageId: page.id,
+    type: "image",
+    category: "media",
+    version: 1,
+    displayName: `Image ${file.name || "Upload"}`,
+    locked: false,
+    hidden: false,
+    transform: {
+      x: posX,
+      y: posY,
+      width: Math.round(finalW),
+      height: Math.round(finalH),
+      rotation: 0,
+      zIndex: highestZ + 1,
+    },
+    style: {
+      borderRadius: 8,
+      borderWidth: 0,
+      borderStyle: "none",
+      objectFit: "cover",
+    },
+    content: {
+      src: dataUrl,
+      url: dataUrl,
+      caption: file.name ? file.name.replace(/\.[^/.]+$/, "") : "Pasted Image",
+      aspectRatio: aspect,
+      rawWidthPx: dimensions.width,
+      rawHeightPx: dimensions.height,
+      mimeType: file.type,
+    },
+  };
+
+  store.insertPublicationElement(newElement);
+
+  useUiStore.getState().showToast({
+    type: "success",
+    title: "Image Inserted",
+    message: `${Math.round(finalW)} × ${Math.round(finalH)} pt image placed on worksheet`,
+  });
+
+  return true;
+}
+
+/**
+ * Direct Paste Image Option: Reads clipboard directly and pastes any found image.
+ * If clipboard doesn't contain an image or permissions deny, opens the Direct Paste modal.
+ */
+export async function directPasteImageFromClipboard(
+  options: UniversalPasteOptions = {}
+): Promise<boolean> {
+  if (typeof navigator !== "undefined" && navigator.clipboard && navigator.clipboard.read) {
+    try {
+      const items = await navigator.clipboard.read();
+      for (const item of items) {
+        for (const type of item.types) {
+          if (type.startsWith("image/")) {
+            const blob = await item.getType(type);
+            const file = new File([blob], "clipboard-image.png", { type: blob.type || "image/png" });
+            return await insertImageFileOntoActivePage(file, options);
+          }
+        }
+      }
+    } catch (err) {
+      console.warn("Clipboard read error or permission denied:", err);
+    }
+  }
+
+  // If no direct clipboard image found or permission denied, open the direct paste dialog
+  useUiStore.getState().setDirectPasteModalOpen(true);
+  return false;
+}
+

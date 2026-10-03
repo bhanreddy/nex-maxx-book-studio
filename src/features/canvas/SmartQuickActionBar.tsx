@@ -1,6 +1,8 @@
 "use client";
 
 import { EducationalBlockTools } from "../educational/EducationalBlockTools";
+import { referenceBannerFor } from '../../editor/educational/referenceBanners';
+import { ReferenceBannerQuickTools } from '../educational/ReferenceBannerControls';
 import { SIGNATURE_LAYOUTS } from "../../editor/educational/atelier/skins/signature";
 import { CURRICULUM_BLOCK_MAP, LAYOUT_NAMES } from "../../editor/curriculum/catalog";
 import { switchCurriculumLayout, reshuffleCurriculumBlock } from "../../editor/curriculum/actions";
@@ -163,6 +165,7 @@ export const SmartQuickActionBar: React.FC<SmartQuickActionBarProps> = ({
   };
 
   const allLocked = selectedElements.every((el) => el.locked);
+  if (single?.smartBlockData && referenceBannerFor(single.smartBlockData.presetId)) return <ReferenceBannerQuickTools element={single} zoom={zoom}/>;
   if (single?.smartBlockData?.presetId.startsWith("edu-")) return <EducationalBlockTools element={single} zoom={zoom}/>;
 
   return (

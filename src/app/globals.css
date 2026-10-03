@@ -934,6 +934,46 @@ fieldset { min-width: 0; }
 @media (prefers-reduced-motion:reduce) { .educational-publishing-panel .publication-library-card:hover { transform:none; } }
 
 /* Reference banner collection: editorial previews, shared studio tokens. */
+.reference-artwork-library { color:var(--foreground); min-width:0; }
+.reference-artwork-intro { padding:8px 0 12px; }
+.reference-artwork-intro h2 { margin:6px 0; font-size:20px; font-weight:700; line-height:1.2; letter-spacing:-.04em; }
+.reference-artwork-intro p,.reference-artwork-note,.reference-artwork-empty,.reference-artwork-inspector p { color:var(--text-muted); font-size:11px; line-height:1.6; }
+.reference-artwork-colours { padding:12px; border:1px solid var(--border-subtle); border-radius:var(--studio-radius,12px); background:var(--surface-bg); margin-bottom:16px; }
+.reference-artwork-colour-actions { display:flex; gap:8px; }
+.reference-artwork-colours button,.reference-artwork-button,.reference-artwork-quick-tools button { display:inline-flex; align-items:center; justify-content:center; gap:8px; min-height:44px; min-width:44px; padding:8px 12px; color:var(--foreground); background:var(--panel-bg); border:1px solid var(--border-subtle); border-radius:9px; font-size:11px; font-weight:600; cursor:pointer; transition:transform 100ms ease,opacity 100ms ease; }
+.reference-artwork-colour-actions .reference-artwork-shuffle { flex:1; border-color:var(--curriculum-accent); }
+.reference-artwork-swatches { display:flex; gap:2px; margin-top:8px; flex-wrap:wrap; }
+.reference-artwork-swatches button { padding:7px; background:transparent; border-color:transparent; }
+.reference-artwork-swatches button[aria-pressed="true"] { border-color:var(--curriculum-accent); background:var(--panel-bg); }
+.reference-artwork-swatches button span { width:24px; height:24px; border-radius:50%; border:1px solid var(--border-subtle); }
+.reference-artwork-colour-name { display:block; margin-top:4px; color:var(--text-muted); font-size:10px; }
+.reference-artwork-grid { display:grid; grid-template-columns:minmax(0,1fr); gap:12px; }
+.reference-artwork-card { overflow:hidden; border:1px solid var(--border-subtle); border-radius:var(--studio-radius,12px); background:var(--panel-bg); }
+.reference-artwork-preview { display:block; width:100%; padding:0; background:var(--studio-paper); border:0; cursor:pointer; }
+.reference-artwork-preview img { display:block; width:100%; height:auto; aspect-ratio:3/1; object-fit:contain; }
+.reference-artwork-caption { display:flex; gap:12px; align-items:center; padding:12px; }
+.reference-artwork-caption>div { flex:1; min-width:0; }
+.reference-artwork-caption strong { display:block; font-size:13px; font-weight:700; letter-spacing:-.02em; }
+.reference-artwork-caption small { display:block; margin-top:4px; color:var(--text-muted); font-size:10px; line-height:1.5; }
+.reference-artwork-caption button { display:flex; align-items:center; justify-content:center; flex-shrink:0; width:44px; height:44px; border:1px solid var(--border-subtle); border-radius:50%; color:var(--foreground); background:var(--surface-bg); cursor:pointer; transition:transform 100ms ease; }
+.reference-artwork-added { display:flex; gap:4px; align-items:center; padding:0 12px 10px; color:var(--text-muted); font-size:10px; }
+.reference-artwork-note { margin:12px 0 0; }
+.reference-artwork-shelf { padding:12px; border:1px solid var(--border-subtle); border-radius:var(--studio-radius,12px); background:var(--panel-bg); }
+.reference-artwork-shelf>summary { min-height:44px; cursor:pointer; font-size:12px; font-weight:700; color:var(--foreground); }
+.reference-artwork-shelf>summary span { display:block; padding:4px 0; color:var(--text-muted); font-size:10px; font-weight:400; }
+.reference-artwork-inspector { padding:16px; background:var(--panel-bg); border:1px solid var(--border-subtle); border-radius:var(--studio-radius,12px); color:var(--foreground); }
+.reference-artwork-inspector h3 { font-size:18px; font-weight:700; margin:8px 0; }
+.reference-artwork-inspector .reference-artwork-colours { margin:16px 0; }
+.reference-artwork-button { width:100%; }
+.reference-artwork-save { margin-top:12px; border-top:1px solid var(--border-subtle); padding-top:12px; font-size:11px; }
+.reference-artwork-save summary { cursor:pointer; min-height:44px; }
+.reference-artwork-save label { display:block; color:var(--text-muted); }
+.reference-artwork-save input { width:100%; margin:8px 0; padding:10px; min-height:44px; border:1px solid var(--border-subtle); border-radius:9px; background:var(--surface-bg); color:var(--foreground); }
+.reference-artwork-quick-tools { display:flex; gap:4px; padding:6px; border:1px solid var(--border-subtle); border-radius:var(--studio-radius,12px); background:var(--panel-bg); box-shadow:0 8px 24px rgb(15 23 42 / .12); z-index:100; pointer-events:auto; }
+.reference-artwork-colours button:disabled,.reference-artwork-quick-tools button:disabled { opacity:.4; cursor:default; }
+.reference-artwork-colours button:not(:disabled):active,.reference-artwork-caption button:active,.reference-artwork-quick-tools button:not(:disabled):active,.reference-artwork-button:active { transform:scale(.97); }
+.reference-artwork-library button:focus-visible,.reference-artwork-inspector button:focus-visible,.reference-artwork-quick-tools button:focus-visible,.reference-artwork-shelf>summary:focus-visible { outline:2px solid var(--curriculum-accent); outline-offset:2px; }
+@media (prefers-reduced-motion:reduce) { .reference-artwork-library button,.reference-artwork-inspector button,.reference-artwork-quick-tools button { transition:none; } }
 .reference-banner-library { min-width:0; }
 .reference-banner-intro { padding:12px 3px 16px; }
 .reference-banner-intro h2 { margin:7px 0 6px; color:var(--foreground); font-size:20px; font-weight:700; letter-spacing:-.04em; line-height:1.2; }
@@ -999,3 +1039,16 @@ fieldset { min-width: 0; }
 .math-library article { content-visibility: auto; contain-intrinsic-size: auto 170px; }
 
 .math-data-fields > label:not(.math-control) { min-height: 44px; }
+
+/* Reference versions share the existing studio tokens and 44px controls. */
+.reference-artwork-preview { aspect-ratio:3/1; }
+.reference-artwork-versions { display:flex; gap:4px; margin:12px 0; padding:4px; border:1px solid var(--border-subtle); border-radius:10px; background:var(--surface-bg); }
+.reference-artwork-versions button { flex:1; min-height:44px; padding:6px; border-radius:7px; color:var(--text-muted); font-size:10px; font-weight:600; }
+.reference-artwork-versions button[aria-pressed="true"] { background:var(--panel-bg); color:var(--foreground); outline:1px solid var(--border-subtle); }
+.reference-artwork-versions button:disabled { opacity:.45; }
+.reference-artwork-heading { display:block; font-size:12px; font-weight:600; margin:14px 0; }
+.reference-artwork-heading textarea { display:block; width:100%; min-height:82px; margin:8px 0; padding:10px; border:1px solid var(--border-subtle); border-radius:9px; background:var(--surface-bg); color:var(--foreground); font:400 14px/1.5 Nunito,sans-serif; resize:vertical; }
+.reference-artwork-heading small { display:block; color:var(--text-muted); font-size:10px; line-height:1.5; font-weight:400; }
+.reference-artwork-heading textarea:focus-visible,.reference-artwork-versions button:focus-visible { outline:2px solid var(--curriculum-accent); outline-offset:2px; }
+
+.reference-artwork-empty-field { color:var(--text-muted); opacity:.65; pointer-events:none; }

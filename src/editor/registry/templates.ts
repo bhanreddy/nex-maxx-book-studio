@@ -60,7 +60,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         category: "media",
         version: 1,
         displayName: "Hero Botanical Image",
-        transform: { x: 54, y: 248, width: 480, height: 260, rotation: 0, zIndex: 4 },
+        transform: { x: 54, y: 242, width: 480, height: 180, rotation: 0, zIndex: 4 },
         style: { borderRadius: 8, borderColor: "#cbd5e1", borderWidth: 1 },
         content: {
           src: "https://images.unsplash.com/photo-1518531933037-91b2f5f229cc?w=1000&auto=format&fit=crop&q=80",
@@ -78,7 +78,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         category: "text",
         version: 1,
         displayName: "Opening Narrative",
-        transform: { x: 54, y: 530, width: 480, height: 110, rotation: 0, zIndex: 5 },
+        transform: { x: 54, y: 435, width: 480, height: 85, rotation: 0, zIndex: 5 },
         style: ELEMENT_PRESETS["preset-body-paragraph"].defaultStyle,
         content: {
           text: "When Robert Hooke peered into his handcrafted brass microscope in 1665, he observed hollow microscopic honeycombs in a thin sliver of bottle cork. He named these tiny chambers 'cells'. Today, we recognize that every blade of grass, redwood giant, and living organism is an astonishing metropolis of interacting cells.",

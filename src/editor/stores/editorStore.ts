@@ -16,6 +16,7 @@ import { schedulePersistence } from "../core/debouncedPersistence";
 import { detachedSceneForElement } from "../educational/detachScene";
 import { arrangeElements, type ArrangeMode } from "../core/arrangement";
 import { buildPublicationScene, ArtworkKind } from "../educational/publicationScene";
+import { referenceBannerFor, shuffledReferenceBannerColour } from '../educational/referenceBanners';
 import { makePublicationDemo, makePublicationPages } from "../educational/publicationPages";
 import { create } from "zustand";
 import { Book, PageDefinition, Chapter, Unit, TextStyleDefinition, BookComment } from "../../domain/book/types";
@@ -117,7 +118,8 @@ interface EditorState {
     initialX?: number,
     initialY?: number,
     initialWidth?: number,
-    initialHeight?: number
+    initialHeight?: number,
+    pageId?: string
   ) => PageElement | null;
   addTextFrame: (initialX?: number, initialY?: number, width?: number, height?: number) => PageElement | null;
   addTableElement: (rows?: number, cols?: number, initialX?: number, initialY?: number) => PageElement | null;
@@ -258,7 +260,7 @@ interface EditorState {
   addPublicationArtwork: (kind: ArtworkKind, x?: number, y?: number) => void;
   // Educational Smart Block System
   addMathElement: (templateId: string, initialX?: number, initialY?: number, customData?: Record<string, unknown>, styleVariant?: string) => PageElement | null;
-  addEducationalBlock: (blockId: string, initialX?: number, initialY?: number, options?: { subject?: string; grade?: string }) => PageElement | null;
+  addEducationalBlock: (blockId: string, initialX?: number, initialY?: number, options?: { subject?: string; grade?: string; referenceBannerColour?: string; referenceBannerVersion?: "original" | "editable" | "blank" }) => PageElement | null;
   shuffleEducationalBlockStyle: (elementId: string) => void;
   setEducationalBlockPreset: (elementId: string, presetId: string) => void;
   reSkinEducationalBlock: (elementId: string, subject: SubjectDomain) => void;
@@ -766,12 +768,14 @@ export const useEditorStore = create<EditorState>((set, get) => {
       return newElement;
     },
 
-    addVectorShape: (shapeType, initialX = 100, initialY = 150, initialWidth = 140, initialHeight = 100) => {
-      const page = get().getActivePage();
+    addVectorShape: (shapeType, initialX = 100, initialY = 150, initialWidth = 140, initialHeight = 100, pageId) => {
+      const book = get().getActiveBook();
+      if (!book) return null;
+      const page = pageId ? book.pages.find((p) => p.id === pageId) || get().getActivePage() : get().getActivePage();
       if (!page) return null;
 
       const id = `el-${Math.random().toString(36).substring(2, 9)}`;
-      const activeElements = get().getActivePageElements();
+      const activeElements = Object.values(get().elements).filter((el) => el.pageId === page.id);
       const maxZ = activeElements.reduce((max, el) => Math.max(max, el.transform.zIndex), 0);
 
       const colorMap: Partial<Record<ShapeSubtype, { bg: string; border: string }>> = {
@@ -810,13 +814,16 @@ export const useEditorStore = create<EditorState>((set, get) => {
           borderRadius: shapeType === "circle" ? 9999 : shapeType === "rectangle" ? 6 : 0,
           opacity: 1,
         },
-        content: {},
+        content: { shapeType },
         locked: false,
         hidden: false,
       };
 
+      const pageIdx = book.pages.findIndex((p) => p.id === page.id);
+
       set((state) => ({
         elements: { ...state.elements, [id]: newElement },
+        activePageIndex: pageIdx !== -1 ? pageIdx : state.activePageIndex,
         books: state.books.map((b) =>
           b.id === state.activeBookId
             ? {
@@ -3519,7 +3526,7 @@ export const useEditorStore = create<EditorState>((set, get) => {
     insertPublicationPreset: (presetId) => {
       const saved = get().publicationPresets[presetId];
       if (!saved) return;
-      if(saved.block.presetId.startsWith('edu-')){
+      if(saved.block.presetId.startsWith('edu-') || referenceBannerFor(saved.block.presetId)){
         const destination=get().getActiveBook();if(!destination)return;
         const contextual={...structuredClone(saved.block),subject:resolveBookSubject(destination.subject),gradeBand:resolveBookGrade(destination.grade)};
         duplicateEducationalBlock({id:saved.block.id,pageId:saved.block.pageId,type:'smart-block',category:'educational',version:4,displayName:saved.name,presetId:saved.block.presetId,smartBlockData:contextual,transform:saved.block.transform,style:{},content:{},locked:false,hidden:false},saved.block.presetId,saved.name);
@@ -3996,7 +4003,11 @@ export const useEditorStore = create<EditorState>((set, get) => {
       if (!smartBlock) return null;
 
       if (blockId.startsWith("edu-")) { smartBlock.subject = resolveBookSubject(book.subject); smartBlock.gradeBand = resolveBookGrade(book.grade); }
-      if (options?.subject && options.subject !== "all" && def.supportedSubjects.includes("general")) {
+      if (referenceBannerFor(blockId)) {
+        smartBlock.styleOverrides.referenceBannerColour = options?.referenceBannerColour || 'original';
+        smartBlock.styleOverrides.referenceBannerVersion = options?.referenceBannerVersion || 'original';
+      }
+      if (!referenceBannerFor(blockId) && options?.subject && options.subject !== "all" && def.supportedSubjects.includes("general")) {
         smartBlock = withSubjectExample(smartBlock, options.subject as SubjectDomain);
       }
       if (options?.grade && options.grade !== "all") {
@@ -4231,6 +4242,10 @@ export const useEditorStore = create<EditorState>((set, get) => {
 
     shuffleEducationalBlockStyle: (elementId) => {
       const el=get().elements[elementId]; if(!el?.smartBlockData || isElementLocked(elementId, get().elements) || el.smartBlockData.isLockedDesign)return;
+      if (referenceBannerFor(el.smartBlockData.presetId)) {
+        get().updateSmartBlockStyle(elementId, { referenceBannerColour: shuffledReferenceBannerColour(el.smartBlockData.styleOverrides.referenceBannerColour) });
+        return;
+      }
       if (el.smartBlockData.curriculum) { reshuffleCurriculumBlock(el); return; }
       const type = EDUCATIONAL_BLOCK_REGISTRY[el.smartBlockData.presetId]?.educationalType;
       const presets=getPresetsByArchetype(el.smartBlockData.archetypeId).filter(def=>!type || def.educationalType===type);

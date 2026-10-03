@@ -168,10 +168,10 @@ export const PrimaryMathRenderer: React.FC<MathRendererProps> = ({ data: d, mode
   </svg>;
 };
 
-function template(id: string, name: string, category: MathTopic, grades: MathGrade[], kind: string, data: Record<string, unknown>, height = 220): MathTemplate {
+function template(id: string, name: string, category: MathTopic, grades: MathGrade[], kind: string, data: Record<string, unknown>, height = 170): MathTemplate {
   return { id: `math-${id}`, name, category, grades, type: kind === "daily-practice" ? "practice" : "visual-model",
     subcategory: "Primary Essentials", tags: ["primary essentials", kind, name.toLowerCase(), ...grades.map(g => `class ${g}`)],
-    defaultWidth: 380, defaultHeight: height, styleVariants: ["clean", "color-coded", "visual"], renderer: PrimaryMathRenderer,
+    defaultWidth: 290, defaultHeight: height, styleVariants: ["clean", "color-coded", "visual"], renderer: PrimaryMathRenderer,
     defaultData: { kind, title: name, subtitle: `CLASS ${grades.join(" / ")} · THINK, DRAW & EXPLAIN`, instruction: "Explain your thinking.", ...data },
     configFields: Object.entries(data).filter(([, v]) => typeof v === "number").map(([key, value]) => {
       const bounds: Record<string, [number, number]> = { count: [kind === "times-table" ? 4 : 0, kind === "twenty-frame" ? 20 : kind === "times-table" ? 12 : 10],

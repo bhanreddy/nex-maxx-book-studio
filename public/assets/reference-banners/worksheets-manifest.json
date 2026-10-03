@@ -1,0 +1,142 @@
+{
+  "mode": "builtin image_gen image editing",
+  "promptSet": {
+    "initial": "Remove only the printed heading letters. Preserve the original canvas size, artwork, icons, borders, writing guides, colours and transparency. Fill the removed letters with the surrounding header material. Do not redraw the layout.",
+    "didYouKnowRepair": "Remove only Did You Know? inside the heading region. Preserve the yellow lightbulb and green leaf, all body illustrations and writing guides.",
+    "iconRepairs": "Restore only the Fun Fact lightbulb / Quick Review green check medallion from the original reference onto the blank edit at their exact original position, size and rotation. Keep heading letters absent and preserve every other feature."
+  },
+  "assets": [
+    {
+      "slug": "playful-activity",
+      "source": "Playful Activity Worksheet Template.png",
+      "original": {
+        "file": "playful-activity.png",
+        "dimensions": [
+          1536,
+          1024
+        ],
+        "pngColourType": 2,
+        "sha256": "02f114ae7d4a1e935beb1fe34b5d7d18b5661440a4849db719556987a401afdd"
+      },
+      "textFree": {
+        "file": "playful-activity-blank.png",
+        "dimensions": [
+          1536,
+          1024
+        ],
+        "pngColourType": 2,
+        "sha256": "f42792407b712647a59f308044208de436d9ca54782d71783a4b5cd3c048ac0d"
+      }
+    },
+    {
+      "slug": "pastel-did-you-know",
+      "source": "Pastel Did You Know Learning Banner (1).png",
+      "original": {
+        "file": "pastel-did-you-know.png",
+        "dimensions": [
+          1672,
+          941
+        ],
+        "pngColourType": 6,
+        "sha256": "9b678a247db4e7958b72d49bc03435ca151ceb9b9fe0d1dcb53698831e2cc93a"
+      },
+      "textFree": {
+        "file": "pastel-did-you-know-blank.png",
+        "dimensions": [
+          1672,
+          941
+        ],
+        "pngColourType": 6,
+        "sha256": "9b81a0760c7d62b062f1aa571aaf9bedfa20195fd9fbe002fbc16e08ba926bc4"
+      }
+    },
+    {
+      "slug": "learning-objectives",
+      "source": "Colorful Learning Objectives Worksheet Header.png",
+      "original": {
+        "file": "learning-objectives.png",
+        "dimensions": [
+          1448,
+          1086
+        ],
+        "pngColourType": 6,
+        "sha256": "d29eebfd486087df048bc701e152e9861107903bbcf5fa2b5366c001b2448863"
+      },
+      "textFree": {
+        "file": "learning-objectives-blank.png",
+        "dimensions": [
+          1448,
+          1086
+        ],
+        "pngColourType": 6,
+        "sha256": "a20cf4fa47e12dddac9058b54ab04865a7f085ad0add13898f9513ec7f8c72b2"
+      }
+    },
+    {
+      "slug": "fun-fact",
+      "source": "Colorful Fun Fact Learning Banner.png",
+      "original": {
+        "file": "fun-fact.png",
+        "dimensions": [
+          2108,
+          746
+        ],
+        "pngColourType": 6,
+        "sha256": "cc70cfe643955689c117d4fbfd7f7234f2127d960092102be8f801b3b1ec2fb7"
+      },
+      "textFree": {
+        "file": "fun-fact-blank.png",
+        "dimensions": [
+          2109,
+          746
+        ],
+        "pngColourType": 6,
+        "sha256": "6fc4dc9df69507dd5b3aca6205d6884762167356dd7709161bfc464c0bdc7f8a"
+      }
+    },
+    {
+      "slug": "skill-builder",
+      "source": "ChatGPT Image Oct 3, 2026, 07_27_41 PM-2.png",
+      "original": {
+        "file": "skill-builder.png",
+        "dimensions": [
+          1672,
+          941
+        ],
+        "pngColourType": 2,
+        "sha256": "851274a858edbb842e21075ec206d79d2d44c64dd477ff44de331ef781f1a603"
+      },
+      "textFree": {
+        "file": "skill-builder-blank.png",
+        "dimensions": [
+          1672,
+          941
+        ],
+        "pngColourType": 2,
+        "sha256": "35a1cac9a4dc428908fb2f3fd05bdaa3f65561c9b19770e2b542886b1abc05d3"
+      }
+    },
+    {
+      "slug": "quick-review",
+      "source": "ChatGPT Image Oct 3, 2026, 07_27_38 PM-1.png",
+      "original": {
+        "file": "quick-review.png",
+        "dimensions": [
+          1672,
+          941
+        ],
+        "pngColourType": 2,
+        "sha256": "7bfb1ff27d8729179d1eccd95a44ada6041bb413c8634ac2ffbf74f9b62a2bac"
+      },
+      "textFree": {
+        "file": "quick-review-blank.png",
+        "dimensions": [
+          1672,
+          941
+        ],
+        "pngColourType": 2,
+        "sha256": "630389db4b728bbeedfb8ecae7fd0bf6ab581c02f6a92955db0266e80bf1d9d4"
+      }
+    }
+  ]
+}

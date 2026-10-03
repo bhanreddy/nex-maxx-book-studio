@@ -17,6 +17,7 @@ import { EmptyPageAssistant } from "./EmptyPageAssistant";
 import { NodeToolOverlay } from "./NodeToolOverlay";
 import { PixelBrushOverlay } from "./PixelBrushOverlay";
 import { VectorPenOverlay } from "./VectorPenOverlay";
+import { ShapeDrawOverlay } from "./ShapeDrawOverlay";
 import { PageDefinition, Book } from "../../domain/book/types";
 import { ptToMm } from "../../editor/core/coordinates";
 import { useLayoutPartnerStore } from "../../editor/layoutPartner/layoutPartnerStore";
@@ -242,10 +243,8 @@ export const PageCanvas: React.FC<PageCanvasProps> = ({ book, activePage }) => {
       return;
     }
 
-    // 4. Vector Shape Tool click on page
+    // 4. Vector Shape Tool - handled by ShapeDrawOverlay directly on the worksheet
     if (activeTool === "shape") {
-      const coords = getPageCoordinates(e);
-      addVectorShape(activeShapeType, coords.x - 70, coords.y - 50);
       return;
     }
 
@@ -569,7 +568,6 @@ export const PageCanvas: React.FC<PageCanvasProps> = ({ book, activePage }) => {
       className={`relative flex-1 h-full w-full overflow-hidden bg-[#f1f4f8] dark:bg-[#0c1017] canvas-grid-bg select-none ${cursorClass}`}
       onWheel={handleWheel}
       onPointerDown={handleCanvasPointerDown}
-      onMouseDown={handleMouseDown}
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}
       onDragOver={(e) => {
@@ -755,16 +753,20 @@ export const PageCanvas: React.FC<PageCanvasProps> = ({ book, activePage }) => {
                 let id = blockId;
                 let subject: string | undefined = undefined;
                 let grade: string | undefined = undefined;
+                let referenceBannerColour: string | undefined;
+                let referenceBannerVersion: "original" | "editable" | "blank" | undefined;
                 if (blockPayload) {
                   try {
                     const parsed = JSON.parse(blockPayload);
                     id = parsed.id || id;
                     subject = parsed.subject;
                     grade = parsed.grade;
+                    if (typeof parsed.referenceBannerColour === 'string') referenceBannerColour = parsed.referenceBannerColour;
+                    if (['original', 'editable', 'blank'].includes(parsed.referenceBannerVersion)) referenceBannerVersion = parsed.referenceBannerVersion;
                   } catch {}
                 }
                 const coords = getPageCoordinates(e);
-                addEducationalBlock(id, coords.x, coords.y, { subject, grade });
+                addEducationalBlock(id, coords.x, coords.y, { subject, grade, referenceBannerColour, referenceBannerVersion });
                 return;
               }
               const mathTemplateId = e.dataTransfer.getData("application/x-nexmaxx-math-template");
@@ -988,8 +990,11 @@ export const PageCanvas: React.FC<PageCanvasProps> = ({ book, activePage }) => {
                   key={el.id}
                   data-element-id={el.id}
                   onPointerDown={(e) => {
-                    if (e.button === 0 && (activeTool === "move" || !["hand", "zoom", "measure", "pen", "pencil", "shape", "table", "brush", "eraser"].includes(activeTool))) {
+                    if (e.button === 0 && !["hand", "zoom", "measure", "brush", "eraser"].includes(activeTool)) {
                       e.stopPropagation();
+                      if (activeTool !== "move") {
+                        useUiStore.getState().setActiveTool("move");
+                      }
                       if (activePage.id !== el.pageId) useEditorStore.getState().setActivePageIndex(book.pages.findIndex(page => page.id === el.pageId));
                       const rootId = selectionRoot(el.id, elements);
                       if (!selectedElementIds.includes(rootId)) {
@@ -1000,18 +1005,19 @@ export const PageCanvas: React.FC<PageCanvasProps> = ({ book, activePage }) => {
                     }
                   }}
                   onClick={(e) => {
-                    if (activeTool === "move" || !["hand", "zoom", "measure", "pen", "pencil", "shape", "table", "brush", "eraser"].includes(activeTool)) {
+                    if (!["hand", "zoom", "measure", "brush", "eraser"].includes(activeTool)) {
                       e.stopPropagation();
+                      if (activeTool !== "move") {
+                        useUiStore.getState().setActiveTool("move");
+                      }
                       if (activePage.id !== el.pageId) useEditorStore.getState().setActivePageIndex(book.pages.findIndex(page => page.id === el.pageId));
                       selectElement(el.id, e.shiftKey || e.metaKey);
                     }
                   }}
                   onDoubleClick={(e) => {
-                    if (el.type === "math-component") {
-                      e.stopPropagation();
-                      selectElement(el.id, false);
-                      useUiStore.getState().setRightInspectorOpen(true);
-                    }
+                    e.stopPropagation();
+                    selectElement(el.id, false);
+                    useUiStore.getState().setRightInspectorOpen(true);
                   }}
                 >
                   <ElementRenderer element={el} isSelected={isSelected} zoom={zoom} />
@@ -1099,6 +1105,17 @@ export const PageCanvas: React.FC<PageCanvasProps> = ({ book, activePage }) => {
               <VectorPenOverlay zoom={zoom} />
             )}
 
+            {/* Vector Shape Drawing Tool Overlay */}
+            {activeTool === "shape" && (
+              <ShapeDrawOverlay
+                artboardElementId={activePage.id === leftPage.id ? "page-artboard" : "page-artboard-left"}
+                pageId={leftPage.id}
+                zoom={zoom}
+                pageWidthPt={dimensions.widthPt}
+                pageHeightPt={dimensions.heightPt}
+              />
+            )}
+
             <PublisherFooterView book={book} page={leftPage} elements={elements}/>
           </div>
 
@@ -1170,8 +1187,11 @@ export const PageCanvas: React.FC<PageCanvasProps> = ({ book, activePage }) => {
                     key={el.id}
                     data-element-id={el.id}
                     onPointerDown={(e) => {
-                      if (e.button === 0 && (activeTool === "move" || !["hand", "zoom", "measure", "pen", "pencil", "shape", "table", "brush", "eraser"].includes(activeTool))) {
+                      if (e.button === 0 && !["hand", "zoom", "measure", "brush", "eraser"].includes(activeTool)) {
                         e.stopPropagation();
+                        if (activeTool !== "move") {
+                          useUiStore.getState().setActiveTool("move");
+                        }
                         if (activePage.id !== el.pageId) useEditorStore.getState().setActivePageIndex(book.pages.findIndex(page => page.id === el.pageId));
                         const rootId = selectionRoot(el.id, elements);
                         if (!selectedElementIds.includes(rootId)) {
@@ -1182,24 +1202,36 @@ export const PageCanvas: React.FC<PageCanvasProps> = ({ book, activePage }) => {
                       }
                     }}
                     onClick={(e) => {
-                      if (activeTool === "move" || !["hand", "zoom", "measure", "pen", "pencil", "shape", "table", "brush", "eraser"].includes(activeTool)) {
+                      if (!["hand", "zoom", "measure", "brush", "eraser"].includes(activeTool)) {
                         e.stopPropagation();
+                        if (activeTool !== "move") {
+                          useUiStore.getState().setActiveTool("move");
+                        }
                         if (activePage.id !== el.pageId) useEditorStore.getState().setActivePageIndex(book.pages.findIndex(page => page.id === el.pageId));
                         selectElement(el.id, e.shiftKey || e.metaKey);
                       }
                     }}
                     onDoubleClick={(e) => {
-                      if (el.type === "math-component") {
-                        e.stopPropagation();
-                        selectElement(el.id, false);
-                        useUiStore.getState().setRightInspectorOpen(true);
-                      }
+                      e.stopPropagation();
+                      selectElement(el.id, false);
+                      useUiStore.getState().setRightInspectorOpen(true);
                     }}
                   >
                     <ElementRenderer element={el} isSelected={isSelected} zoom={zoom} />
                   </div>
                 );
               })}
+
+              {/* Vector Shape Drawing Tool Overlay */}
+              {activeTool === "shape" && (
+                <ShapeDrawOverlay
+                  artboardElementId={activePage.id === rightPage.id ? "page-artboard" : "page-artboard-right"}
+                  pageId={rightPage.id}
+                  zoom={zoom}
+                  pageWidthPt={dimensions.widthPt}
+                  pageHeightPt={dimensions.heightPt}
+                />
+              )}
 
               <PublisherFooterView book={book} page={rightPage} elements={elements}/>
             </div>

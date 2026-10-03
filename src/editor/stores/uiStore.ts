@@ -169,6 +169,7 @@ interface UiState {
   designTokensModalOpen: boolean;
   bookStructureModalOpen: boolean;
   pageBorderModalOpen: boolean;
+  directPasteModalOpen: boolean;
 
   // Professional Grid System
   columnGrid: { enabled: boolean; columns: number; gutterPt: number };
@@ -268,6 +269,7 @@ interface UiState {
   setDesignTokensModalOpen: (open: boolean) => void;
   setBookStructureModalOpen: (open: boolean) => void;
   setPageBorderModalOpen: (open: boolean) => void;
+  setDirectPasteModalOpen: (open: boolean) => void;
   setColumnGrid: (grid: Partial<{ enabled: boolean; columns: number; gutterPt: number }>) => void;
   setBaselineGrid: (grid: Partial<{ enabled: boolean; stepPt: number }>) => void;
 
@@ -353,6 +355,7 @@ export const useUiStore = create<UiState>((set, get) => ({
   designTokensModalOpen: false,
   bookStructureModalOpen: false,
   pageBorderModalOpen: false,
+  directPasteModalOpen: false,
 
   columnGrid: { enabled: false, columns: 2, gutterPt: 16 },
   baselineGrid: { enabled: false, stepPt: 12 },
@@ -496,6 +499,7 @@ export const useUiStore = create<UiState>((set, get) => ({
   setDesignTokensModalOpen: (open) => set({ designTokensModalOpen: open }),
   setBookStructureModalOpen: (open) => set({ bookStructureModalOpen: open }),
   setPageBorderModalOpen: (open) => set({ pageBorderModalOpen: open }),
+  setDirectPasteModalOpen: (open) => set({ directPasteModalOpen: open }),
   setColumnGrid: (grid) => set((s) => ({ columnGrid: { ...s.columnGrid, ...grid } })),
   setBaselineGrid: (grid) => set((s) => ({ baselineGrid: { ...s.baselineGrid, ...grid } })),
 

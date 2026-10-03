@@ -21,9 +21,11 @@ import {
   LayoutTemplate,
   Paintbrush,
   Eraser,
+  Image as ImageIcon,
 } from "lucide-react";
 import { useEditorStore } from "../../editor/stores/editorStore";
 import { useUiStore } from "../../editor/stores/uiStore";
+import { directPasteImageFromClipboard } from "../../editor/clipboard/universalClipboard";
 
 export interface ContextMenuState {
   isOpen: boolean;
@@ -397,6 +399,20 @@ export const CanvasContextMenu: React.FC<CanvasContextMenuProps> = ({
               <span>Paste Here</span>
             </span>
             <span className="text-[10px] text-slate-500 font-mono">⌘V</span>
+          </button>
+
+          <button
+            onClick={() => {
+              void directPasteImageFromClipboard();
+              onClose();
+            }}
+            className="w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg hover:bg-white/10 hover:text-white transition-colors"
+          >
+            <span className="flex items-center gap-2">
+              <ImageIcon className="w-3.5 h-3.5 text-emerald-400" />
+              <span>Direct Paste Image</span>
+            </span>
+            <span className="text-[9px] text-emerald-400/80 font-mono">Instant</span>
           </button>
 
           <button

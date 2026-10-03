@@ -17,6 +17,8 @@ import type { EducationalBlockDefinition } from "../../domain/educational/blockS
 import { LIBRARY_BY_TYPE, LESSON_STAGES, RECOMMENDED_BLOCK_IDS } from "../../editor/educational/library/catalog";
 import { recentEducationalPresets, resolveBookGrade, resolveBookSubject } from "../../editor/educational/library/preferences";
 import { ReferenceElementsLibrary } from "../curriculum/ReferenceElementsLibrary";
+import { ReferenceBannerLibrary } from './ReferenceBannerLibrary';
+import { REFERENCE_ARTWORKS, referenceBannerFor } from '../../editor/educational/referenceBanners';
 import { PREMIUM_REFERENCE_ELEMENTS } from "../../editor/curriculum/referenceElements";
 import type { CurriculumGrade } from "../../domain/educational/curriculum";
 
@@ -44,7 +46,7 @@ const BlockPreview = memo(function BlockPreview({ definition, subject, grade }: 
     const key=`${definition.id}:${subject}:${grade}`;
     const cached=thumbnailCache.get(key);if(cached)return cached;
     let block = createSmartBlockInstance(definition.id, "preview")!;
-    if (subject !== "all" && definition.supportedSubjects.includes("general")) {
+    if (!referenceBannerFor(definition.id) && subject !== "all" && definition.supportedSubjects.includes("general")) {
       block = withSubjectExample(block, subject as SubjectDomain);
     }
     if (grade !== "all") block.gradeBand = grade as GradeBand;
@@ -163,7 +165,7 @@ export const EducationalBlocksPanel: React.FC = () => {
         {(["blocks", "banners", "pages", "artwork"] as const).map((t) => {
           const isActive = tab === t;
           const count =
-            t === "blocks" ? (category === "saved" ? filteredSaved.length : filtered.length) : t === "banners" ? PREMIUM_REFERENCE_ELEMENTS.length : t === "pages" ? PUBLICATION_PAGES.length : ARTWORKS.length;
+            t === "blocks" ? (category === "saved" ? filteredSaved.length : filtered.length) : t === "banners" ? PREMIUM_REFERENCE_ELEMENTS.length + REFERENCE_ARTWORKS.length : t === "pages" ? PUBLICATION_PAGES.length : ARTWORKS.length;
           return (
             <button
               key={t}
@@ -418,6 +420,11 @@ export const EducationalBlocksPanel: React.FC = () => {
             <h2>Lessons worth looking at.</h2>
             <p>Illustrated, editable, and ready for your page.</p>
           </div>
+
+          {category !== 'saved' && <details className="reference-artwork-shelf" open={category === 'recommended' || Boolean(search) || undefined}>
+            <summary>Your image templates <span>10 sculpted ribbons · 6 illustrated worksheets</span></summary>
+            <ReferenceBannerLibrary search={search} />
+          </details>}
 
           {category === "saved" && !Object.keys(saved).length && (
             <p className="p-4 text-xs text-slate-600 dark:text-slate-400">

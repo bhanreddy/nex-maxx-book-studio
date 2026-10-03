@@ -1,0 +1,101 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
+  <defs>
+    <!-- Soft Clay Drop Shadow -->
+    <filter id="clayShadow" x="-20%" y="-20%" width="150%" height="150%">
+      <feDropShadow dx="0" dy="12" stdDeviation="14" flood-color="#0f172a" flood-opacity="0.18" />
+      <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#0f172a" flood-opacity="0.12" />
+    </filter>
+    <filter id="deepShadow" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="18" stdDeviation="20" flood-color="#1e1b4b" flood-opacity="0.22" />
+    </filter>
+
+    <!-- Clay Gradients -->
+    <linearGradient id="clayRed" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stopColor="#ff7675" />
+      <stop offset="100%" stopColor="#d63031" />
+    </linearGradient>
+    <linearGradient id="clayCoral" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stopColor="#ff9f43" />
+      <stop offset="100%" stopColor="#ee5253" />
+    </linearGradient>
+    <linearGradient id="clayYellow" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stopColor="#ffeaa7" />
+      <stop offset="60%" stopColor="#fdcb6e" />
+      <stop offset="100%" stopColor="#e17055" />
+    </linearGradient>
+    <linearGradient id="clayGreen" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stopColor="#55efc4" />
+      <stop offset="100%" stopColor="#00b894" />
+    </linearGradient>
+    <linearGradient id="clayTeal" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stopColor="#81ecec" />
+      <stop offset="100%" stopColor="#00cec9" />
+    </linearGradient>
+    <linearGradient id="clayBlue" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stopColor="#74b9ff" />
+      <stop offset="100%" stopColor="#0984e3" />
+    </linearGradient>
+    <linearGradient id="clayIndigo" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stopColor="#a29bfe" />
+      <stop offset="100%" stopColor="#6c5ce7" />
+    </linearGradient>
+    <linearGradient id="clayPink" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stopColor="#fd79a8" />
+      <stop offset="100%" stopColor="#e84393" />
+    </linearGradient>
+    <linearGradient id="clayPurple" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stopColor="#d980fa" />
+      <stop offset="100%" stopColor="#9980fa" />
+    </linearGradient>
+    <linearGradient id="clayWhite" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stopColor="#ffffff" />
+      <stop offset="100%" stopColor="#dfe6e9" />
+    </linearGradient>
+    <linearGradient id="clayWood" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stopColor="#e0b88f" />
+      <stop offset="100%" stopColor="#b37d4e" />
+    </linearGradient>
+    <linearGradient id="clayGold" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stopColor="#fff275" />
+      <stop offset="50%" stopColor="#fbc531" />
+      <stop offset="100%" stopColor="#e1b12c" />
+    </linearGradient>
+    <linearGradient id="claySilver" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stopColor="#f5f6fa" />
+      <stop offset="60%" stopColor="#dcdde1" />
+      <stop offset="100%" stopColor="#718093" />
+    </linearGradient>
+    <linearGradient id="clayDark" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stopColor="#636e72" />
+      <stop offset="100%" stopColor="#2d3436" />
+    </linearGradient>
+    <linearGradient id="clayGlass" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stopColor="#ffffff" stopOpacity="0.8" />
+      <stop offset="100%" stopColor="#81ecec" stopOpacity="0.3" />
+    </linearGradient>
+
+    <!-- Glossy Specular Highlight -->
+    <linearGradient id="gloss" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stopColor="#ffffff" stopOpacity="0.65" />
+      <stop offset="100%" stopColor="#ffffff" stopOpacity="0" />
+    </linearGradient>
+  </defs>
+
+  <!-- Ground Ambient Shadow -->
+  <ellipse cx="256" cy="460" rx="170" ry="24" fill="#0f172a" opacity="0.12" />
+
+  
+      <g filter="url(#clayShadow)" transform="translate(256, 250)">
+        <!-- Handle (diagonally down right) -->
+        <rect x="50" y="50" width="34" height="150" rx="17" fill="url(#clayCoral)" stroke="#d63031" stroke-width="4" transform="rotate(-45 67 125)" />
+        <!-- Lens Rim -->
+        <circle cx="-30" cy="-30" r="120" fill="none" stroke="url(#clayTeal)" stroke-width="26" />
+        <!-- Glass Lens -->
+        <circle cx="-30" cy="-30" r="106" fill="url(#clayGlass)" />
+        <!-- Magnified Math Formula inside -->
+        <text x="-30" y="-18" font-size="34" font-weight="900" font-family="'Comic Sans MS', sans-serif" fill="#2d3436" text-anchor="middle">x + y</text>
+        <!-- Crescent Reflection -->
+        <path d="M -105 -95 A 90 90 0 0 1 45 -95" fill="none" stroke="#ffffff" stroke-width="12" opacity="0.6" stroke-linecap="round" />
+      </g>
+    
+</svg>

@@ -372,15 +372,15 @@ export const MathTemplatesPanel: React.FC = () => {
                 className="group relative rounded-xl border border-slate-200 dark:border-white/10 hover:border-indigo-500/80 bg-white dark:bg-slate-900/80 transition-transform overflow-hidden flex flex-col cursor-grab active:cursor-grabbing"
                 onClick={() => handleInsert(template)}
               >
-                {/* Miniature Live Preview Frame */}
-                <div className="h-28 w-full bg-slate-50/70 dark:bg-slate-950/40 border-b border-slate-100 dark:border-white/5 relative overflow-hidden flex items-center justify-center p-2">
+                {/* Miniature Live Preview Frame - Compact Size */}
+                <div className="h-20 w-full bg-slate-50/70 dark:bg-slate-950/40 border-b border-slate-100 dark:border-white/5 relative overflow-hidden flex items-center justify-center p-1.5">
                   <div
                     style={{
                       width: template.defaultWidth,
                       height: template.defaultHeight,
                       transform: `scale(${Math.min(
-                        280 / template.defaultWidth,
-                        96 / template.defaultHeight
+                        260 / template.defaultWidth,
+                        68 / template.defaultHeight
                       )})`,
                       transformOrigin: "center center",
                     }}
@@ -418,7 +418,7 @@ export const MathTemplatesPanel: React.FC = () => {
                 </div>
 
                 {/* Template Info Card Body */}
-                <div className="p-2.5 flex items-center justify-between">
+                <div className="p-2 flex items-center justify-between">
                   <div className="flex-1 min-w-0 pr-2">
                     <div className="flex items-center gap-1.5 mb-0.5">
                       <span className="font-semibold text-xs text-slate-800 dark:text-slate-100 truncate group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">

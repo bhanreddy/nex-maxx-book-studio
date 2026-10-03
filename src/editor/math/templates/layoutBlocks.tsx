@@ -17,8 +17,8 @@ export const ExampleBoxTemplate: MathTemplate = {
   category: "activities",
   type: "worked-example",
   tags: ["example", "worked example", "callout", "layout"],
-  defaultWidth: 360,
-  defaultHeight: 140,
+  defaultWidth: 280,
+  defaultHeight: 110,
   defaultData: {
     title: "EXAMPLE 1",
     question: "Find the sum of 345 and 278.",
@@ -65,8 +65,8 @@ export const RememberBoxTemplate: MathTemplate = {
   category: "activities",
   type: "visual-model",
   tags: ["remember", "rule", "key takeaway", "layout"],
-  defaultWidth: 360,
-  defaultHeight: 110,
+  defaultWidth: 280,
+  defaultHeight: 90,
   defaultData: {
     title: "REMEMBER",
     content: "Any number multiplied by 0 always gives 0 (e.g. 5 × 0 = 0). Multiplying by 1 leaves the number unchanged.",
@@ -105,8 +105,8 @@ export const TryItBoxTemplate: MathTemplate = {
   category: "activities",
   type: "activity",
   tags: ["try it", "practice", "activity", "layout"],
-  defaultWidth: 360,
-  defaultHeight: 120,
+  defaultWidth: 280,
+  defaultHeight: 95,
   defaultData: {
     title: "TRY THIS",
     instructions: "Measure 3 objects in your pencil box using your ruler. Record their lengths below in cm.",
@@ -145,8 +145,8 @@ export const FillBlanksRowTemplate: MathTemplate = {
   category: "assessment",
   type: "practice",
   tags: ["fill in the blanks", "missing number", "equation", "layout"],
-  defaultWidth: 360,
-  defaultHeight: 90,
+  defaultWidth: 280,
+  defaultHeight: 70,
   defaultData: {
     prefix: "7 × ",
     blank: "8",
@@ -194,8 +194,8 @@ export const MatchFollowingTemplate: MathTemplate = {
   category: "assessment",
   type: "practice",
   tags: ["match", "pairs", "columns", "assessment", "layout"],
-  defaultWidth: 360,
-  defaultHeight: 180,
+  defaultWidth: 280,
+  defaultHeight: 145,
   defaultData: {
     pairs: [
       { colA: "5 + 5", colB: "10" },
@@ -255,8 +255,8 @@ export const TrueFalseTemplate: MathTemplate = {
   category: "assessment",
   type: "practice",
   tags: ["true false", "statements", "quiz", "layout"],
-  defaultWidth: 360,
-  defaultHeight: 160,
+  defaultWidth: 280,
+  defaultHeight: 130,
   defaultData: {
     statements: [
       { text: "A square has 4 equal sides.", answer: "True" },
@@ -313,8 +313,8 @@ export const McqBlockTemplate: MathTemplate = {
   category: "assessment",
   type: "practice",
   tags: ["mcq", "multiple choice", "options", "quiz", "layout"],
-  defaultWidth: 360,
-  defaultHeight: 160,
+  defaultWidth: 280,
+  defaultHeight: 130,
   defaultData: {
     question: "What is the perimeter of a square with side 6 cm?",
     options: ["12 cm", "24 cm", "36 cm", "18 cm"],
@@ -379,8 +379,8 @@ export const WordProblemTemplate: MathTemplate = {
   category: "word-problems",
   type: "worked-example",
   tags: ["word problem", "story problem", "working space", "layout"],
-  defaultWidth: 360,
-  defaultHeight: 180,
+  defaultWidth: 280,
+  defaultHeight: 145,
   defaultData: {
     question: "Ravi bought 4 notebooks for ₹25 each. How much money did he spend in total?",
     solution: "Cost of 1 notebook = ₹25. Cost of 4 notebooks = 4 × ₹25 = ₹100.",
@@ -430,8 +430,8 @@ export const AnswerLinesTemplate: MathTemplate = {
   category: "activities",
   type: "activity",
   tags: ["answer lines", "notebook lines", "ruled lines", "layout"],
-  defaultWidth: 340,
-  defaultHeight: 120,
+  defaultWidth: 270,
+  defaultHeight: 95,
   defaultData: {
     title: "Answer:",
     lineCount: 4,
@@ -475,8 +475,8 @@ export const ChapterHeaderBandTemplate: MathTemplate = {
   category: "activities",
   type: "visual-model",
   tags: ["chapter header", "title banner", "masthead", "layout"],
-  defaultWidth: 420,
-  defaultHeight: 70,
+  defaultWidth: 330,
+  defaultHeight: 60,
   defaultData: {
     chapterNumber: 3,
     chapterTitle: "Numbers and Operations",

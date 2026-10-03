@@ -29,11 +29,13 @@
     }
   },
   "include": [
+    ".next-reference-check/types/**/*.ts",
     ".next/types/**/*.ts",
     "next-env.d.ts",
     "next.config.ts",
     "src/**/*.ts",
-    "src/**/*.tsx"
+    "src/**/*.tsx",
+    ".next-worksheet-check/types/**/*.ts"
   ],
   "exclude": [
     "node_modules",

@@ -28,8 +28,8 @@ export const PlaceValue3DigitTemplate: MathTemplate = {
   category: "place-value",
   type: "visual-model",
   tags: ["place value", "3-digit", "hundreds", "tens", "ones", "class 2"],
-  defaultWidth: 320,
-  defaultHeight: 180,
+  defaultWidth: 250,
+  defaultHeight: 145,
   defaultData: {
     hundreds: 3,
     tens: 4,
@@ -79,8 +79,8 @@ export const SkipCountingLineTemplate: MathTemplate = {
   category: "numbers",
   type: "visual-model",
   tags: ["skip counting", "jumps", "patterns", "class 2"],
-  defaultWidth: 360,
-  defaultHeight: 120,
+  defaultWidth: 280,
+  defaultHeight: 95,
   defaultData: {
     start: 0,
     end: 20,
@@ -136,8 +136,8 @@ export const ColumnAddSubtractTemplate: MathTemplate = {
   category: "addition",
   type: "practice",
   tags: ["column addition", "carry", "vertical math", "class 2"],
-  defaultWidth: 200,
-  defaultHeight: 180,
+  defaultWidth: 180,
+  defaultHeight: 145,
   defaultData: {
     operation: "+",
     op1: 247,
@@ -189,8 +189,8 @@ export const RepeatedAdditionArraysTemplate: MathTemplate = {
   category: "multiplication",
   type: "visual-model",
   tags: ["array", "repeated addition", "rows", "columns", "class 2"],
-  defaultWidth: 280,
-  defaultHeight: 170,
+  defaultWidth: 220,
+  defaultHeight: 135,
   defaultData: {
     rows: 3,
     cols: 5,
@@ -246,8 +246,8 @@ export const TimesTableGridTemplate: MathTemplate = {
   category: "multiplication",
   type: "table",
   tags: ["times table", "multiplication grid", "matrix", "class 2"],
-  defaultWidth: 260,
-  defaultHeight: 200,
+  defaultWidth: 200,
+  defaultHeight: 160,
   defaultData: {
     maxNum: 5,
   },
@@ -317,8 +317,8 @@ export const HalfQuarterClockTemplate: MathTemplate = {
   category: "time",
   type: "visual-model",
   tags: ["clock", "half past", "quarter past", "time", "class 2"],
-  defaultWidth: 220,
-  defaultHeight: 180,
+  defaultWidth: 180,
+  defaultHeight: 145,
   defaultData: {
     hours: 3,
     minutes: 30, // 3:30 = half past 3
@@ -363,8 +363,8 @@ export const NotesAndChangeTemplate: MathTemplate = {
   category: "money",
   type: "visual-model",
   tags: ["notes", "change", "rupees", "currency", "class 2"],
-  defaultWidth: 320,
-  defaultHeight: 160,
+  defaultWidth: 250,
+  defaultHeight: 130,
   defaultData: {
     note: 50,
     itemCost: 35,
@@ -420,8 +420,8 @@ export const CmRulerTemplate: MathTemplate = {
   category: "measurement",
   type: "visual-model",
   tags: ["ruler", "centimeters", "measurement", "pencil", "class 2"],
-  defaultWidth: 360,
-  defaultHeight: 120,
+  defaultWidth: 280,
+  defaultHeight: 95,
   defaultData: {
     startCm: 2,
     endCm: 9,
@@ -473,8 +473,8 @@ export const FractionHalvesQuartersTemplate: MathTemplate = {
   category: "fractions",
   type: "visual-model",
   tags: ["fractions", "half", "quarter", "1/2", "1/4", "class 2"],
-  defaultWidth: 280,
-  defaultHeight: 140,
+  defaultWidth: 220,
+  defaultHeight: 110,
   defaultData: {
     numerator: 1,
     denominator: 4,
@@ -515,8 +515,8 @@ export const SymmetryGridTemplate: MathTemplate = {
   category: "geometry",
   type: "activity",
   tags: ["symmetry", "mirror line", "grid", "reflection", "class 2"],
-  defaultWidth: 280,
-  defaultHeight: 180,
+  defaultWidth: 220,
+  defaultHeight: 145,
   defaultData: {
     cols: 8,
     rows: 6,
@@ -559,8 +559,8 @@ export const BarGraphTemplate: MathTemplate = {
   category: "data",
   type: "visual-model",
   tags: ["bar graph", "chart", "data handling", "class 2"],
-  defaultWidth: 320,
-  defaultHeight: 180,
+  defaultWidth: 250,
+  defaultHeight: 145,
   defaultData: {
     data: [
       { label: "Red", value: 5 },

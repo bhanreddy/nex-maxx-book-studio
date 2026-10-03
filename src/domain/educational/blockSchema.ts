@@ -280,6 +280,9 @@ export interface SmartBlockInstance {
 
   // Visual Overrides & Adaptive Sizing
   styleOverrides: {
+    /** Saved colour treatment for an original reference-artwork banner. */
+    referenceBannerColour?: string;
+    referenceBannerVersion?: "original" | "editable" | "blank";
     /** Presentation-only continuation window. Canonical curriculum content stays complete. */
     sceneSlice?: { from: number; to: number };
     referenceElement?: ReferenceElementStyle;

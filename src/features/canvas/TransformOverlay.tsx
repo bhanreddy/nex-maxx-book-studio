@@ -25,6 +25,7 @@ import { stageName } from "../../editor/curriculum/frameworkPlan";
 import { CURRICULUM_BLOCK_MAP } from "../../editor/curriculum/catalog";
 import { setFrameworkMode } from "../../editor/curriculum/actions";
 import { Move, Unlink2, MousePointer2 } from "lucide-react";
+import { referenceBannerFor } from "../../editor/educational/referenceBanners";
 import { beginBlockContentEditing } from "../../editor/educational/blockContentEditing";
 
 import { trackPointerGesture } from "../../editor/core/pointerGesture";
@@ -452,7 +453,7 @@ export const TransformOverlay: React.FC<TransformOverlayProps> = ({
         onDoubleClick={e => {
           if (singleElement?.type === "image") { e.stopPropagation(); setCropElementId(singleElement.id); }
           else if (singleElement && ["body", "heading", "subheading", "caption", "quote", "chapter-title", "lesson-title"].includes(singleElement.type)) { e.stopPropagation(); setEditingTextElementId(singleElement.id); }
-          else if (singleElement?.type === "math-component") {
+          else if (singleElement?.type === "math-component" || singleElement?.type === "shape" || singleElement?.style.shapeType) {
             e.stopPropagation();
             useUiStore.getState().setRightInspectorOpen(true);
           }
@@ -500,7 +501,7 @@ export const TransformOverlay: React.FC<TransformOverlayProps> = ({
             <div className="absolute top-0 bottom-0 -right-2 w-4 pointer-events-auto cursor-move" onPointerDown={handleBoxPointerDown} title="Drag border to move block" />
           </>
         )}
-        {Boolean(singleElement?.smartBlockData) && !editingContents && <MotifOverlay element={singleElement!} zoom={zoom} />}
+        {Boolean(singleElement?.smartBlockData) && !referenceBannerFor(singleElement!.smartBlockData!.presetId) && !editingContents && <MotifOverlay element={singleElement!} zoom={zoom} />}
         {curriculumMeta && singleElement?.type !== "smart-block" && (
           <div
             className="studio-selection-label pointer-events-auto cursor-move select-none"

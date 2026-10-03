@@ -7,7 +7,7 @@ const require = createRequire(import.meta.url);
 require.extensions['.ts'] = (module, file) => module._compile(ts.transpileModule(fs.readFileSync(file, 'utf8'), {
   compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, esModuleInterop: true },
 }).outputText, file);
-const { STARTER_PICTURES, picturePresets } = require('../src/editor/media/picturePresetCatalog.ts');
+const { STARTER_PICTURES, CLAY_DOODLE_PICTURES, picturePresets } = require('../src/editor/media/picturePresetCatalog.ts');
 const { uploadCloudPicture, listCloudPictures, validatePictureFile, pictureElement } = require('../src/editor/media/pictureRepository.ts');
 const { platformApiUrl } = require('../src/editor/persistence/platformApiUrl.ts');
 const { ELEMENT_PRESETS } = require('../src/editor/registry/presets.ts');
@@ -30,6 +30,20 @@ test('all ten supplied pictures have registered presets, immutable originals and
     const digest = require('node:crypto').createHash('sha256').update(bytes).digest('hex');
     assert.equal(digest, picture.checksum);
     const preset = ELEMENT_PRESETS[`preset-picture-${picture.id}`];
+    assert.equal(preset, picturePresets[preset.id]);
+    assert.equal(preset.defaultStyle.objectFit, 'contain');
+    assert.equal(preset.defaultContent.src, picture.src);
+  }
+});
+
+test('all 42 doodle clay pictures have registered presets and valid SVG assets', () => {
+  assert.equal(CLAY_DOODLE_PICTURES.length, 42);
+  assert.equal(new Set(CLAY_DOODLE_PICTURES.map(p => p.id)).size, 42);
+  for (const picture of CLAY_DOODLE_PICTURES) {
+    const content = fs.readFileSync(`public${picture.src}`, 'utf8');
+    assert.ok(content.includes('<svg'), `${picture.id} must be valid SVG`);
+    const preset = ELEMENT_PRESETS[`preset-picture-${picture.id}`];
+    assert.ok(preset, `Preset preset-picture-${picture.id} must be in ELEMENT_PRESETS`);
     assert.equal(preset, picturePresets[preset.id]);
     assert.equal(preset.defaultStyle.objectFit, 'contain');
     assert.equal(preset.defaultContent.src, picture.src);

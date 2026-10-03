@@ -1,4 +1,5 @@
 "use client";
+import { referenceBannerFor } from '../../editor/educational/referenceBanners';
 
 import React from "react";
 import { useEditorStore } from "../../editor/stores/editorStore";
@@ -518,6 +519,7 @@ export const ContextToolbar: React.FC = () => {
 
             <select
               value={singleElement.smartBlockData.subject}
+              hidden={Boolean(referenceBannerFor(singleElement.smartBlockData.presetId))}
               onChange={(e) =>
                 useEditorStore.getState().reSkinEducationalBlock(singleElement.id, e.target.value as NonNullable<typeof singleElement.smartBlockData>["subject"])
               }
@@ -535,10 +537,11 @@ export const ContextToolbar: React.FC = () => {
 
             <button
               onClick={() => useEditorStore.getState().shuffleEducationalBlockStyle(singleElement.id)}
+              disabled={singleElement.locked || singleElement.smartBlockData.isLockedDesign}
               className="px-2.5 py-0.5 rounded bg-indigo-600 hover:bg-indigo-500 text-white text-[10.5px] font-semibold flex items-center gap-1 transition-all active:scale-95 shadow-sm"
-              title="Shuffle visual variant while preserving 100% of curriculum content"
+              title={referenceBannerFor(singleElement.smartBlockData.presetId) ? 'Shuffle banner colours' : 'Shuffle visual variant while preserving 100% of curriculum content'}
             >
-              <span>🔀 Shuffle Style</span>
+              <span>{referenceBannerFor(singleElement.smartBlockData.presetId) ? 'Shuffle colours' : '🔀 Shuffle Style'}</span>
             </button>
 
             <button

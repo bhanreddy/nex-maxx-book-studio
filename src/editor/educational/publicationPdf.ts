@@ -1,7 +1,7 @@
 import {smartQrScene} from "../media/smartQr";
 import { mathSceneForElement } from "../math/mathScene";
 import { detachedSceneForElement } from "./detachScene";
-import { imageFilter, imageMaskPath } from "./imageTreatment";
+import { imageFilter, imageMaskPath, filterImagePixels } from "./imageTreatment";
 import { imagePlacement } from "./publicationScene";
 import { isImportedBorderArtwork } from '../pageFrame/types';
 import type jsPDF from "jspdf";
@@ -57,6 +57,7 @@ function uncachedPublicationScene(el:PageElement,pageElements?:PageElement[]):Pu
         brightness: el.content.brightness,
         contrast: el.content.contrast,
         saturation: el.content.saturation,
+        hueRotate: el.content.hueRotate,
         mask: el.content.mask,
         customMaskPath: el.content.customMaskPath,
       }],
@@ -109,8 +110,13 @@ export async function cropImage(node:Extract<SceneNode,{kind:"image"}>,gray:bool
   const radius=node.radius || (node.mask === "rounded" ? 16 : 0);
   if(radius){ctx.beginPath();ctx.roundRect(0,0,node.w,node.h,Math.min(radius,node.w/2,node.h/2));ctx.clip();}
   ctx.translate(node.w/2,node.h/2);ctx.rotate((node.rotation||0)*Math.PI/180);ctx.scale(node.flipX?-1:1,node.flipY?-1:1);ctx.translate(-node.w/2,-node.h/2);
-  ctx.filter=imageFilter(node,gray);
+  const nativeFilters = typeof Reflect.get(ctx, 'filter') === 'string';
+  if (nativeFilters) ctx.filter=imageFilter(node,gray);
   ctx.drawImage(image,placement.x-node.x,placement.y-node.y,placement.w,placement.h);
+  if (!nativeFilters && (gray || node.hueRotate || node.saturation !== undefined || node.brightness !== undefined || node.contrast !== undefined)) {
+    const bitmap = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    filterImagePixels(bitmap.data, node, gray); ctx.putImageData(bitmap, 0, 0);
+  }
   try{return canvas.toDataURL("image/png");}catch{throw new Error(`Image '${node.alt}' does not allow export. Upload a local copy.`);}
 }
 /** Screen and PDF consume the same measured, positioned vector nodes. */
@@ -179,7 +185,7 @@ export async function renderPublicationPdf(doc:jsPDF,scene:PublicationScene,el:P
           if (line.kind !== "text") continue;
           const width=line.textLength??textWidth(line.text,line.size,!!line.bold,line.font==="serif"),shift=line.align==="middle"?width/2:line.align==="end"?width:0;
           const text=line.text.replaceAll("−","-"),charSpace=line.textLength!==undefined&&text.length>1?(line.textLength-doc.getTextWidth(text))/(text.length-1):(line.letterSpacing||0);
-          doc.text(text,line.x-shift,line.y,{charSpace});
+          doc.text(text,line.x-shift,line.y,{charSpace, ...(line.stroke ? { renderingMode: "fillThenStroke" as const } : {})});
           if(line.underline||line.strike){doc.setDrawColor(...color(line.fill));doc.setLineWidth(line.size*.045);if(line.underline)doc.line(line.x-shift,line.y+line.size*.12,line.x-shift+width,line.y+line.size*.12);if(line.strike)doc.line(line.x-shift,line.y-line.size*.3,line.x-shift+width,line.y-line.size*.3);}
         }
       }

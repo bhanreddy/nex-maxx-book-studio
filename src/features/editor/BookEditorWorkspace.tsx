@@ -29,6 +29,7 @@ import { MasterPagesModal } from "../palette/MasterPagesModal";
 import { DesignTokensModal } from "../palette/DesignTokensModal";
 import { BookStructureModal } from "../palette/BookStructureModal";
 import { PageBorderModal } from '../panels/PageBorderModal';
+import { DirectPasteImageModal } from "../ui/DirectPasteImageModal";
 import { PerformanceDiagnostics } from "./PerformanceDiagnostics";
 import { LayoutPartnerPanel } from "../layoutPartner/LayoutPartnerPanel";
 import { SmartChapterBuilder } from "../curriculum/SmartChapterBuilder";
@@ -283,9 +284,13 @@ export const BookEditorWorkspace: React.FC<BookEditorWorkspaceProps> = ({
         return;
       }
       if ((e.metaKey || e.ctrlKey) && !e.altKey && e.key.toLowerCase() === "v") {
-        e.preventDefault();
-        pasteSelection();
-        return;
+        const store = useEditorStore.getState();
+        if (store.clipboardElements && store.clipboardElements.length > 0) {
+          e.preventDefault();
+          pasteSelection();
+          return;
+        }
+        // If internal clipboard is empty, do NOT preventDefault! Let native paste event fire so handleUniversalPaste can capture clipboard image!
       }
 
       // Quick Font Styling Shortcuts for Selected Text Elements (Cmd + B / I / U)
@@ -538,6 +543,7 @@ export const BookEditorWorkspace: React.FC<BookEditorWorkspaceProps> = ({
       <DesignTokensModal />
       <BookStructureModal />
       <PageBorderModal />
+      <DirectPasteImageModal />
 
       {/* Toast Notifications */}
       <div className="fixed bottom-28 right-6 z-50 flex flex-col gap-2 pointer-events-none">

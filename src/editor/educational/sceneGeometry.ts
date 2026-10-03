@@ -28,14 +28,15 @@ export function transformScenePath(path: string, sx: number, sy: number, dx = 0,
 /** Bake the visible block scale into native layers exactly once when detaching. */
 export function transformSceneNode(node: SceneNode, sx: number, sy: number, dx = 0, dy = 0): SceneNode {
   const scale = Math.min(sx, sy);
-  const mark = "strokeWidth" in node ? { strokeWidth: node.strokeWidth === undefined ? undefined : node.strokeWidth * scale } : {};
+  const stroke = "strokeWidth" in node ? { strokeWidth: node.strokeWidth === undefined ? undefined : node.strokeWidth * scale } : {};
+  const mark = { ...stroke, ...("editBounds" in node && node.editBounds ? { editBounds: { x: node.editBounds.x * sx + dx, y: node.editBounds.y * sy + dy, w: node.editBounds.w * sx, h: node.editBounds.h * sy } } : {}) };
   switch (node.kind) {
     case "gradient": return { ...node, x1: node.x1 * sx + dx, y1: node.y1 * sy + dy, x2: node.x2 * sx + dx, y2: node.y2 * sy + dy };
     case "path": return { ...node, ...mark, d: transformScenePath(node.d, sx, sy, dx, dy) };
     case "polygon": return { ...node, ...mark, points: node.points.map(([x, y]) => [x * sx + dx, y * sy + dy]) };
     case "line": return { ...node, ...mark, x: node.x * sx + dx, y: node.y * sy + dy, x2: node.x2 * sx + dx, y2: node.y2 * sy + dy };
     case "ellipse": return { ...node, ...mark, x: node.x * sx + dx, y: node.y * sy + dy, rx: node.rx * sx, ry: node.ry * sy };
-    case "text": return { ...node, x: node.x * sx + dx, y: node.y * sy + dy, size: node.size * sy,
+    case "text": return { ...node, ...mark, shadow: node.shadow ? { ...node.shadow, dx: node.shadow.dx * sx, dy: node.shadow.dy * sy, blur: node.shadow.blur * scale } : undefined, x: node.x * sx + dx, y: node.y * sy + dy, size: node.size * sy,
       wrapWidth: node.wrapWidth === undefined ? undefined : node.wrapWidth * sx,
       lineHeight: node.lineHeight === undefined ? undefined : node.lineHeight * sy,
       textLength: node.textLength === undefined ? undefined : node.textLength * sx,

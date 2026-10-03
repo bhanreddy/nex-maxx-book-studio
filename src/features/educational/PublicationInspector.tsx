@@ -1,4 +1,6 @@
 "use client";
+import { referenceBannerFor } from '../../editor/educational/referenceBanners';
+import { ReferenceBannerInspector } from './ReferenceBannerControls';
 import { legacyPublishingPreset,upgradeLegacyEducationalBlock } from '../../editor/educational/library/actions';
 import { EducationalContentControls } from "./EducationalContentControls";
 import { readPublicationImage } from "../../editor/educational/imageAssets";
@@ -27,6 +29,7 @@ export function PublicationInspector({element}:{element:PageElement}) {
   const book=store.getActiveBook();
   const overflow=book && element.transform.y+buildPublicationScene({...b,transform:element.transform}).height>book.dimensions.heightPt-book.margins.bottomPt;
   const collisions=store.getActivePageElements().some(other=>other.id!==element.id&&other.category!=="decorative"&&!other.hidden&&element.transform.x<other.transform.x+other.transform.width&&element.transform.x+element.transform.width>other.transform.x&&element.transform.y<other.transform.y+other.transform.height&&element.transform.y+element.transform.height>other.transform.y);
+  if (referenceBannerFor(b.presetId)) return <ReferenceBannerInspector element={element} />;
   return <section className="rounded-xl border border-slate-600 bg-slate-900 p-3 space-y-3">
     <div className="text-[10px] text-amber-200 tracking-wider uppercase">Publication studio</div>
     {legacyPublishingPreset(element)&&<button type="button" className="publication-button w-full" onClick={()=>upgradeLegacyEducationalBlock(element)}>Duplicate in the publishing design</button>}

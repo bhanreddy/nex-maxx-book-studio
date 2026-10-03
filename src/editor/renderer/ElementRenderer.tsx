@@ -1,4 +1,5 @@
 "use client";
+import { referenceBannerFor } from "../educational/referenceBanners";
 import { EducationalBlock } from "./EducationalBlock";
 import { selectionRoot, isElementLocked } from "../core/elementGroups";
 import {SmartQrRenderer} from "../../features/media/SmartQrRenderer";
@@ -285,7 +286,7 @@ export const ElementRenderer: React.FC<ElementRendererProps> = memo(function Ele
 
   const containerStyle: React.CSSProperties = {
     position: "absolute",
-    pointerEvents: type === "group" || (isFlowText(element) && !isEditingText) ? "none" : undefined,
+    pointerEvents: type === "group" || (isFlowText(element) && !isEditingText) ? "none" : "auto",
     left: `${transform.x}pt`,
     top: `${transform.y}pt`,
     width: `${transform.width}pt`,
@@ -515,14 +516,14 @@ export const ElementRenderer: React.FC<ElementRendererProps> = memo(function Ele
 
         return (
           <div
-            className="w-full h-full relative"
+            className="w-full h-full relative pointer-events-auto cursor-pointer"
             style={{
               boxShadow: isRectangular ? containerBoxShadow : undefined,
               borderRadius: isRectangular ? (style.borderRadius ? `${style.borderRadius}pt` : (style.shapeCorners?.radius ? `${style.shapeCorners.radius}pt` : undefined)) : undefined,
             }}
           >
             <svg
-              className="w-full h-full overflow-visible pointer-events-none"
+              className="w-full h-full overflow-visible pointer-events-auto cursor-pointer"
               style={{
                 filter: !isRectangular && svgDropShadow !== "none" ? svgDropShadow : undefined,
               }}
@@ -622,6 +623,8 @@ export const ElementRenderer: React.FC<ElementRendererProps> = memo(function Ele
                 strokeLinecap={stroke.linecap}
                 strokeLinejoin={stroke.linejoin}
                 strokeOpacity={stroke.opacity}
+                pointerEvents="all"
+                className="pointer-events-auto cursor-pointer"
               />
             </svg>
 
@@ -1529,6 +1532,7 @@ export const ElementRenderer: React.FC<ElementRendererProps> = memo(function Ele
 
       case "smart-block":
         if (element.smartBlockData) {
+          if (referenceBannerFor(element.smartBlockData.presetId)) return <EducationalBlock element={element} selected={isSelected && !locked && !grouped}/>;
           if (element.smartBlockData.presetId.startsWith("edu-") && !element.smartBlockData.styleOverrides.contentLayout?.enabled) return <EducationalBlock element={element} selected={isSelected && !locked && !grouped}/>;
           if (element.smartBlockData.styleOverrides.compactScale || element.smartBlockData.styleOverrides.contentLayout?.enabled || isPremiumBlockLayout(element.smartBlockData.styleOverrides.layoutVariant)) return <BlockContentEditor element={element} selected={isSelected && !locked && !grouped} zoom={zoom}/>;
           if (element.smartBlockData.styleOverrides.referenceElement) return <PublicationSceneView scene={buildPublicationScene({ ...element.smartBlockData, transform: blockTransform })} viewBox={`0 0 ${blockTransform.width} ${blockTransform.height}`} preserveAspectRatio="none" overflow="visible" label={element.smartBlockData.semanticContent.title}/>;

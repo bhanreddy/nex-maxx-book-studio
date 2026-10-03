@@ -25,8 +25,8 @@ export const CountingObjectsGridTemplate: MathTemplate = {
   category: "numbers",
   type: "visual-model",
   tags: ["counting", "objects", "quantities", "class 1"],
-  defaultWidth: 320,
-  defaultHeight: 180,
+  defaultWidth: 250,
+  defaultHeight: 145,
   defaultData: {
     count: 7,
     itemType: "apple", // "apple" | "star" | "smile"
@@ -114,8 +114,8 @@ export const TenFrameTemplate: MathTemplate = {
   category: "numbers",
   type: "visual-model",
   tags: ["ten frame", "counters", "number sense", "class 1"],
-  defaultWidth: 260,
-  defaultHeight: 140,
+  defaultWidth: 200,
+  defaultHeight: 110,
   defaultData: {
     value: 7,
     label: "Show 7 on the Ten Frame",
@@ -155,8 +155,8 @@ export const NumberBondsTemplate: MathTemplate = {
   category: "addition",
   type: "visual-model",
   tags: ["number bonds", "part-part-whole", "addition", "class 1"],
-  defaultWidth: 240,
-  defaultHeight: 180,
+  defaultWidth: 190,
+  defaultHeight: 145,
   defaultData: {
     whole: 8,
     part1: 5,
@@ -224,8 +224,8 @@ export const NumberLine20Template: MathTemplate = {
   category: "numbers",
   type: "visual-model",
   tags: ["number line", "0 to 20", "order", "class 1"],
-  defaultWidth: 360,
-  defaultHeight: 110,
+  defaultWidth: 280,
+  defaultHeight: 90,
   defaultData: {
     start: 0,
     end: 20,
@@ -271,8 +271,8 @@ export const TensOnesBlocksTemplate: MathTemplate = {
   category: "place-value",
   type: "visual-model",
   tags: ["base 10", "tens", "ones", "place value", "class 1"],
-  defaultWidth: 260,
-  defaultHeight: 160,
+  defaultWidth: 200,
+  defaultHeight: 130,
   defaultData: {
     tens: 2,
     ones: 5,
@@ -318,8 +318,8 @@ export const MoreLessComparisonTemplate: MathTemplate = {
   category: "numbers",
   type: "practice",
   tags: ["comparison", "more", "less", "greater than", "class 1"],
-  defaultWidth: 260,
-  defaultHeight: 120,
+  defaultWidth: 200,
+  defaultHeight: 95,
   defaultData: {
     num1: 8,
     num2: 5,
@@ -374,8 +374,8 @@ export const ShapesGalleryTemplate: MathTemplate = {
   category: "geometry",
   type: "visual-model",
   tags: ["2d shapes", "circle", "square", "triangle", "rectangle", "class 1"],
-  defaultWidth: 320,
-  defaultHeight: 140,
+  defaultWidth: 250,
+  defaultHeight: 110,
   defaultData: {
     title: "Basic 2D Shapes",
   },
@@ -436,8 +436,8 @@ export const HourClockTemplate: MathTemplate = {
   category: "time",
   type: "visual-model",
   tags: ["clock", "hour", "o'clock", "analog time", "class 1"],
-  defaultWidth: 200,
-  defaultHeight: 180,
+  defaultWidth: 180,
+  defaultHeight: 145,
   defaultData: {
     hours: 4,
     minutes: 0,
@@ -479,8 +479,8 @@ export const DaysMonthsStripTemplate: MathTemplate = {
   category: "time",
   type: "visual-model",
   tags: ["days", "week", "calendar", "sequence", "class 1"],
-  defaultWidth: 360,
-  defaultHeight: 80,
+  defaultWidth: 280,
+  defaultHeight: 65,
   defaultData: {
     days: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
     highlightDay: "Sun",
@@ -534,8 +534,8 @@ export const RupeeCoinsTemplate: MathTemplate = {
   category: "money",
   type: "visual-model",
   tags: ["money", "rupees", "coins", "currency", "class 1"],
-  defaultWidth: 260,
-  defaultHeight: 130,
+  defaultWidth: 200,
+  defaultHeight: 105,
   defaultData: {
     coins: [5, 2, 1], // e.g. ₹5, ₹2, ₹1
   },
@@ -583,8 +583,8 @@ export const RepeatingPatternTemplate: MathTemplate = {
   category: "patterns",
   type: "practice",
   tags: ["patterns", "repeating", "sequences", "class 1"],
-  defaultWidth: 320,
-  defaultHeight: 100,
+  defaultWidth: 250,
+  defaultHeight: 80,
   defaultData: {
     pattern: ["▲", "●", "▲", "●", "▲"],
     next: "●",
@@ -639,8 +639,8 @@ export const TallyPictographTemplate: MathTemplate = {
   category: "data",
   type: "visual-model",
   tags: ["tally", "pictograph", "data handling", "class 1"],
-  defaultWidth: 340,
-  defaultHeight: 180,
+  defaultWidth: 270,
+  defaultHeight: 145,
   defaultData: {
     items: [
       { label: "Apples", count: 6 },

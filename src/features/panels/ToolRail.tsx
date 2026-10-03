@@ -376,7 +376,12 @@ export const ToolRail: React.FC = () => {
                 key={s.id}
                 onClick={() => {
                   setActiveShapeType(s.id as typeof activeShapeType);
-                  addVectorShape(s.id as typeof activeShapeType);
+                  useUiStore.getState().setActiveTool("shape");
+                  useUiStore.getState().showToast({
+                    type: "info",
+                    title: `${s.label} Tool Active`,
+                    message: "Click and drag on the worksheet to draw",
+                  });
                   setShapeMenuOpen(false);
                 }}
                 className={`flex items-center gap-2.5 min-h-9 px-2.5 rounded-lg text-[13px] hover:bg-slate-100 dark:hover:bg-white/10 text-left active:scale-[0.97] ${

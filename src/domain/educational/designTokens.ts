@@ -496,3 +496,22 @@ export const REFERENCE_ELEMENT_TOKENS = {
   premiumRadius: 12, premiumInset: 8, premiumStroke: 1.1, premiumShadowOffset: 3,
   gold: "#B38B40", muted: "#647083",
 } as const;
+/** Hue treatments for the supplied sculpted ribbons; neutral paper stays neutral. */
+export const REFERENCE_BANNER_COLOURS = [
+  { id: 'original', name: 'Original colours', hueRotate: 0, ink: '#003568', accent: '#ffc122' },
+  { id: 'violet', name: 'Violet & lime', hueRotate: 35, ink: '#2b216d', accent: '#a8d92d' },
+  { id: 'berry', name: 'Berry & mint', hueRotate: 80, ink: '#58234f', accent: '#41d994' },
+  { id: 'copper', name: 'Copper & aqua', hueRotate: 145, ink: '#63321f', accent: '#28c6e7' },
+  { id: 'olive', name: 'Olive & lavender', hueRotate: 220, ink: '#314d20', accent: '#b291ef' },
+  { id: 'teal', name: 'Teal & rose', hueRotate: 285, ink: '#005346', accent: '#f09bb9' },
+] as const;
+
+/** Heading inks sampled from the six supplied worksheet references. */
+export const REFERENCE_WORKSHEET_TEXT = {
+  'playful-activity': { primary: '#ed001b', secondary: '#b60013', stroke: '#ffffff', strokePx: 3, shadow: '#ba643133', body: '#193c55' },
+  'pastel-did-you-know': { primary: '#145389', secondary: '#ffb800', stroke: '#fffaee', strokePx: 1, shadow: '#a2814133', body: '#193c55' },
+  'learning-objectives': { primary: '#ffffff', secondary: '#ffdf00', stroke: '#08427f', strokePx: 2, shadow: '#00294d55', body: '#193c55' },
+  'fun-fact': { primary: '#064678', secondary: '#ff243d', stroke: '#fff9e8', strokePx: 1, shadow: '#a2814133', body: '#193c55' },
+  'skill-builder': { primary: '#ffffff', secondary: '#ffffff', stroke: '#075b37', strokePx: 8, shadow: '#69813d33', body: '#193c55' },
+  'quick-review': { primary: '#133770', secondary: '#133770', stroke: '#ffffff', strokePx: 7, shadow: '#b9813e33', body: '#193c55' },
+} as const;

@@ -1,12 +1,13 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from "react";
-import { Cloud, ImagePlus, RefreshCw, Search } from "lucide-react";
-import { STARTER_PICTURES } from "../../editor/media/picturePresetCatalog";
+import { Cloud, ImagePlus, RefreshCw, Search, Clipboard } from "lucide-react";
+import { STARTER_PICTURES, CLAY_DOODLE_PICTURES } from "../../editor/media/picturePresetCatalog";
 import { listCloudPictures, pictureElement, uploadCloudPicture, type PictureAsset } from "../../editor/media/pictureRepository";
 import { assetRenderUrl } from "../../editor/persistence/assetReferences";
 import { ChapterRepositoryError } from "../../editor/persistence/chapterRepository";
 import { useEditorStore } from "../../editor/stores/editorStore";
+import { directPasteImageFromClipboard } from "../../editor/clipboard/universalClipboard";
 
 const field = "w-full rounded-lg border border-slate-300 dark:border-white/15 bg-white dark:bg-slate-900 px-3 py-2 text-xs text-slate-800 dark:text-slate-100";
 // Share an in-flight seed when both sidebar entry points are opened during an upload.
@@ -18,6 +19,7 @@ async function saveStarterPictures(progress: (message: string) => void) {
     let offset: number | null = 0;
     do { const page = await listCloudPictures("NEX Picture · ", offset); saved.push(...page.items); offset = page.next_offset; } while (offset !== null);
     for (const [index, picture] of STARTER_PICTURES.entries()) {
+      if (picture.src.endsWith(".svg")) continue;
       if (saved.some(asset => asset.checksum === picture.checksum)) continue;
       progress(`Saving starter pictures ${index + 1} of ${STARTER_PICTURES.length}…`);
       const response = await fetch(picture.src, { signal: AbortSignal.timeout(30000) });
@@ -107,21 +109,105 @@ export function PicturePresetLibrary() {
     <div className="shrink-0 p-3 space-y-2 border-b border-slate-200 dark:border-white/10">
       <div className="flex items-center justify-between"><h3 className="text-sm font-semibold text-slate-800 dark:text-slate-100">Picture presets</h3><button type="button" aria-label="Refresh cloud pictures" title="Refresh cloud pictures" disabled={busy} onClick={() => void load()} className="min-h-9 min-w-9 flex items-center justify-center rounded-lg hover:bg-slate-100 dark:hover:bg-white/10 disabled:opacity-40"><RefreshCw size={15}/></button></div>
       <input ref={fileInput} type="file" multiple accept="image/png,image/jpeg,image/webp" aria-label="Upload picture presets" className="sr-only" disabled={busy} onChange={event => void upload(Array.from(event.target.files || []))}/>
-      <button type="button" disabled={busy} onClick={() => fileInput.current?.click()} className="w-full min-h-11 px-3 flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white rounded-lg text-xs font-semibold"><ImagePlus size={16}/>{busy ? "Working…" : "Upload pictures to cloud"}</button>
-      <p className="text-[10px] text-slate-500 dark:text-slate-400">PNG, JPG or WebP · up to 25 MB each · transparency preserved</p>
-      <form className="flex gap-2" onSubmit={event => { event.preventDefault(); void load(0, false); }}><input aria-label="Search cloud pictures" placeholder="Search cloud pictures" maxLength={200} value={search} onChange={event => setSearch(event.target.value)} className={field}/><button disabled={busy} aria-label="Search pictures" className="min-w-10 rounded-lg bg-slate-100 dark:bg-white/10 flex items-center justify-center"><Search size={15}/></button></form>
+      <div className="flex gap-2">
+        <button type="button" disabled={busy} onClick={() => void directPasteImageFromClipboard()} className="flex-1 min-h-10 px-2.5 flex items-center justify-center gap-1.5 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white rounded-lg text-xs font-semibold shadow-xs transition-all active:scale-[0.98]"><Clipboard size={14}/><span>Direct Paste</span></button>
+        <button type="button" disabled={busy} onClick={() => fileInput.current?.click()} className="flex-1 min-h-10 px-2.5 flex items-center justify-center gap-1.5 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white rounded-lg text-xs font-semibold shadow-xs transition-all active:scale-[0.98]"><ImagePlus size={14}/><span>{busy ? "Working…" : "Upload Cloud"}</span></button>
+      </div>
+      <p className="text-[10px] text-slate-500 dark:text-slate-400">Paste clipboard image (Cmd+V) · PNG, JPG, WebP, SVG</p>
+      <form className="flex gap-2" onSubmit={event => { event.preventDefault(); void load(0, false); }}><input aria-label="Search cloud pictures" placeholder="Search pictures (maths, clay, learner)..." maxLength={200} value={search} onChange={event => setSearch(event.target.value)} className={field}/><button disabled={busy} aria-label="Search pictures" className="min-w-10 rounded-lg bg-slate-100 dark:bg-white/10 flex items-center justify-center"><Search size={15}/></button></form>
       {message && <p role="status" aria-live="polite" className="text-xs text-indigo-600 dark:text-indigo-300">{message}</p>}
       {error && !needsLogin && <p role="alert" className="text-xs text-rose-600 dark:text-rose-300">{error}</p>}
       {needsLogin && <details open className="bg-slate-50 dark:bg-white/5 p-2 rounded-lg border border-indigo-200 dark:border-indigo-900/40"><summary className="cursor-pointer text-xs font-semibold text-indigo-600 dark:text-indigo-300 py-1">Sign in with SuperAdmin Founder credentials</summary><form onSubmit={signIn} className="space-y-2 mt-2">{loginError && <p role="alert" className="text-xs text-rose-600 dark:text-rose-300 bg-rose-50 dark:bg-rose-950/40 p-1.5 rounded">{loginError}</p>}<label className="text-xs block text-slate-700 dark:text-slate-200">Platform email or Founder ID<input autoComplete="username" type="text" required value={email} onChange={event => setEmail(event.target.value)} placeholder="e.g. 25e001.nexsyrus@gmail.com or FOUNDER-001" className={field}/></label><label className="text-xs block text-slate-700 dark:text-slate-200">Password<input autoComplete="current-password" type="password" required value={password} onChange={event => setPassword(event.target.value)} placeholder="Founder password" className={field}/></label><button disabled={busy} className="min-h-10 w-full bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white rounded-lg text-xs font-semibold">{busy ? "Signing in to SuperAdmin…" : "Sign in and save presets"}</button></form></details>}
     </div>
     <div className="flex-1 min-h-0 overflow-y-auto p-3 space-y-4">
-      <div><h4 className="text-xs font-semibold mb-2 text-slate-700 dark:text-slate-200">Starter pictures · {STARTER_PICTURES.length}</h4><div className="grid grid-cols-2 gap-2">{STARTER_PICTURES.filter(p => !search || `${p.name} ${p.tags}`.toLowerCase().includes(search.toLowerCase())).map(picture => {
-        const cloud = assets.find(asset => asset.checksum === picture.checksum);
-        return <button key={picture.id} type="button" title={`Add ${picture.name} to page`} aria-label={`Add ${picture.name}`} onClick={event => cloud ? insert(cloud, null, { width: picture.width, height: picture.height }) : useEditorStore.getState().addElement(`preset-picture-${picture.id}`)} className="rounded-xl border border-slate-200 dark:border-white/10 p-2 text-left hover:border-indigo-400 bg-slate-50 dark:bg-white/5"><img loading="lazy" src={`/assets/picture-presets/${picture.id}-thumb.webp`} alt={picture.name} className="w-full h-20 object-contain"/><span className="block mt-1 text-[11px] font-medium text-slate-700 dark:text-slate-200">{picture.name}</span>{cloud && <span className="text-[9px] text-emerald-600 flex items-center gap-1"><Cloud size={10}/>Saved to cloud</span>}</button>;
-      })}</div></div>
-      <div><h4 className="text-xs font-semibold mb-2 text-slate-700 dark:text-slate-200">Cloud pictures · {assets.length}</h4><div className="grid grid-cols-2 gap-2">{assets.filter(asset => !STARTER_PICTURES.some(p => p.checksum === asset.checksum)).map(asset => <button key={asset.id} type="button" aria-label={`Add ${asset.title}`} onClick={event => insert(asset, event.currentTarget.querySelector("img"))} className="rounded-xl border border-slate-200 dark:border-white/10 p-2 text-left hover:border-indigo-400 bg-slate-50 dark:bg-white/5"><img loading="lazy" src={assetRenderUrl({ assetId: asset.id, revision: asset.revision, checksum: asset.checksum })} alt={asset.title} className="w-full h-20 object-contain"/><span className="block mt-1 text-[11px] font-medium text-slate-700 dark:text-slate-200 truncate">{asset.title}</span><span className="text-[9px] text-emerald-600 flex items-center gap-1"><Cloud size={10}/>Saved to cloud</span></button>)}</div>
-      {!assets.length && !busy && <p className="text-xs text-slate-500">{needsLogin ? "Sign in to load cloud pictures." : search ? "No cloud pictures match this search." : "Upload a picture to build your cloud library."}</p>}
-      {offset !== null && <button disabled={busy} onClick={() => void load(offset, false)} className="w-full mt-3 min-h-10 rounded-lg border border-slate-300 dark:border-white/15 text-xs">Load more pictures</button>}</div>
+      {/* 3D Doodle Clay Presets (Maths & Education) */}
+      <div>
+        <div className="flex items-center justify-between mb-2">
+          <h4 className="text-xs font-semibold text-indigo-600 dark:text-indigo-400 flex items-center gap-1.5">
+            <span className="inline-block w-2 h-2 rounded-full bg-indigo-500 animate-pulse" />
+            Clay Doodle 3D (Maths & STEM) · {CLAY_DOODLE_PICTURES.length}
+          </h4>
+          <span className="text-[10px] text-slate-400 font-mono">Vector 300DPI</span>
+        </div>
+        <div className="grid grid-cols-2 gap-2">
+          {CLAY_DOODLE_PICTURES.filter(p => !search || `${p.name} ${p.tags}`.toLowerCase().includes(search.toLowerCase())).map(picture => (
+            <button
+              key={picture.id}
+              type="button"
+              title={`Add ${picture.name} to worksheet`}
+              aria-label={`Add ${picture.name}`}
+              onClick={() => useEditorStore.getState().addElement(`preset-picture-${picture.id}`)}
+              className="group rounded-xl border border-slate-200 dark:border-white/10 p-2 text-left hover:border-indigo-500 hover:shadow-md bg-gradient-to-b from-white to-slate-50 dark:from-white/5 dark:to-white/[0.02] transition-all"
+            >
+              <div className="relative w-full h-20 flex items-center justify-center p-1 bg-slate-50/60 dark:bg-black/20 rounded-lg group-hover:scale-105 transition-transform duration-200">
+                <img loading="lazy" src={picture.src} alt={picture.name} className="w-full h-full object-contain filter drop-shadow-sm" />
+              </div>
+              <span className="block mt-1.5 text-[11px] font-medium text-slate-700 dark:text-slate-200 truncate group-hover:text-indigo-600 dark:group-hover:text-indigo-300">
+                {picture.name}
+              </span>
+              <span className="text-[9px] text-indigo-500/80 dark:text-indigo-400/80 font-medium">Clay Doodle</span>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Starter Photos */}
+      <div>
+        <h4 className="text-xs font-semibold mb-2 text-slate-700 dark:text-slate-200">
+          Learner Photos · {STARTER_PICTURES.length}
+        </h4>
+        <div className="grid grid-cols-2 gap-2">
+          {STARTER_PICTURES.filter(p => !search || `${p.name} ${p.tags}`.toLowerCase().includes(search.toLowerCase())).map(picture => {
+            const cloud = assets.find(asset => asset.checksum === picture.checksum);
+            return (
+              <button
+                key={picture.id}
+                type="button"
+                title={`Add ${picture.name} to page`}
+                aria-label={`Add ${picture.name}`}
+                onClick={() => cloud ? insert(cloud, null, { width: picture.width, height: picture.height }) : useEditorStore.getState().addElement(`preset-picture-${picture.id}`)}
+                className="rounded-xl border border-slate-200 dark:border-white/10 p-2 text-left hover:border-indigo-400 bg-slate-50 dark:bg-white/5"
+              >
+                <img loading="lazy" src={picture.src} alt={picture.name} className="w-full h-20 object-contain" />
+                <span className="block mt-1 text-[11px] font-medium text-slate-700 dark:text-slate-200 truncate">{picture.name}</span>
+                {cloud && <span className="text-[9px] text-emerald-600 flex items-center gap-1"><Cloud size={10} />Saved to cloud</span>}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Cloud Pictures */}
+      <div>
+        <h4 className="text-xs font-semibold mb-2 text-slate-700 dark:text-slate-200">
+          Cloud pictures · {assets.length}
+        </h4>
+        <div className="grid grid-cols-2 gap-2">
+          {assets.filter(asset => !STARTER_PICTURES.some(p => p.checksum === asset.checksum)).map(asset => (
+            <button
+              key={asset.id}
+              type="button"
+              aria-label={`Add ${asset.title}`}
+              onClick={event => insert(asset, event.currentTarget.querySelector("img"))}
+              className="rounded-xl border border-slate-200 dark:border-white/10 p-2 text-left hover:border-indigo-400 bg-slate-50 dark:bg-white/5"
+            >
+              <img loading="lazy" src={assetRenderUrl({ assetId: asset.id, revision: asset.revision, checksum: asset.checksum })} alt={asset.title} className="w-full h-20 object-contain" />
+              <span className="block mt-1 text-[11px] font-medium text-slate-700 dark:text-slate-200 truncate">{asset.title}</span>
+              <span className="text-[9px] text-emerald-600 flex items-center gap-1"><Cloud size={10} />Saved to cloud</span>
+            </button>
+          ))}
+        </div>
+        {!assets.length && !busy && (
+          <p className="text-xs text-slate-500">
+            {needsLogin ? "Sign in to load cloud pictures." : search ? "No cloud pictures match this search." : "Upload a picture to build your cloud library."}
+          </p>
+        )}
+        {offset !== null && (
+          <button disabled={busy} onClick={() => void load(offset, false)} className="w-full mt-3 min-h-10 rounded-lg border border-slate-300 dark:border-white/15 text-xs">
+            Load more pictures
+          </button>
+        )}
+      </div>
     </div>
   </section>;
 }

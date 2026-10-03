@@ -100,6 +100,7 @@ export function detachPublicationScene(block: SmartBlockInstance, baseZIndex: nu
         brightness: node.brightness,
         contrast: node.contrast,
         saturation: node.saturation,
+        hueRotate: node.hueRotate,
         mask: node.mask,
         customMaskPath: node.customMaskPath,
       };
@@ -119,7 +120,7 @@ export function detachPublicationScene(block: SmartBlockInstance, baseZIndex: nu
           ...el.style,
           color: node.fill,
           fontSize: node.size,
-          fontWeight: node.bold ? 700 : 400,
+          fontWeight: node.fontWeight ?? (node.bold ? 700 : 400),
           fontFamily: node.fontFamily || (node.font === "serif" ? "Times New Roman" : "Arial"),
         };
       } else {
@@ -147,7 +148,7 @@ export function detachedSceneForElement(el: PageElement): PublicationScene | nul
     const lineHeight = size * (el.style.lineHeight || 1.42);
     const align = el.style.textAlign === "center" ? "middle" : el.style.textAlign === "right" ? "end" : text.align || "start";
     return { width, height: Math.max(el.transform.height, size * 1.55 + (lines.length - 1) * lineHeight), variant: "editable-text", warnings: [],
-      nodes: lines.map((line, i) => ({ ...text, text: line, textLength: undefined, x: align === "middle" ? width / 2 : align === "end" ? width : text.x, y: size * 1.15 + i * lineHeight, size, align, fill: el.style.color || text.fill, bold: (el.style.fontWeight || 400) >= 600, fontFamily: el.style.fontFamily || text.fontFamily, font: el.style.fontFamily?.includes("Times") ? "serif" : "sans" })) };
+      nodes: [...source.nodes.filter(n => n.kind === "gradient" || n.kind === "clip"), ...lines.map((line, i): SceneNode => ({ ...text, text: line, textLength: undefined, x: align === "middle" ? width / 2 : align === "end" ? width : text.x, y: size * 1.15 + i * lineHeight, size, align, fill: el.style.color || text.fill, bold: (el.style.fontWeight || 400) >= 600, fontFamily: el.style.fontFamily || text.fontFamily, font: el.style.fontFamily?.includes("Times") ? "serif" : "sans" }))] };
   }
 
   const nodes = source.nodes.map((n): SceneNode => {
