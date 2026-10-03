@@ -447,17 +447,61 @@ export interface ElementStyle {
   // Typography
   fontFamily?: string;
   fontSize?: number;        // in points (pt)
-  fontWeight?: 300 | 400 | 500 | 600 | 700 | 800 | 900;
-  fontStyle?: "normal" | "italic";
+  fontWeight?: 100 | 200 | 300 | 400 | 500 | 600 | 700 | 800 | 900 | number;
+  fontStyle?: "normal" | "italic" | "oblique";
   lineHeight?: number;      // multiplier or pt
   letterSpacing?: number;   // in pt
+  wordSpacing?: number;     // in pt
   textAlign?: "left" | "center" | "right" | "justify";
+  verticalAlign?: "top" | "middle" | "center" | "bottom";
   textTransform?: "none" | "uppercase" | "lowercase" | "capitalize";
-  textDecoration?: "none" | "underline" | "line-through";
+  textDecoration?: "none" | "underline" | "line-through" | string;
+  textDecorationStyle?: "solid" | "double" | "dotted" | "dashed" | "wavy";
+  textDecorationColor?: string;
   baselineShift?: number;   // in pt
   columns?: number;         // 1, 2, 3
   columnGap?: number;       // in pt
-  paragraphSpacing?: number;// in pt
+  paragraphSpacing?: number;// in pt (spacing after)
+  paragraphSpacingBefore?: number; // in pt (spacing before)
+  textIndent?: {
+    left?: number;
+    right?: number;
+    firstLine?: number;
+    hanging?: number;
+  };
+  listStyle?: {
+    type: "bullet" | "number" | "none";
+    bulletVariant?: "circle" | "square" | "dash" | "arrow" | "check" | "star";
+    numberVariant?: "decimal" | "padded" | "upper-alpha" | "lower-alpha" | "upper-roman" | "lower-roman";
+  };
+  textStroke?: {
+    color: string;
+    width: number;
+    opacity?: number;
+  };
+  textGradient?: {
+    enabled: boolean;
+    type?: "linear" | "radial";
+    angle?: number;
+    stops: Array<{ offset: number; color: string; opacity?: number }>;
+  };
+  textShadows?: Array<{
+    id: string;
+    x: number;
+    y: number;
+    blur: number;
+    color: string;
+    opacity?: number;
+  }>;
+  textHighlight?: {
+    color: string;
+    opacity?: number;
+    borderRadius?: number;
+    padding?: number;
+  };
+  overflowMode?: "visible" | "hidden" | "shrink-to-fit" | "auto-grow";
+  spellCheck?: boolean;
+  lang?: string;
   styleId?: string;         // assigned paragraph / character style id
   color?: string;
 

@@ -440,7 +440,7 @@ export const TransformOverlay: React.FC<TransformOverlayProps> = ({
       <div
         data-canvas-controls
         onClick={e => e.stopPropagation()}
-        className={`absolute touch-none border-2 z-40 transition-none ${curriculumMeta ? "border-[#d7c49c]" : "border-indigo-500/90"} ${(singleElement?.type === "smart-block" || Boolean(curriculumMeta)) ? "pointer-events-none" : "pointer-events-auto"}`}
+        className={`absolute touch-none border-2 z-40 transition-none ${curriculumMeta ? "border-[#d7c49c]" : "border-indigo-500/90"} ${(singleElement?.type === "smart-block" || singleElement?.type === "math-component" || Boolean(curriculumMeta)) ? "pointer-events-none" : "pointer-events-auto"}`}
         style={{
           left: `${boundingBox.x}pt`,
           top: `${boundingBox.y}pt`,
@@ -457,12 +457,12 @@ export const TransformOverlay: React.FC<TransformOverlayProps> = ({
             useUiStore.getState().setRightInspectorOpen(true);
           }
         }}
-        onPointerDown={(singleElement?.type === "smart-block" || Boolean(curriculumMeta)) ? undefined : handleBoxPointerDown}
+        onPointerDown={(singleElement?.type === "smart-block" || singleElement?.type === "math-component" || Boolean(curriculumMeta)) ? undefined : handleBoxPointerDown}
       >
-        {(singleElement?.type === "smart-block" || Boolean(curriculumMeta)) && (
+        {(singleElement?.type === "smart-block" || singleElement?.type === "math-component" || Boolean(curriculumMeta)) && (
           <>
             {/* Dedicated Top Move & Unlock Header Bar */}
-            {!singleElement?.smartBlockData?.presetId.startsWith("edu-") && <div
+            {singleElement?.type !== "math-component" && !singleElement?.smartBlockData?.presetId.startsWith("edu-") && <div
               className="block-edit-bar absolute left-0 pointer-events-auto select-none z-50"
               style={{ top: boundingBox.y * zoom < 45 ? 20 / zoom : -60 / zoom, transform: `scale(${1 / zoom})`, transformOrigin: "top left" }}
               onPointerDown={e => e.stopPropagation()}

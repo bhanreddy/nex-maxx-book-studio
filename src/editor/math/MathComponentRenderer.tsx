@@ -1,14 +1,10 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-// ============================================================================
-// NEX MAXX BOOK STUDIO - UNIVERSAL MATH COMPONENT RENDERER
-// Dispatches to the registered Math Template renderer with responsive layout reflow
-// ============================================================================
-
-import React from "react";
-import { PageElement } from "../../domain/element/types";
+import React, { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
+import type { PageElement } from "../../domain/element/types";
 import { getMathTemplate } from "./mathRegistry";
 import { useEditorStore } from "../stores/editorStore";
-import { MathAnswerMode, MathStyleVariant } from "./types";
+import { useUiStore } from "../stores/uiStore";
+import { buildEditableMathTree, mathRenderFrame, type MathPart, type MathPartOverride } from "./mathEditableTree";
 
 interface MathComponentRendererProps {
   element: PageElement;
@@ -16,58 +12,75 @@ interface MathComponentRendererProps {
   zoom?: number;
 }
 
-export const MathComponentRenderer: React.FC<MathComponentRendererProps> = ({
-  element,
-  zoom = 1,
-}) => {
-  const updateElementContent = useEditorStore((s) => s.updateElementContent);
+export const MathComponentRenderer: React.FC<MathComponentRendererProps> = ({ element, isSelected = false, zoom = 1 }) => {
+  const updateContent = useEditorStore(s => s.updateElementContent);
+  const target = useUiStore(s => s.mathEditingTarget);
+  const [editing, setEditing] = useState<{ part: MathPart; left: number; top: number; width: number } | null>(null);
+  const draft = useRef("");
+  const cancelled = useRef(false);
+  const template = getMathTemplate(element.content.mathTemplateId || element.presetId || "math-place-value-indian");
+  const data = element.content.mathData || element.content;
+  const overrides: Record<string, MathPartOverride> = element.content.mathOverrides || {};
+  const appearance = element.content.mathAppearance || {};
 
-  const mathTemplateId =
-    element.content?.mathTemplateId || element.presetId || "math-place-value-indian";
-  const template = getMathTemplate(mathTemplateId);
+  useEffect(() => {
+    if (!isSelected || element.locked) {
+      setEditing(null);
+      if (useUiStore.getState().editingTextElementId === element.id) useUiStore.getState().setEditingTextElementId(null);
+    }
+  }, [isSelected, element.locked, element.id]);
+  useEffect(() => () => {
+    if (useUiStore.getState().editingTextElementId === element.id) useUiStore.getState().setEditingTextElementId(null);
+  }, [element.id]);
 
-  const mathData = element.content?.mathData || element.content || {};
-  const mode: MathAnswerMode = element.content?.mathMode || "teacher";
-  const styleVariant: MathStyleVariant =
-    (element.content?.styleVariant as MathStyleVariant) || "color-coded";
-
-  const handleUpdateData = (patch: Record<string, unknown>) => {
-    updateElementContent(element.id, {
-      mathData: { ...mathData, ...patch },
-      // also keep synced at root for ease of access
-      ...patch,
-    });
+  if (!template) return <div className="p-3 text-xs text-rose-700">Maths template unavailable: {element.content.mathTemplateId}</div>;
+  const frame = mathRenderFrame(template, element.transform.width, element.transform.height, appearance);
+  const selectPart = (part: MathPart) => {
+    useUiStore.getState().setMathEditingTarget({ elementId: element.id, partId: part.id });
+    useUiStore.getState().setRightInspectorOpen(true);
   };
+  const finish = (save: boolean) => {
+    if (!editing) return;
+    if (save && !cancelled.current && draft.current !== editing.part.text) {
+      const current = useEditorStore.getState().elements[element.id];
+      const parts = current?.content.mathOverrides || {};
+      updateContent(element.id, { mathOverrides: { ...parts, [editing.part.id]: {
+        ...parts[editing.part.id], source: editing.part.source, text: draft.current,
+      } } });
+    }
+    setEditing(null);
+    if (useUiStore.getState().editingTextElementId === element.id) useUiStore.getState().setEditingTextElementId(null);
+  };
+  const { tree } = buildEditableMathTree(template, {
+    data, mode: element.content.mathMode || "teacher", styleVariant: element.content.styleVariant || "color-coded",
+    width: frame.renderWidth, height: frame.renderHeight, elementId: element.id, zoom,
+    onUpdateData: element.locked ? undefined : patch => updateContent(element.id, { mathData: { ...data, ...patch }, ...patch }),
+  }, {
+    overrides, appearance, interactive: !element.locked && isSelected,
+    selectedPartId: target?.elementId === element.id ? target.partId : undefined,
+    onSelect: selectPart,
+    onEdit: (part, node) => {
+      selectPart(part); cancelled.current = false; draft.current = part.text || "";
+      const rect = node.getBoundingClientRect();
+      setEditing({ part, left: Math.max(8, Math.min(rect.left, window.innerWidth - 248)), top: Math.max(8, Math.min(rect.top, window.innerHeight - 112)), width: Math.max(240, Math.min(rect.width + 24, 480)) });
+      useUiStore.getState().setEditingTextElementId(element.id);
+    },
+  });
 
-  if (!template) {
-    return (
-      <div className="w-full h-full flex flex-col items-center justify-center p-2 rounded border border-rose-300 bg-rose-50 text-rose-800 text-xs text-center font-mono">
-        <span>Math Template Not Found</span>
-        <span className="text-[9px] opacity-75">{mathTemplateId}</span>
-      </div>
-    );
-  }
-
-  const Renderer = template.renderer;
-
-  return (
-    <div
-      className="w-full h-full relative overflow-hidden"
-      style={{
-        width: "100%",
-        height: "100%",
-      }}
-    >
-      <Renderer
-        data={mathData}
-        mode={mode}
-        styleVariant={styleVariant}
-        width={element.transform.width}
-        height={element.transform.height}
-        elementId={element.id}
-        zoom={zoom}
-        onUpdateData={handleUpdateData}
-      />
+  return <div className="math-component-frame w-full h-full relative" data-math-component={element.id}>
+    <div style={{ position: "absolute", left: `${frame.padding + frame.offsetX}pt`, top: `${frame.padding + frame.offsetY}pt`, width: `${frame.renderWidth}pt`, height: `${frame.renderHeight}pt`, transform: `scale(${frame.scaleX}, ${frame.scaleY})`, transformOrigin: "top left" }}>
+      {tree}
     </div>
-  );
+    {editing && typeof document !== "undefined" && createPortal(
+      <div className="math-inline-editor" data-canvas-controls style={{ position: "fixed", left: editing.left, top: editing.top, width: editing.width, zIndex: 10000 }} onPointerDown={e => e.stopPropagation()} onMouseDown={e => e.stopPropagation()} onClick={e => e.stopPropagation()}>
+        <textarea autoFocus aria-label="Edit maths template text" defaultValue={editing.part.text || ""} onFocus={e => e.currentTarget.select()} onChange={e => { draft.current = e.target.value; }}
+          onBlur={() => finish(true)} onKeyDown={e => {
+            e.stopPropagation();
+            if (e.key === "Escape") { e.preventDefault(); cancelled.current = true; finish(false); }
+            if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); finish(true); }
+          }} />
+        <div>Enter to save · Shift+Enter for a new line · Esc to cancel</div>
+      </div>, document.body
+    )}
+  </div>;
 };

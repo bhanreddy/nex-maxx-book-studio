@@ -5,6 +5,8 @@
 // ============================================================================
 
 import { useEditorStore } from "../stores/editorStore";
+import { useHistoryStore } from "../stores/historyStore";
+import type { CustomMathTemplateEntry } from "./types";
 import { useUiStore } from "../stores/uiStore";
 import { getMathTemplate, recordRecentMathId } from "./mathRegistry";
 import { mathSceneForElement } from "./mathScene";
@@ -17,7 +19,8 @@ export function insertMathComponent(
   templateId: string,
   targetX?: number,
   targetY?: number,
-  customData?: Record<string, any>
+  customData?: Record<string, any>,
+  settings?: Partial<CustomMathTemplateEntry>
 ): string | null {
   const { getActiveBook, getActivePage, getActivePageElements } = useEditorStore.getState();
   const book = getActiveBook();
@@ -40,14 +43,16 @@ export function insertMathComponent(
   const maxZ = activeElements.reduce((max, el) => Math.max(max, el.transform.zIndex), 0);
   const id = `el-math-${Math.random().toString(36).substring(2, 9)}`;
 
+  const width = settings?.width || template.defaultWidth;
+  const height = settings?.height || template.defaultHeight;
   const posX =
     targetX !== undefined
-      ? Math.max(10, Math.min(book.dimensions.widthPt - template.defaultWidth - 10, targetX))
-      : Math.max(40, Math.round((book.dimensions.widthPt - template.defaultWidth) / 2));
+      ? Math.max(10, Math.min(book.dimensions.widthPt - width - 10, targetX))
+      : Math.max(40, Math.round((book.dimensions.widthPt - width) / 2));
 
   const posY = targetY !== undefined ? Math.max(20, targetY) : 140;
 
-  const dataPayload = customData || template.defaultData;
+  const dataPayload = { ...template.defaultData, ...customData };
 
   const newElement: PageElement = {
     id,
@@ -55,13 +60,13 @@ export function insertMathComponent(
     type: "math-component" as const,
     category: "math" as const,
     version: 1,
-    displayName: template.name,
+    displayName: settings?.name || template.name,
     presetId: template.id,
     transform: {
       x: posX,
       y: posY,
-      width: template.defaultWidth,
-      height: template.defaultHeight,
+      width,
+      height,
       rotation: 0,
       zIndex: maxZ + 1,
     },
@@ -69,37 +74,40 @@ export function insertMathComponent(
       backgroundColor: "transparent",
     },
     content: {
+      ...structuredClone(dataPayload),
       mathTemplateId: template.id,
       mathData: structuredClone(dataPayload),
-      mathMode: "teacher",
-      styleVariant: "color-coded",
-      ...dataPayload,
+      mathMode: settings?.mode || "teacher",
+      styleVariant: settings?.styleVariant || (template.styleVariants.includes("color-coded") ? "color-coded" : template.styleVariants[0]),
+      mathAppearance: structuredClone(settings?.appearance || { resizeMode: "scale" }),
+      mathOverrides: structuredClone(settings?.overrides || {}),
     },
     locked: false,
     hidden: false,
   };
 
-  useEditorStore.setState((state) => ({
-    elements: { ...state.elements, [id]: newElement },
-    books: state.books.map((b) =>
-      b.id === state.activeBookId
-        ? {
-            ...b,
-            pages: b.pages.map((p) =>
-              p.id === page.id ? { ...p, elementIds: [...p.elementIds, id] } : p
-            ),
-          }
-        : b
-    ),
-    selectedElementIds: [id],
-  }));
-
-  useEditorStore.getState().saveToStorage();
+  const previousSelection = useEditorStore.getState().selectedElementIds;
+  const apply = (forward: boolean) => {
+    useEditorStore.setState(state => {
+      const elements = { ...state.elements };
+      if (forward) elements[id] = newElement; else delete elements[id];
+      return { elements,
+        books: state.books.map(b => b.id === book.id ? { ...b, pages: b.pages.map(p => p.id === page.id ? {
+          ...p, elementIds: forward ? [...p.elementIds.filter(eid => eid !== id), id] : p.elementIds.filter(eid => eid !== id),
+        } : p) } : b),
+        selectedElementIds: forward ? [id] : previousSelection.filter(eid => Boolean(elements[eid])),
+      };
+    });
+    useEditorStore.getState().saveToStorage();
+  };
+  apply(true);
+  useHistoryStore.getState().pushAction({ description: `Insert ${template.name}`, undo: () => apply(false), redo: () => apply(true) });
+  useUiStore.getState().setRightInspectorOpen(true);
 
   useUiStore.getState().showToast({
     type: "success",
     title: `Inserted ${template.name}`,
-    message: "Ready for live mathematical editing in the Inspector.",
+    message: "Double-click text to edit. Resize and style every part in the Inspector.",
   });
 
   return id;

@@ -16,7 +16,7 @@ const {useEditorStore}=require('../src/editor/stores/editorStore.ts');
 const {useHistoryStore}=require('../src/editor/stores/historyStore.ts');
 const words=scene=>scene.nodes.filter(n=>n.kind==='text').map(n=>n.text).join(' ');
 
-test('all ten reference variants render finite, in-bounds editable vectors across subjects and widths',()=>{
+test('all reference variants render finite, in-bounds editable vectors across subjects and widths',()=>{
   for(const {kind} of REFERENCE_ELEMENTS)for(const subject of ['Maths','Science','English','Hindi','Telugu','Music','My own subject'])for(const width of [180,320,517,900]){
     const block=makeReferenceLibraryBlock(kind,3,subject);block.transform.width=width;
     const scene=buildPublicationScene(block);assert.ok(scene.height>60);
@@ -125,4 +125,54 @@ test('reference PDF output retains vector geometry and selectable questions with
   const block=makeReferenceLibraryBlock('quick-check');const scene=buildPublicationScene(block);
   const pdf=new jsPDF({unit:'pt',format:'a4'});
   return renderPublicationPdf(pdf,scene,{transform:{...block.transform,height:scene.height},style:{},content:{}},36,36).then(()=>{const output=pdf.output();assert.ok(output.includes('Which part absorbs water?'));assert.ok(!output.includes('The roots.'));});
+});
+
+test('twelve premium banners default to a header, preserve worksheet source and remain additive',()=>{
+  const {PREMIUM_REFERENCE_ELEMENTS}=require('../src/editor/curriculum/referenceElements.ts');
+  assert.equal(PREMIUM_REFERENCE_ELEMENTS.length,12);
+  assert.equal(REFERENCE_ELEMENTS.filter(p=>!p.premium).length,10);
+  for(const preset of PREMIUM_REFERENCE_ELEMENTS){
+    const block=makeReferenceLibraryBlock(preset.kind,3,'Science'),source=structuredClone(block.semanticContent);
+    const banner=buildPublicationScene(block);assert.equal(block.styleOverrides.referenceElement.showBody,false);
+    assert.ok(banner.nodes.some(n=>n.kind==='text'&&n.fieldPath==='title'));
+    assert.ok(!words(banner).includes('Which part absorbs water?'));
+    block.styleOverrides.referenceElement.showBody=true;
+    const worksheet=buildPublicationScene(block);assert.ok(worksheet.height>banner.height);
+    assert.deepEqual(block.semanticContent,source);
+    assert.equal(withReferenceElements(block).styleOverrides.referenceElement.kind,preset.kind);
+    const restored=JSON.parse(JSON.stringify(block));assert.deepEqual(buildPublicationScene(restored),worksheet);
+    block.styleOverrides.customPalette={text:preset.premium.layout==='nocturne'||preset.premium.layout==='flag'?'#FFF9F0':'#54356E'};
+    const custom=buildPublicationScene(block).nodes.find(n=>n.kind==='text'&&n.fieldPath==='title');
+    assert.equal(custom.fill,block.styleOverrides.customPalette.text,'Readable authored text colours remain editable');
+  }
+});
+
+test('premium banners rewrap long and regional-language headings with bounded readable type',()=>{
+  const {PREMIUM_REFERENCE_ELEMENTS}=require('../src/editor/curriculum/referenceElements.ts');
+  const {expandSceneText,textWidth}=require('../src/editor/educational/publicationScene.ts');
+  for(const preset of PREMIUM_REFERENCE_ELEMENTS)for(const width of [180,320,517,900])for(const heading of [preset.premium.title,'A long heading that explains what students will learn and invites them to investigate','తెలుగు భాషలో కొత్త ఆలోచనలు మరియు అన్వేషణ','नए विचारों की खोज और अभ्यास']){
+    const block=makeReferenceLibraryBlock(preset.kind);block.transform.width=width;block.semanticContent.title=heading;
+    if(preset.kind==='premium-exercise')block.styleOverrides.referenceElement.number='12345.67890';
+    const scene=buildPublicationScene(block);
+    for(const node of scene.nodes.flatMap(expandSceneText).filter(n=>n.kind==='text')){
+      assert.ok(node.x>=0&&node.y<=scene.height&&Number.isFinite(node.y),`${preset.kind}/${width}: text within measured height`);
+      assert.ok(textWidth(node.text,node.size,!!node.bold,node.font==='serif',node.fontFamily)<=node.wrapWidth+.01,`${preset.kind}/${width}: measured text fits`);
+      assert.ok(node.x+node.wrapWidth<=scene.width+.01,`${preset.kind}/${width}: reading width fits`);
+      if(node.fieldPath==='title')assert.ok(node.size>=20);
+    }
+  }
+});
+
+test('premium banners retain native print text, grayscale geometry and separate editable layers',async()=>{
+  const {PREMIUM_REFERENCE_ELEMENTS}=require('../src/editor/curriculum/referenceElements.ts');
+  const {jsPDF}=require('jspdf');const {renderPublicationPdf}=require('../src/editor/educational/publicationPdf.ts');
+  for(const preset of PREMIUM_REFERENCE_ELEMENTS){
+    const block=makeReferenceLibraryBlock(preset.kind);
+    const layers=detachPublicationScene(block,10);assert.ok(layers.some(el=>el.type==='body'));assert.ok(layers.some(el=>el.type==='shape'));assert.ok(layers.every(el=>!el.locked));
+    block.styleOverrides.printMode='grayscale';
+    const scene=buildPublicationScene(block);
+    for(const node of scene.nodes)for(const colour of [node.fill,node.stroke].filter(c=>/^#[\da-f]{6}$/i.test(c||'')))assert.ok(colour.slice(1,3)===colour.slice(3,5)&&colour.slice(3,5)===colour.slice(5,7));
+    const pdf=new jsPDF({unit:'pt',format:'a4'});await renderPublicationPdf(pdf,scene,{transform:{...block.transform,height:scene.height},style:{},content:{}},36,36);
+    assert.ok(pdf.output().includes(preset.premium.title));
+  }
 });

@@ -155,7 +155,7 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ onOpenDashboard }) => {
                   }}
                   className={`${menuItemClass} flex items-center justify-between`}
                 >
-                  <span>Import Manuscript...</span>
+                  <span>Import & Continue…</span>
                   <FileUp className="w-4 h-4 text-indigo-500 dark:text-indigo-300" />
                 </button>
                 <button
@@ -452,6 +452,7 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ onOpenDashboard }) => {
           </button>
           {activeMenu === "more" && (
             <div className="absolute right-0 top-10 w-56 bg-white dark:bg-[#0f1422] border border-slate-200 dark:border-white/10 rounded-xl shadow-xl dark:shadow-2xl p-1.5 z-50 flex flex-col">
+              <button onClick={() => { setManuscriptImportOpen(true); closeMenu(); }} className={`${menuItemClass} flex items-center gap-2`}><FileUp size={16}/><span>Import & Continue…</span></button>
               <span className="px-3 pt-1.5 pb-1 text-xs text-slate-400 dark:text-slate-500 font-semibold uppercase tracking-wider text-[10px]">Studios</span>
               {moreStudios.map((st) => (
                 <button

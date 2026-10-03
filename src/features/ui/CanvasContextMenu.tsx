@@ -19,6 +19,8 @@ import {
   Maximize2,
   Wand2,
   LayoutTemplate,
+  Paintbrush,
+  Eraser,
 } from "lucide-react";
 import { useEditorStore } from "../../editor/stores/editorStore";
 import { useUiStore } from "../../editor/stores/uiStore";
@@ -58,6 +60,9 @@ export const CanvasContextMenu: React.FC<CanvasContextMenuProps> = ({
     addTextFrame,
     addVectorShape,
     autoArrangeActivePage,
+    copyTextStyle,
+    pasteTextStyle,
+    clearTextFormatting,
   } = useEditorStore();
 
   const {
@@ -158,6 +163,52 @@ export const CanvasContextMenu: React.FC<CanvasContextMenuProps> = ({
             </span>
             <span className="text-[10px] text-slate-500 font-mono">⌘V</span>
           </button>
+
+          {/* Typography Style Actions */}
+          {singleElement && (["heading", "subheading", "body", "caption", "quote"].includes(singleElement.type) || singleElement.content?.text !== undefined) && (
+            <>
+              <button
+                onClick={() => {
+                  copyTextStyle(singleElement.id);
+                  onClose();
+                }}
+                className="w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg hover:bg-white/10 hover:text-white transition-colors text-rose-300 hover:text-rose-200"
+              >
+                <span className="flex items-center gap-2">
+                  <Paintbrush className="w-3.5 h-3.5" />
+                  <span>Copy Style</span>
+                </span>
+                <span className="text-[10px] text-slate-500 font-mono">⌘⌥C</span>
+              </button>
+
+              <button
+                onClick={() => {
+                  pasteTextStyle();
+                  onClose();
+                }}
+                className="w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg hover:bg-white/10 hover:text-white transition-colors text-rose-300 hover:text-rose-200"
+              >
+                <span className="flex items-center gap-2">
+                  <Paintbrush className="w-3.5 h-3.5" />
+                  <span>Paste Style</span>
+                </span>
+                <span className="text-[10px] text-slate-500 font-mono">⌘⌥V</span>
+              </button>
+
+              <button
+                onClick={() => {
+                  clearTextFormatting(singleElement.id);
+                  onClose();
+                }}
+                className="w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg hover:bg-white/10 hover:text-white transition-colors text-amber-300 hover:text-amber-200"
+              >
+                <span className="flex items-center gap-2">
+                  <Eraser className="w-3.5 h-3.5" />
+                  <span>Clear Formatting</span>
+                </span>
+              </button>
+            </>
+          )}
 
           <div className="h-px bg-white/10 my-1" />
 

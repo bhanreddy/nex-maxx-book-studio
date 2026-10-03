@@ -109,6 +109,8 @@ export interface PageOverflowStatus {
 }
 
 export interface PageDefinition {
+  /** Source provenance; artwork pages bypass generated page furniture. */
+  importSource?: { fileName: string; format: 'docx' | 'pdf' | 'text'; mode: 'editable' | 'artwork'; sourcePage?: number };
   /** Shared editable page artwork; null explicitly disables inheritance. */
   pageFrame?: PageFrame | null;
   id: string;
@@ -157,11 +159,25 @@ export interface TextStyleDefinition {
   category: "heading" | "body" | "caption" | "educational" | "question";
   fontFamily: string;
   fontSize: number;
-  fontWeight: 300 | 400 | 500 | 600 | 700 | 800 | 900;
+  fontWeight: 100 | 200 | 300 | 400 | 500 | 600 | 700 | 800 | 900 | number;
   lineHeight: number;
   letterSpacing: number;
+  wordSpacing?: number;
   color: string;
+  textAlign?: "left" | "center" | "right" | "justify";
+  verticalAlign?: "top" | "middle" | "center" | "bottom";
+  fontStyle?: "normal" | "italic" | "oblique";
   textTransform?: "none" | "uppercase" | "lowercase" | "capitalize";
+  textDecoration?: string;
+  textDecorationStyle?: "solid" | "double" | "dotted" | "dashed" | "wavy";
+  textDecorationColor?: string;
+  paragraphSpacing?: number;
+  paragraphSpacingBefore?: number;
+  textIndent?: { left?: number; right?: number; firstLine?: number; hanging?: number };
+  textStroke?: { color: string; width: number; opacity?: number };
+  textGradient?: { enabled: boolean; type?: "linear" | "radial"; angle?: number; stops: Array<{ offset: number; color: string; opacity?: number }> };
+  textShadows?: Array<{ id: string; x: number; y: number; blur: number; color: string; opacity?: number }>;
+  textHighlight?: { color: string; opacity?: number; borderRadius?: number; padding?: number };
   basedOn?: string;
 }
 

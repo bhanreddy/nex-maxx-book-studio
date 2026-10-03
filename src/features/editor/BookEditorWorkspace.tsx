@@ -255,16 +255,78 @@ export const BookEditorWorkspace: React.FC<BookEditorWorkspaceProps> = ({
         return;
       }
 
+      // Copy Style (Cmd/Ctrl + Alt + C)
+      if ((e.metaKey || e.ctrlKey) && e.altKey && e.key.toLowerCase() === "c") {
+        e.preventDefault();
+        const store = useEditorStore.getState();
+        const firstText = store.selectedElementIds
+          .map((id) => store.elements[id])
+          .find((el) => el && (["heading", "subheading", "body", "caption", "quote"].includes(el.type) || el?.content?.text !== undefined));
+        if (firstText) {
+          store.copyTextStyle(firstText.id);
+        }
+        return;
+      }
+
+      // Paste Style (Cmd/Ctrl + Alt + V)
+      if ((e.metaKey || e.ctrlKey) && e.altKey && e.key.toLowerCase() === "v") {
+        e.preventDefault();
+        const store = useEditorStore.getState();
+        store.pasteTextStyle();
+        return;
+      }
+
       // Copy / Paste
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "c") {
+      if ((e.metaKey || e.ctrlKey) && !e.altKey && e.key.toLowerCase() === "c") {
         e.preventDefault();
         copySelection();
         return;
       }
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "v") {
+      if ((e.metaKey || e.ctrlKey) && !e.altKey && e.key.toLowerCase() === "v") {
         e.preventDefault();
         pasteSelection();
         return;
+      }
+
+      // Quick Font Styling Shortcuts for Selected Text Elements (Cmd + B / I / U)
+      if ((e.metaKey || e.ctrlKey) && !e.altKey && (e.key.toLowerCase() === "b" || e.key.toLowerCase() === "i" || e.key.toLowerCase() === "u")) {
+        const store = useEditorStore.getState();
+        const textEls = store.selectedElementIds
+          .map((id) => store.elements[id])
+          .filter((el) => el && (["heading", "subheading", "body", "caption", "quote"].includes(el.type) || el?.content?.text !== undefined));
+        if (textEls.length > 0) {
+          e.preventDefault();
+          const key = e.key.toLowerCase();
+          if (key === "b") {
+            const isBold = (textEls[0].style.fontWeight || 400) >= 700;
+            store.batchUpdateElementStyle(textEls.map((el) => el.id), { fontWeight: isBold ? 400 : 700 });
+          } else if (key === "i") {
+            const isItalic = textEls[0].style.fontStyle === "italic";
+            store.batchUpdateElementStyle(textEls.map((el) => el.id), { fontStyle: isItalic ? "normal" : "italic" });
+          } else if (key === "u") {
+            const isUnderline = textEls[0].style.textDecoration === "underline";
+            store.batchUpdateElementStyle(textEls.map((el) => el.id), { textDecoration: isUnderline ? "none" : "underline" });
+          }
+          return;
+        }
+      }
+
+      // Quick Font Size Adjustment: Cmd/Ctrl + Shift + > or <
+      if ((e.metaKey || e.ctrlKey) && e.shiftKey && (e.key === ">" || e.key === "." || e.key === "<" || e.key === ",")) {
+        const store = useEditorStore.getState();
+        const textEls = store.selectedElementIds
+          .map((id) => store.elements[id])
+          .filter((el) => el && (["heading", "subheading", "body", "caption", "quote"].includes(el.type) || el?.content?.text !== undefined));
+        if (textEls.length > 0) {
+          e.preventDefault();
+          const isIncrease = e.key === ">" || e.key === ".";
+          textEls.forEach((el) => {
+            const currentSize = el.style.fontSize || 12;
+            const newSize = Math.max(6, Math.min(200, isIncrease ? currentSize + 2 : currentSize - 2));
+            store.updateElementStyle(el.id, { fontSize: newSize });
+          });
+          return;
+        }
       }
 
       // Duplicate (Cmd + D)

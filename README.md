@@ -8,6 +8,8 @@ NEX MAXX Book Studio delivers a full-fidelity editorial and curriculum authoring
 
 ## Key Features
 
+- **Import & Continue**: Resume partial Word (`.docx`), PDF, text, or Markdown manuscripts. Preview editable Word content or preserved PDF artwork, append to an existing book or start a new one, and open a continuation page. Includes cancellation and one-step undo. See [format support and limitations](docs/manuscript-import.md).
+
 - **219 Pedagogical Learning Elements**: Covers Reading & Writing, Maths, Science, Pictures & Tables, Projects, Extra Learning, and Online Resources.
 - **6-Stage Curriculum Planning**: Sequential progression through **Start → Learn → Practice → Activities → Review → Test**.
 - **Dual Authoring Modes**:

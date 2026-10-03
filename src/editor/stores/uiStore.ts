@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { PixelSelectionState } from "../../domain/creative/types";
-import { VectorShapeType } from "../../domain/element/types";
+import { VectorShapeType, ElementStyle } from "../../domain/element/types";
 
 export type StudioType =
   | "LAYOUT"
@@ -176,8 +176,17 @@ interface UiState {
 
   cropElementId: string | null;
   setCropElementId: (id: string | null) => void;
+  mathEditingTarget: { elementId: string; partId: string } | null;
+  setMathEditingTarget: (target: { elementId: string; partId: string } | null) => void;
   editingTextElementId: string | null;
   setEditingTextElementId: (id: string | null) => void;
+
+  // Typography Format Painter & Style Clipboard
+  formatPainterStyle: Partial<ElementStyle> | null;
+  isPersistentPainter: boolean;
+  setFormatPainter: (style: Partial<ElementStyle> | null, persistent?: boolean) => void;
+  copiedTextStyle: Partial<ElementStyle> | null;
+  setCopiedTextStyle: (style: Partial<ElementStyle> | null) => void;
 
   // Vector Node Editing
   selectedNodeIds: string[];
@@ -350,8 +359,16 @@ export const useUiStore = create<UiState>((set, get) => ({
 
   cropElementId: null,
   setCropElementId: (id) => set({ cropElementId: id }),
+  mathEditingTarget: null,
+  setMathEditingTarget: (target) => set({ mathEditingTarget: target }),
   editingTextElementId: null,
   setEditingTextElementId: (id) => set({ editingTextElementId: id }),
+  formatPainterStyle: null,
+  isPersistentPainter: false,
+  setFormatPainter: (style, persistent = false) =>
+    set({ formatPainterStyle: style, isPersistentPainter: persistent }),
+  copiedTextStyle: null,
+  setCopiedTextStyle: (style) => set({ copiedTextStyle: style }),
   selectedNodeIds: [],
   brushSettings: {
     size: 24,

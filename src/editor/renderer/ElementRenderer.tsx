@@ -3,7 +3,7 @@ import { EducationalBlock } from "./EducationalBlock";
 import { selectionRoot, isElementLocked } from "../core/elementGroups";
 import {SmartQrRenderer} from "../../features/media/SmartQrRenderer";
 
-import React, { useRef, useEffect, memo } from "react";
+import React, { useState, useRef, useEffect, memo } from "react";
 import { useUiStore } from "../stores/uiStore";
 import { DesignBinding, PageElement, ShapeTextConfig } from "../../domain/element/types";
 import { LayoutView } from "../design/LayoutView";
@@ -229,14 +229,21 @@ export const ElementRenderer: React.FC<ElementRendererProps> = memo(function Ele
 }) {
   const updateElementContent = useEditorStore(s => s.updateElementContent);
   const updateElementStyle = useEditorStore(s => s.updateElementStyle);
+  const updateElementTransform = useEditorStore(s => s.updateElementTransform);
   const addPage = useEditorStore(s => s.addPage);
   const shuffleEducationalBlockStyle = useEditorStore(s => s.shuffleEducationalBlockStyle);
   const detachEducationalBlock = useEditorStore(s => s.detachEducationalBlock);
   const editingTextElementId = useUiStore(s => s.editingTextElementId);
   const setEditingTextElementId = useUiStore(s => s.setEditingTextElementId);
+  const formatPainterStyle = useUiStore(s => s.formatPainterStyle);
+  const isPersistentPainter = useUiStore(s => s.isPersistentPainter);
+  const setFormatPainter = useUiStore(s => s.setFormatPainter);
+
   const isEditingText = editingTextElementId === element.id;
   const setIsEditingText = (value: boolean) => setEditingTextElementId(value ? element.id : null);
   const textEditRef = useRef<HTMLDivElement>(null);
+  const textContainerRef = useRef<HTMLDivElement>(null);
+  const [hasOverflow, setHasOverflow] = useState(false);
 
   useEffect(() => {
     if (isEditingText && textEditRef.current) {
@@ -249,6 +256,15 @@ export const ElementRenderer: React.FC<ElementRendererProps> = memo(function Ele
   const blockTransform = resizeFrame ? { ...transform, width: resizeFrame.width, height: resizeFrame.height } : transform;
   const grouped = Boolean(element.groupId);
   const locked = isElementLocked(element.id, useEditorStore.getState().elements);
+  const isTextElement = ["heading", "subheading", "body", "body-text", "caption", "quote", "chapter-title", "lesson-title", "header", "footer", "pageNumber", "page-number", "sidebar", "callout"].includes(type);
+
+  useEffect(() => {
+    if (textContainerRef.current && isTextElement) {
+      const el = textContainerRef.current;
+      setHasOverflow(el.scrollHeight > el.clientHeight + 4);
+    }
+  }, [content.text, style.fontSize, style.lineHeight, style.fontFamily, transform.width, transform.height, isTextElement]);
+
   const selectGroup = (e: React.SyntheticEvent) => {
     if (!grouped) return;
     e.stopPropagation();
@@ -276,7 +292,7 @@ export const ElementRenderer: React.FC<ElementRendererProps> = memo(function Ele
     height: `${transform.height}pt`,
     transform: transform.rotation ? `rotate(${transform.rotation}deg)` : undefined,
     zIndex: transform.zIndex,
-    backgroundColor: type === "smart-block" || type === "shape" || content.publicationPrimitive ? undefined : style.backgroundColor,
+    backgroundColor: style.textHighlight?.color || (type === "smart-block" || type === "shape" || content.publicationPrimitive ? undefined : style.backgroundColor),
     borderRadius: type === "shape" ? undefined : (style.borderRadius ? `${style.borderRadius}pt` : undefined),
     ...(type === "smart-block" || type === "shape" || content.publicationPrimitive ? {} : borderStyle(style)),
     opacity: style.opacity ?? 1,
@@ -293,10 +309,38 @@ export const ElementRenderer: React.FC<ElementRendererProps> = memo(function Ele
     textAlign: style.textAlign,
     textTransform: style.textTransform,
     textDecoration: style.textDecoration,
+    textDecorationStyle: style.textDecorationStyle,
+    textDecorationColor: style.textDecorationColor,
     letterSpacing: style.letterSpacing ? `${style.letterSpacing}pt` : undefined,
+    wordSpacing: style.wordSpacing ? `${style.wordSpacing}pt` : undefined,
+    textIndent: style.textIndent?.firstLine ? `${style.textIndent.firstLine}pt` : undefined,
+    paddingLeft: style.textIndent?.left ? `${style.textIndent.left}pt` : undefined,
+    paddingRight: style.textIndent?.right ? `${style.textIndent.right}pt` : undefined,
     columnCount: isFlowText(element) ? undefined : style.columns,
     columnGap: style.columnGap ? `${style.columnGap}pt` : undefined,
     filter: cssFilter,
+    WebkitTextStroke: style.textStroke?.width
+      ? `${style.textStroke.width}pt ${style.textStroke.color || "#000000"}`
+      : undefined,
+    ...(style.textGradient?.enabled && style.textGradient.stops?.length
+      ? {
+          backgroundImage:
+            style.textGradient.type === "radial"
+              ? `radial-gradient(circle, ${style.textGradient.stops
+                  .map((s) => `${s.color} ${s.offset * 100}%`)
+                  .join(", ")})`
+              : `linear-gradient(${style.textGradient.angle || 90}deg, ${style.textGradient.stops
+                  .map((s) => `${s.color} ${s.offset * 100}%`)
+                  .join(", ")})`,
+          WebkitBackgroundClip: "text",
+          WebkitTextFillColor: "transparent",
+        }
+      : {}),
+    textShadow: style.textShadows?.length
+      ? style.textShadows
+          .map((s) => `${s.x}pt ${s.y}pt ${s.blur}pt ${s.color}`)
+          .join(", ")
+      : undefined,
   };
 
   // Render element content based on its semantic type
@@ -356,7 +400,27 @@ export const ElementRenderer: React.FC<ElementRendererProps> = memo(function Ele
           />
         ) : (
           <div
-            className={`w-full h-full select-none cursor-pointer ${isFlowText(element) ? "" : "overflow-hidden flex flex-col justify-center"}`}
+            ref={textContainerRef}
+            className={`w-full h-full select-none cursor-pointer relative ${
+              isFlowText(element)
+                ? ""
+                : `overflow-hidden flex flex-col ${
+                    style.verticalAlign === "top"
+                      ? "justify-start"
+                      : style.verticalAlign === "bottom"
+                      ? "justify-end"
+                      : "justify-center"
+                  }`
+            }`}
+            onClick={(e) => {
+              if (formatPainterStyle) {
+                e.stopPropagation();
+                updateElementStyle(element.id, formatPainterStyle);
+                if (!isPersistentPainter) {
+                  setFormatPainter(null);
+                }
+              }
+            }}
             onDoubleClick={(e) => {
               e.stopPropagation();
               setIsEditingText(true);
@@ -367,13 +431,57 @@ export const ElementRenderer: React.FC<ElementRendererProps> = memo(function Ele
                 {content.numberLabel || "CHAPTER"} {content.number}
               </span>
             )}
-            {isFlowText(element) ? <FlowText element={element} /> : <div
-              className="font-[inherit] leading-[inherit] break-words"
-              dangerouslySetInnerHTML={{ __html: content.text || "" }}
-            />}
+            {isFlowText(element) ? (
+              <FlowText element={element} />
+            ) : (
+              <div
+                className="font-[inherit] leading-[inherit] break-words [&>p]:mb-[var(--p-spacing)]"
+                style={{
+                  ["--p-spacing" as any]: `${style.paragraphSpacing ?? 8}pt`,
+                }}
+                dangerouslySetInnerHTML={{ __html: content.text || "" }}
+              />
+            )}
             {content.subtitle && (
               <div className="text-[10pt] font-normal opacity-75 mt-0.5 leading-snug">
                 {content.subtitle}
+              </div>
+            )}
+
+            {/* Overflow Indicator & Quick Remediation (Directive 48) */}
+            {hasOverflow && isSelected && !isEditingText && (
+              <div
+                className="absolute -bottom-6 right-0 z-40 bg-amber-500 text-slate-950 text-[9px] font-bold px-1.5 py-0.5 rounded shadow-lg flex items-center gap-1.5 animate-in fade-in select-none"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <span>⚠️ Text Overflows</span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (textContainerRef.current) {
+                      updateElementTransform(element.id, {
+                        height: Math.ceil(textContainerRef.current.scrollHeight) + 8,
+                      }, true);
+                    }
+                  }}
+                  className="bg-slate-900 text-white hover:bg-slate-800 px-1 py-0.2 rounded text-[8px]"
+                  title="Expand box height"
+                >
+                  Expand
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const currentSize = style.fontSize || 12;
+                    if (currentSize > 6) {
+                      updateElementStyle(element.id, { fontSize: Math.max(6, currentSize - 1) });
+                    }
+                  }}
+                  className="bg-slate-900 text-white hover:bg-slate-800 px-1 py-0.2 rounded text-[8px]"
+                  title="Reduce font size"
+                >
+                  Shrink
+                </button>
               </div>
             )}
           </div>

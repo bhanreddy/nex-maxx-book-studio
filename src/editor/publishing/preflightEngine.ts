@@ -24,6 +24,7 @@ import { pageMarginsFor } from "../pageFrame/pageFrame";
 import { smartQrPreflight } from "../media/smartQr";
 import { compileBookStructure } from "../structure/bookStructureEngine";
 import { printFont } from "./fontRegistry";
+import { layoutTextFlow, textWrapObstacles } from "../layoutPartner/textWrapLayout";
 import { estimateTextHeight } from "../core/layoutSolver";
 import { renumberBookPages } from "../core/pageNumbering";
 import { publicationPreflight } from "../educational/publicationPreflight";
@@ -125,12 +126,14 @@ export function runFullPreflightScan(
       if (el.hidden) return;
       totalElements++;
 
-      const furniture = ['header', 'footer', 'pageNumber', 'page-number', 'shape', 'divider', 'borderFrame'].includes(el.type) || el.metadata?.tags?.includes('bleed-bg');
+      const furniture = (page.importSource?.mode === 'artwork' && el.style.isBackgroundElement) || ['header', 'footer', 'pageNumber', 'page-number', 'shape', 'divider', 'borderFrame'].includes(el.type) || el.metadata?.tags?.includes('bleed-bg');
       const issue = (id: string, category: PreflightIssue['category'], title: string, message: string, severity: PreflightIssue['severity'] = 'error') => issues.push({ id: `${id}-${el.id}`, severity, category, title, message, elementId: el.id, pageId: page.id, pageIndex: pageIdx });
       if (![el.transform.x, el.transform.y, el.transform.width, el.transform.height].every(Number.isFinite)) issue('invalid-geometry', 'geometry', 'Invalid geometry', 'Element coordinates must be finite.');
       if (typeof el.content.text === 'string' && !el.smartBlockData && !furniture) {
         if (!el.content.text.trim()) issue('blank-text', 'text', 'Empty text frame', 'Add text or remove the empty frame.', 'warning');
-        if (el.isOverset || (el.oversetChars || 0) > 0 || estimateTextHeight(el.content.text, el.style.fontSize || 10.5, el.style.lineHeight || 1.45, el.transform.width) > el.transform.height + 4) {
+        if (el.isOverset || (el.oversetChars || 0) > 0 || (el.metadata?.tags?.includes('manuscript-import')
+          ? layoutTextFlow(el, textWrapObstacles(el, page.elementIds.map(id => elementsMap[id]).filter(Boolean))).oversetChars > 0
+          : estimateTextHeight(el.content.text, el.style.fontSize || 10.5, el.style.lineHeight || 1.45, el.transform.width) > el.transform.height + 4)) {
           textOverflowCount++; issue('overset', 'text', 'Text overflows its frame', 'Increase the frame height or flow the text to a continuation page.');
         }
         try { printFont(el.content.text, el.style.fontFamily); } catch (error) { issue('missing-font', 'font', 'Font unavailable for print', String(error)); }

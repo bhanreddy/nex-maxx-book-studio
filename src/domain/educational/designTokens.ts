@@ -493,4 +493,6 @@ export const REFERENCE_ELEMENT_TOKENS = {
   lilac: "#B69BCB", paper: "#FFF9F0", aqua: "#EAF8F8", white: "#FFFFFF",
   ink: "#14244E", shadow: "#DAD3DD", rule: "#AAA8AD",
   radius: 18, padding: 22, gap: 12,
+  premiumRadius: 12, premiumInset: 8, premiumStroke: 1.1, premiumShadowOffset: 3,
+  gold: "#B38B40", muted: "#647083",
 } as const;

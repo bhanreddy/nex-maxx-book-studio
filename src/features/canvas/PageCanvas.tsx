@@ -77,6 +77,7 @@ export const PageCanvas: React.FC<PageCanvasProps> = ({ book, activePage }) => {
     setActiveMeasure,
     columnGrid,
     baselineGrid,
+    formatPainterStyle,
   } = useUiStore();
 
   const containerRef = useRef<HTMLDivElement>(null);
@@ -544,9 +545,11 @@ export const PageCanvas: React.FC<PageCanvasProps> = ({ book, activePage }) => {
     ? rightPage.elementIds.map((id) => elements[id]).filter(Boolean)
     : [];
 
-  // Determine cursor based on activeTool
+  // Determine cursor based on activeTool or format painter
   let cursorClass = "cursor-default";
-  if (marqueeBox) {
+  if (formatPainterStyle) {
+    cursorClass = "cursor-copy";
+  } else if (marqueeBox) {
     cursorClass = "cursor-crosshair";
   } else if (isSpacePanning || isPanning) {
     cursorClass = isPanning ? "cursor-grabbing" : "cursor-grab";
@@ -774,7 +777,9 @@ export const PageCanvas: React.FC<PageCanvasProps> = ({ book, activePage }) => {
                   } catch {}
                 }
                 const coords = getPageCoordinates(e);
-                insertMathComponent(mathTemplateId, coords.x, coords.y, customData);
+                let settings;
+                try { settings = JSON.parse(e.dataTransfer.getData("application/x-nexmaxx-math-settings") || "null") || undefined; } catch {}
+                insertMathComponent(mathTemplateId, coords.x, coords.y, customData, settings);
                 return;
               }
               const presetId = e.dataTransfer.getData("application/x-nexmaxx-preset");

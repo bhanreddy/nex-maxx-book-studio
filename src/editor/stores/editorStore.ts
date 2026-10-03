@@ -1,3 +1,6 @@
+import { readTextManuscript } from '../importing/readManuscript';
+import { composeManuscript } from '../importing/composeManuscript';
+import { commitManuscriptImport } from '../importing/commitImport';
 import { duplicateEducationalBlock } from '../educational/library/actions';
 import { refreshPublishingLayout } from '../educational/library/refreshLayout';
 import { cloneElementTree, elementTree, selectionRoot, isElementLocked, transformGroupChildren } from "../core/elementGroups";
@@ -146,9 +149,10 @@ interface EditorState {
   expandImageToFrame: (elementId: string) => Promise<void>;
   upscaleImage: (elementId: string, factor: 2 | 4) => Promise<void>;
 
-  updateElement: (id: string, updates: Partial<PageElement>) => void;
+  updateElement: (id: string, updates: Partial<PageElement>, recordHistory?: boolean) => void;
   updateElementTransform: (id: string, transform: Partial<ElementTransform>, recordHistory?: boolean, resizeMode?: BlockResizeMode) => void;
-  updateElementStyle: (id: string, style: Partial<ElementStyle>) => void;
+  updateElementStyle: (id: string, style: Partial<ElementStyle>, recordHistory?: boolean) => void;
+  batchUpdateElementStyle: (ids: string[], style: Partial<ElementStyle>) => void;
   updateElementContent: (id: string, content: ElementContent) => void;
   deleteSelectedElements: () => void;
   duplicateSelectedElements: () => void;
@@ -158,6 +162,12 @@ interface EditorState {
   applyTextStyle: (elementId: string, styleId: string) => void;
   createTextStyleFromElement: (elementId: string, name: string) => void;
   updateTextStyle: (styleId: string, updates: Partial<TextStyleDefinition>) => void;
+  deleteTextStyle: (styleId: string) => void;
+  detachTextStyle: (elementId: string) => void;
+  resetTextStyleOverrides: (elementId: string) => void;
+  copyTextStyle: (targetId?: string) => void;
+  pasteTextStyle: (targetId?: string) => void;
+  clearTextFormatting: (targetId?: string) => void;
 
   // Comments & Review System
   addComment: (
@@ -1753,17 +1763,34 @@ export const useEditorStore = create<EditorState>((set, get) => {
       const targetStyle = book.textStyles.find((ts) => ts.id === styleId);
       if (!targetStyle) return;
 
-      get().updateElement(elementId, { metadata: { ...get().elements[elementId]?.metadata, styleOverride: false }, style: {
-        ...get().elements[elementId]?.style,
-        fontFamily: targetStyle.fontFamily,
-        fontSize: targetStyle.fontSize,
-        fontWeight: targetStyle.fontWeight,
-        lineHeight: targetStyle.lineHeight,
-        letterSpacing: targetStyle.letterSpacing,
-        color: targetStyle.color,
-        textTransform: targetStyle.textTransform,
-        styleId: targetStyle.id,
-      } });
+      get().updateElement(elementId, {
+        metadata: { ...get().elements[elementId]?.metadata, styleOverride: false },
+        style: {
+          ...get().elements[elementId]?.style,
+          fontFamily: targetStyle.fontFamily,
+          fontSize: targetStyle.fontSize,
+          fontWeight: targetStyle.fontWeight,
+          lineHeight: targetStyle.lineHeight,
+          letterSpacing: targetStyle.letterSpacing,
+          wordSpacing: targetStyle.wordSpacing,
+          color: targetStyle.color,
+          textAlign: targetStyle.textAlign,
+          verticalAlign: targetStyle.verticalAlign,
+          fontStyle: targetStyle.fontStyle,
+          textTransform: targetStyle.textTransform,
+          textDecoration: targetStyle.textDecoration,
+          textDecorationStyle: targetStyle.textDecorationStyle,
+          textDecorationColor: targetStyle.textDecorationColor,
+          paragraphSpacing: targetStyle.paragraphSpacing,
+          paragraphSpacingBefore: targetStyle.paragraphSpacingBefore,
+          textIndent: targetStyle.textIndent,
+          textStroke: targetStyle.textStroke,
+          textGradient: targetStyle.textGradient,
+          textShadows: targetStyle.textShadows,
+          textHighlight: targetStyle.textHighlight,
+          styleId: targetStyle.id,
+        },
+      });
 
       useUiStore.getState().showToast({
         type: "success",
@@ -1786,8 +1813,22 @@ export const useEditorStore = create<EditorState>((set, get) => {
         fontWeight: el.style.fontWeight || 400,
         lineHeight: el.style.lineHeight || 1.5,
         letterSpacing: el.style.letterSpacing || 0,
+        wordSpacing: el.style.wordSpacing,
         color: el.style.color || "#0f172a",
+        textAlign: el.style.textAlign,
+        verticalAlign: el.style.verticalAlign,
+        fontStyle: el.style.fontStyle,
         textTransform: el.style.textTransform,
+        textDecoration: el.style.textDecoration,
+        textDecorationStyle: el.style.textDecorationStyle,
+        textDecorationColor: el.style.textDecorationColor,
+        paragraphSpacing: el.style.paragraphSpacing,
+        paragraphSpacingBefore: el.style.paragraphSpacingBefore,
+        textIndent: el.style.textIndent,
+        textStroke: el.style.textStroke,
+        textGradient: el.style.textGradient,
+        textShadows: el.style.textShadows,
+        textHighlight: el.style.textHighlight,
       };
 
       const existingStyles = book.textStyles || [];
@@ -1797,8 +1838,11 @@ export const useEditorStore = create<EditorState>((set, get) => {
         ),
       }));
 
-      // Bind the element to this style
-      get().updateElementStyle(elementId, { styleId: newStyleId });
+      // Bind the element to this style without flagging as local override
+      get().updateElement(elementId, {
+        metadata: { ...el.metadata, styleOverride: false },
+        style: { ...el.style, styleId: newStyleId },
+      });
       get().saveToStorage();
 
       useUiStore.getState().showToast({
@@ -1815,7 +1859,7 @@ export const useEditorStore = create<EditorState>((set, get) => {
 
       // Propagate to all elements using this styleId throughout the book!
       const updatedElements = { ...get().elements };
-      new Set(book.pages.flatMap(page => page.elementIds)).forEach((elId) => {
+      new Set(book.pages.flatMap((page) => page.elementIds)).forEach((elId) => {
         if (updatedElements[elId]?.style?.styleId === styleId && !updatedElements[elId].metadata?.styleOverride) {
           updatedElements[elId] = {
             ...updatedElements[elId],
@@ -1836,6 +1880,132 @@ export const useEditorStore = create<EditorState>((set, get) => {
       useUiStore.getState().showToast({
         type: "success",
         title: "Style Updated Globally",
+      });
+    },
+
+    deleteTextStyle: (styleId) => {
+      const book = get().getActiveBook();
+      if (!book || !book.textStyles) return;
+      const updatedStyles = book.textStyles.filter((s) => s.id !== styleId);
+      set((state) => ({
+        books: state.books.map((b) => (b.id === book.id ? { ...b, textStyles: updatedStyles } : b)),
+      }));
+      get().saveToStorage();
+      useUiStore.getState().showToast({
+        type: "info",
+        title: "Style Deleted",
+      });
+    },
+
+    detachTextStyle: (elementId) => {
+      const el = get().elements[elementId];
+      if (!el) return;
+      get().updateElement(elementId, {
+        style: { ...el.style, styleId: undefined },
+        metadata: { ...el.metadata, styleOverride: true },
+      });
+      useUiStore.getState().showToast({
+        type: "info",
+        title: "Detached from Style",
+        message: "Element now has independent formatting.",
+      });
+    },
+
+    resetTextStyleOverrides: (elementId) => {
+      const el = get().elements[elementId];
+      if (!el || !el.style.styleId) return;
+      get().applyTextStyle(elementId, el.style.styleId);
+    },
+
+    copyTextStyle: (targetId?: string) => {
+      const { selectedElementIds, elements } = get();
+      const elId = targetId || selectedElementIds[0];
+      if (!elId) return;
+      const firstEl = elements[elId];
+      if (!firstEl) return;
+      const textStyle: Partial<ElementStyle> = {
+        fontFamily: firstEl.style.fontFamily,
+        fontSize: firstEl.style.fontSize,
+        fontWeight: firstEl.style.fontWeight,
+        fontStyle: firstEl.style.fontStyle,
+        lineHeight: firstEl.style.lineHeight,
+        letterSpacing: firstEl.style.letterSpacing,
+        wordSpacing: firstEl.style.wordSpacing,
+        textAlign: firstEl.style.textAlign,
+        verticalAlign: firstEl.style.verticalAlign,
+        color: firstEl.style.color,
+        textTransform: firstEl.style.textTransform,
+        textDecoration: firstEl.style.textDecoration,
+        textDecorationStyle: firstEl.style.textDecorationStyle,
+        textDecorationColor: firstEl.style.textDecorationColor,
+        paragraphSpacing: firstEl.style.paragraphSpacing,
+        paragraphSpacingBefore: firstEl.style.paragraphSpacingBefore,
+        textIndent: firstEl.style.textIndent,
+        textStroke: firstEl.style.textStroke,
+        textGradient: firstEl.style.textGradient,
+        textShadows: firstEl.style.textShadows,
+        textHighlight: firstEl.style.textHighlight,
+      };
+      useUiStore.getState().setCopiedTextStyle(textStyle);
+      useUiStore.getState().showToast({
+        type: "info",
+        title: "Copied Text Style",
+        message: "Formatting copied to style clipboard.",
+      });
+    },
+
+    pasteTextStyle: (targetId?: string) => {
+      const copied = useUiStore.getState().copiedTextStyle;
+      const { selectedElementIds } = get();
+      const targetIds = targetId ? [targetId] : selectedElementIds;
+      if (!copied || targetIds.length === 0) {
+        useUiStore.getState().showToast({
+          type: "warning",
+          title: "No Style Copied",
+          message: "Copy a text style first using Copy Style.",
+        });
+        return;
+      }
+      get().batchUpdateElementStyle(targetIds, copied);
+      useUiStore.getState().showToast({
+        type: "success",
+        title: "Pasted Text Style",
+        message: `Applied formatting to ${targetIds.length} element(s).`,
+      });
+    },
+
+    clearTextFormatting: (targetId?: string) => {
+      const { selectedElementIds } = get();
+      const targetIds = targetId ? [targetId] : selectedElementIds;
+      if (targetIds.length === 0) return;
+      const defaultClearStyle: Partial<ElementStyle> = {
+        fontFamily: "Inter",
+        fontSize: 10.5,
+        fontWeight: 400,
+        fontStyle: "normal",
+        lineHeight: 1.5,
+        letterSpacing: 0,
+        wordSpacing: 0,
+        textAlign: "left",
+        color: "#0f172a",
+        textTransform: "none",
+        textDecoration: "none",
+        textDecorationStyle: undefined,
+        textDecorationColor: undefined,
+        paragraphSpacing: 8,
+        paragraphSpacingBefore: 0,
+        textIndent: undefined,
+        textStroke: undefined,
+        textGradient: undefined,
+        textShadows: undefined,
+        textHighlight: undefined,
+        styleId: undefined,
+      };
+      get().batchUpdateElementStyle(targetIds, defaultClearStyle);
+      useUiStore.getState().showToast({
+        type: "info",
+        title: "Cleared Formatting",
+        message: "Reset text formatting to standard publication style.",
       });
     },
 
@@ -1895,54 +2065,12 @@ export const useEditorStore = create<EditorState>((set, get) => {
     importManuscript: (markdownText) => {
       const book = get().getActiveBook();
       if (!book) return { unitsAdded: 0, chaptersAdded: 0, pagesAdded: 0 };
-
-      const lines = markdownText.split("\n");
-      let unitsCount = 0;
-      let chaptersCount = 0;
-      let pagesCount = 0;
-
-      let currentUnitId: string | undefined = book.units[0]?.id;
-      let currentChapterId: string | undefined = book.chapters[0]?.id;
-
-      for (let i = 0; i < lines.length; i++) {
-        const line = lines[i].trim();
-        if (line.startsWith("# Unit")) {
-          const title = line.replace(/^#\s*Unit\s*\d*:?\s*/i, "").trim() || "New Curriculum Unit";
-          get().addUnit(title);
-          unitsCount++;
-          const updatedBook = get().getActiveBook();
-          currentUnitId = updatedBook?.units[updatedBook.units.length - 1]?.id;
-        } else if (line.startsWith("## Chapter") && currentUnitId) {
-          const title = line.replace(/^##\s*Chapter\s*\d*:?\s*/i, "").trim() || "New Chapter";
-          get().addChapter(currentUnitId, title);
-          chaptersCount++;
-          const updatedBook = get().getActiveBook();
-          currentChapterId = updatedBook?.chapters[updatedBook.chapters.length - 1]?.id;
-        } else if (line.startsWith("### Page") || (line.startsWith("### ") && !line.startsWith("### Page"))) {
-          // Create a new textbook page
-          get().addPage();
-          pagesCount++;
-          const updatedPage = get().getActivePage();
-          if (updatedPage && currentChapterId) {
-            get().addElement("preset-section-heading", 54, 54);
-            const headingText = line.replace(/^###\s*/, "");
-            const activeEls = get().getActivePageElements();
-            const lastEl = activeEls[activeEls.length - 1];
-            if (lastEl) {
-              get().updateElementContent(lastEl.id, { text: headingText });
-            }
-          }
-        }
-      }
-
-      get().saveToStorage();
-      useUiStore.getState().showToast({
-        type: "success",
-        title: "Manuscript Imported",
-        message: `Parsed: ${unitsCount} unit(s), ${chaptersCount} chapter(s), ${pagesCount} page(s)`,
+      const plan = composeManuscript(readTextManuscript(markdownText), book, {
+        destination: 'append', title: book.title, continuation: false, continuationTitle: '',
       });
-
-      return { unitsAdded: unitsCount, chaptersAdded: chaptersCount, pagesAdded: pagesCount };
+      commitManuscriptImport(plan, book);
+      return { unitsAdded: plan.book.units.length - book.units.length,
+        chaptersAdded: plan.book.chapters.length - book.chapters.length, pagesAdded: plan.importedPages };
     },
 
     generateDataMergePages: (records) => {
@@ -2010,7 +2138,7 @@ export const useEditorStore = create<EditorState>((set, get) => {
       return generatedCount;
     },
 
-    updateElement: (id, updates) => {
+    updateElement: (id, updates, recordHistory = true) => {
       const old = get().elements[id]; if (!old) return;
       if (isElementLocked(id, get().elements) && Object.keys(updates).some(key => key !== "locked" && key !== "hidden")) return;
       const chapter = old.smartBlockData?.curriculum?.chapterId ? get().getActiveBook()?.chapters.find(c => c.id === old.smartBlockData!.curriculum!.chapterId) : undefined;
@@ -2058,7 +2186,9 @@ export const useEditorStore = create<EditorState>((set, get) => {
         const updatedBooks = previous.books.map(book => book.id === activeBook.id ? updatedBook : book);
         const applyDocument = (books: Book[], elements: Record<string, PageElement>) => { set({ books, elements }); get().saveToStorage(); };
         applyDocument(updatedBooks, result.updatedElements);
-        useHistoryStore.getState().pushAction({ description: `Edit and flow ${old.displayName}`, undo: () => applyDocument(previous.books, previous.elements), redo: () => applyDocument(updatedBooks, result.updatedElements) });
+        if (recordHistory) {
+          useHistoryStore.getState().pushAction({ description: `Edit and flow ${old.displayName}`, undo: () => applyDocument(previous.books, previous.elements), redo: () => applyDocument(updatedBooks, result.updatedElements) });
+        }
         if (!result.overflowResolved) useUiStore.getState().showToast({ type: 'warning', title: 'Block needs layout review', message: 'This block cannot fit safely. Its content is preserved; resize it or use chapter composition.' });
         return;
       }
@@ -2069,7 +2199,9 @@ export const useEditorStore = create<EditorState>((set, get) => {
         get().saveToStorage();
       };
       apply(after);
-      useHistoryStore.getState().pushAction({description: `Edit ${old.displayName}`, undo: () => apply(before), redo: () => apply(after)});
+      if (recordHistory) {
+        useHistoryStore.getState().pushAction({description: `Edit ${old.displayName}`, undo: () => apply(before), redo: () => apply(after)});
+      }
     },
 
     updateElementTransform: (id, newTransform, recordHistory = false, resizeMode = "auto") => {
@@ -2102,9 +2234,41 @@ export const useEditorStore = create<EditorState>((set, get) => {
       if(recordHistory)get().saveToStorage();
     },
 
-    updateElementStyle: (id, style) => {
-      const el=get().elements[id]; if(!el || el.locked) return;
-      get().updateElement(id, { style: {...el.style,...style}, metadata:{...el.metadata,styleOverride:true} });
+    updateElementStyle: (id, style, recordHistory = true) => {
+      const el = get().elements[id];
+      if (!el || el.locked) return;
+      get().updateElement(id, { style: { ...el.style, ...style }, metadata: { ...el.metadata, styleOverride: true } }, recordHistory);
+    },
+
+    batchUpdateElementStyle: (ids, style) => {
+      const current = get().elements;
+      const targets = ids.filter((id) => current[id] && !current[id].locked);
+      if (targets.length === 0) return;
+      const before = targets.map((id) => current[id]);
+      const nextElements = { ...current };
+      targets.forEach((id) => {
+        nextElements[id] = {
+          ...nextElements[id],
+          style: { ...nextElements[id].style, ...style },
+          metadata: { ...nextElements[id].metadata, styleOverride: true },
+        };
+      });
+      const after = targets.map((id) => nextElements[id]);
+      const apply = (items: PageElement[]) => {
+        set((state) => ({
+          elements: {
+            ...state.elements,
+            ...Object.fromEntries(items.map((el) => [el.id, el])),
+          },
+        }));
+        get().saveToStorage();
+      };
+      apply(after);
+      useHistoryStore.getState().pushAction({
+        description: `Format ${targets.length} element(s)`,
+        undo: () => apply(before),
+        redo: () => apply(after),
+      });
     },
     updateElementContent: (id, content) => {
       const el=get().elements[id]; if(!el || el.locked) return;

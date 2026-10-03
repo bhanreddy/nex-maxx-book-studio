@@ -46,6 +46,7 @@ import { CurriculumBlockInspector } from "../curriculum/CurriculumBlockInspector
 import { SmartScrubInput } from "../ui/SmartScrubInput";
 import { MathTemplateInspector } from "../../editor/math/MathTemplateInspector";
 import { ShapeInspector } from "./ShapeInspector";
+import { TypographyInspector } from "./TypographyInspector";
 
 export const InspectorPanel: React.FC = () => {
   const {
@@ -96,8 +97,6 @@ export const InspectorPanel: React.FC = () => {
 
   // Local state for adding a new comment
   const [commentInput, setCommentInput] = useState("");
-  const [newStyleName, setNewStyleName] = useState("");
-  const [showStylePrompt, setShowStylePrompt] = useState(false);
   const [panelWidth, setPanelWidth] = useState(320);
 
   const handleStartResize = (e: React.MouseEvent) => {
@@ -139,6 +138,11 @@ export const InspectorPanel: React.FC = () => {
   const book = getActiveBook();
   const activePage = getActivePage();
   const selectedElements = selectedElementIds.map((id) => elements[id]).filter(Boolean);
+  const textElements = selectedElements.filter(
+    (el) =>
+      ["heading", "subheading", "body", "caption", "quote"].includes(el.type) ||
+      el.content?.text !== undefined
+  );
   const singleElement = selectedElements.length === 1 ? selectedElements[0] : null;
 
   // Attached comments
@@ -155,13 +159,6 @@ export const InspectorPanel: React.FC = () => {
       message: `Attached review comment to ${singleElement.displayName}`,
       type: "success",
     });
-  };
-
-  const handleSaveStyle = () => {
-    if (!newStyleName.trim() || !singleElement) return;
-    createTextStyleFromElement(singleElement.id, newStyleName.trim());
-    setNewStyleName("");
-    setShowStylePrompt(false);
   };
 
   return (
@@ -828,245 +825,10 @@ export const InspectorPanel: React.FC = () => {
             </div>
           )}
 
-          {/* Typography Inspector (For Text & Content Elements) */}
-          {singleElement &&
-            ["heading", "subheading", "body", "caption", "quote"].includes(singleElement.type) && (
-              <div className="space-y-2.5 pt-2 border-t border-white/5">
-                <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider font-mono flex items-center gap-1.5">
-                    <Type className="w-3.5 h-3.5 text-rose-400" /> Typography
-                  </span>
-                  <button
-                    onClick={() => setShowStylePrompt(!showStylePrompt)}
-                    className="text-[10px] text-rose-400 hover:text-rose-300 hover:underline"
-                  >
-                    + New Style
-                  </button>
-                </div>
-
-                {/* Beginner Quick Typography Presets (Directive 51) */}
-                <div className="grid grid-cols-4 gap-1 pb-1">
-                  <button
-                    onClick={() =>
-                      updateElementStyle(singleElement.id, {
-                        fontSize: 26,
-                        fontWeight: 700,
-                        lineHeight: 1.25,
-                        color: "#1e293b",
-                      })
-                    }
-                    className="py-1 rounded bg-slate-100 hover:bg-indigo-50 hover:text-indigo-600 dark:bg-black/40 dark:hover:bg-indigo-600/30 text-center font-bold text-[7.5pt] text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-transparent"
-                  >
-                    Title
-                  </button>
-                  <button
-                    onClick={() =>
-                      updateElementStyle(singleElement.id, {
-                        fontSize: 18,
-                        fontWeight: 600,
-                        lineHeight: 1.35,
-                        color: "#334155",
-                      })
-                    }
-                    className="py-1 rounded bg-slate-100 hover:bg-indigo-50 hover:text-indigo-600 dark:bg-black/40 dark:hover:bg-indigo-600/30 text-center font-semibold text-[7.5pt] text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-transparent"
-                  >
-                    Heading
-                  </button>
-                  <button
-                    onClick={() =>
-                      updateElementStyle(singleElement.id, {
-                        fontSize: 10.5,
-                        fontWeight: 400,
-                        lineHeight: 1.5,
-                        color: "#475569",
-                      })
-                    }
-                    className="py-1 rounded bg-slate-100 hover:bg-indigo-50 hover:text-indigo-600 dark:bg-black/40 dark:hover:bg-indigo-600/30 text-center text-[7.5pt] text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-transparent"
-                  >
-                    Body
-                  </button>
-                  <button
-                    onClick={() =>
-                      updateElementStyle(singleElement.id, {
-                        fontSize: 8.5,
-                        fontWeight: 500,
-                        lineHeight: 1.4,
-                        color: "#64748b",
-                      })
-                    }
-                    className="py-1 rounded bg-slate-100 hover:bg-indigo-50 hover:text-indigo-600 dark:bg-black/40 dark:hover:bg-indigo-600/30 text-center text-[7.5pt] text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-transparent"
-                  >
-                    Caption
-                  </button>
-                </div>
-
-                {/* Save Style Inline Input */}
-                {showStylePrompt && (
-                  <div className="bg-slate-50 dark:bg-black/40 p-2 rounded border border-rose-300 dark:border-rose-500/30 flex items-center gap-1.5">
-                    <input
-                      type="text"
-                      placeholder="Style Name (e.g. Chapter Subtitle)"
-                      value={newStyleName}
-                      onChange={(e) => setNewStyleName(e.target.value)}
-                      className="flex-1 bg-white dark:bg-black/30 border border-slate-300 dark:border-white/10 rounded px-2 py-1 text-[10px] text-slate-800 dark:text-slate-200 outline-none"
-                    />
-                    <button
-                      onClick={handleSaveStyle}
-                      className="px-2 py-1 bg-rose-600 hover:bg-rose-500 text-white rounded text-[10px] font-medium"
-                    >
-                      Save
-                    </button>
-                  </div>
-                )}
-
-                {/* Paragraph Style Selector */}
-                {book?.textStyles && book.textStyles.length > 0 && (
-                  <div className="space-y-1">
-                    <label className="text-[10px] text-slate-600 dark:text-slate-400 block">Paragraph Style</label>
-                    <select
-                      value={singleElement.style.styleId || ""}
-                      onChange={(e) => {
-                        if (e.target.value) {
-                          applyTextStyle(singleElement.id, e.target.value);
-                        }
-                      }}
-                      className="w-full bg-white dark:bg-black/40 border border-slate-300 dark:border-white/10 rounded px-2 py-1 text-xs text-slate-800 dark:text-slate-200 outline-none"
-                    >
-                      <option value="">Custom (No Assigned Style)</option>
-                      {book.textStyles.map((st) => (
-                        <option key={st.id} value={st.id}>
-                          {st.name} ({st.fontSize}pt {st.fontWeight})
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                )}
-
-                {/* Font Family & Size */}
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <label className="text-[10px] text-slate-600 dark:text-slate-400 block mb-0.5">Font Family</label>
-                    <select
-                      value={singleElement.style.fontFamily || "Inter"}
-                      onChange={(e) =>
-                        updateElementStyle(singleElement.id, { fontFamily: e.target.value })
-                      }
-                      className="w-full bg-white dark:bg-black/40 border border-slate-300 dark:border-white/10 rounded px-1.5 py-1 text-xs text-slate-800 dark:text-slate-200 outline-none"
-                    >
-                      <option value="Inter">Inter</option>
-                      <option value="Merriweather">Merriweather</option>
-                      <option value="Crimson Pro">Crimson Pro</option>
-                      <option value="Georgia">Georgia</option>
-                      <option value="monospace">Monospace</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="text-[10px] text-slate-600 dark:text-slate-400 block mb-0.5">Font Size (pt)</label>
-                    <input
-                      type="number"
-                      value={singleElement.style.fontSize || 11}
-                      onChange={(e) =>
-                        updateElementStyle(singleElement.id, {
-                          fontSize: Math.max(6, Number(e.target.value)),
-                        })
-                      }
-                      className="w-full bg-white dark:bg-black/40 border border-slate-300 dark:border-white/10 rounded px-2 py-1 text-xs text-right font-mono text-slate-800 dark:text-slate-200"
-                    />
-                  </div>
-                </div>
-
-                {/* Weight & Color */}
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <label className="text-[10px] text-slate-600 dark:text-slate-400 block mb-0.5">Font Weight</label>
-                    <select
-                      value={singleElement.style.fontWeight || 400}
-                      onChange={(e) =>
-                        updateElementStyle(singleElement.id, {
-                          fontWeight: Number(e.target.value) as 400 | 600 | 700,
-                        })
-                      }
-                      className="w-full bg-white dark:bg-black/40 border border-slate-300 dark:border-white/10 rounded px-1.5 py-1 text-xs text-slate-800 dark:text-slate-200 outline-none"
-                    >
-                      <option value={400}>Regular (400)</option>
-                      <option value={600}>Semibold (600)</option>
-                      <option value={700}>Bold (700)</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="text-[10px] text-slate-600 dark:text-slate-400 block mb-0.5">Text Color</label>
-                    <div className="flex items-center gap-1.5">
-                      <input
-                        type="color"
-                        value={singleElement.style.color || "#0f172a"}
-                        onChange={(e) =>
-                          updateElementStyle(singleElement.id, { color: e.target.value })
-                        }
-                        className="w-7 h-6 bg-transparent rounded cursor-pointer border border-slate-300 dark:border-white/10"
-                      />
-                      <span className="text-[10px] font-mono text-slate-700 dark:text-slate-300">
-                        {singleElement.style.color || "#0f172a"}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Alignment & Letter Spacing */}
-                <div className="flex items-center justify-between">
-                  <span className="text-[10px] text-slate-600 dark:text-slate-400">Align</span>
-                  <div className="flex bg-slate-100 dark:bg-black/30 rounded p-0.5 border border-slate-200 dark:border-white/10">
-                    {(["left", "center", "right", "justify"] as const).map((align) => (
-                      <button
-                        key={align}
-                        onClick={() => updateElementStyle(singleElement.id, { textAlign: align })}
-                        className={`p-1 rounded ${
-                          singleElement.style.textAlign === align
-                            ? "bg-rose-700 text-white"
-                            : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
-                        }`}
-                      >
-                        {align === "left" && <AlignLeft className="w-3 h-3" />}
-                        {align === "center" && <AlignCenter className="w-3 h-3" />}
-                        {align === "right" && <AlignRight className="w-3 h-3" />}
-                        {align === "justify" && <AlignJustify className="w-3 h-3" />}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Multi-Column Layout */}
-                <div className="grid grid-cols-2 gap-2 pt-1">
-                  <div>
-                    <label className="text-[10px] text-slate-600 dark:text-slate-400 block mb-0.5">Text Columns</label>
-                    <select
-                      value={singleElement.style.columns || 1}
-                      onChange={(e) =>
-                        updateElementStyle(singleElement.id, {
-                          columns: Number(e.target.value),
-                          columnGap: singleElement.style.columnGap || 14,
-                        })
-                      }
-                      className="w-full bg-white dark:bg-black/40 border border-slate-300 dark:border-white/10 rounded px-1.5 py-1 text-xs text-slate-800 dark:text-slate-200 outline-none"
-                    >
-                      <option value={1}>1 Column (Standard)</option>
-                      <option value={2}>2 Columns (Textbook)</option>
-                      <option value={3}>3 Columns (Glossary)</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="text-[10px] text-slate-600 dark:text-slate-400 block mb-0.5">Column Gap (pt)</label>
-                    <input
-                      type="number"
-                      value={singleElement.style.columnGap || 14}
-                      onChange={(e) =>
-                        updateElementStyle(singleElement.id, { columnGap: Number(e.target.value) })
-                      }
-                      className="w-full bg-white dark:bg-black/40 border border-slate-300 dark:border-white/10 rounded px-2 py-1 text-xs text-right font-mono text-slate-800 dark:text-slate-200"
-                    />
-                  </div>
-                </div>
-              </div>
-            )}
+          {/* Professional Typography & Text Engine Inspector */}
+          {textElements.length > 0 && (
+            <TypographyInspector selectedElements={textElements} />
+          )}
 
           {/* Vector Shape Engine Inspector */}
           {selectedElements.some((el) => el.type === "shape" || el.style.shapeType) && (

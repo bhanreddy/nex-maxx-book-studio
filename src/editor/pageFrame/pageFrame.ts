@@ -27,6 +27,7 @@ export function createPageFrame(): PageFrame {
   return { style: 'scholar-wave', colors: { ...FRAME_PALETTES.Burgundy }, showTopNumber: true, showBottomNumber: true, edits: {}, additions: [] };
 }
 export function pageFrameFor(book: Book, page: PageDefinition): PageFrame | undefined {
+  if (page.importSource?.mode === 'artwork') return undefined;
   if (book.pageFramePolicy === 'book') return book.pageFrame || undefined;
   const chapter = book.chapters.find(c => c.id === page.chapterId || c.pageIds.includes(page.id));
   return (page.pageFrame !== undefined ? page.pageFrame : chapter?.pageFrame !== undefined ? chapter.pageFrame : book.pageFrame) || undefined;

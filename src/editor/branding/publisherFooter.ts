@@ -8,6 +8,7 @@ import { pageFrameFor, pageMarginsFor } from '../pageFrame/pageFrame';
 /** Page furniture shared by canvas, thumbnails and both PDF exporters. */
 export function buildPublisherFooterScene(book: Book, page: PageDefinition, elements: Record<string, PageElement> = {}): PublicationScene {
   const { widthPt: width, heightPt: height } = book.dimensions;
+  if (page.importSource?.mode === 'artwork') return { width, height, variant: 'publisher-footer', nodes: [], warnings: [] };
   const margins = pageMarginsFor(book, page), frame = pageFrameFor(book, page);
   const left = page.pageIndex % 2 ? margins.outsidePt : margins.insidePt;
   const right = width - (page.pageIndex % 2 ? margins.insidePt : margins.outsidePt);

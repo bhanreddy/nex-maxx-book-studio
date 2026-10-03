@@ -110,10 +110,37 @@ import {
 
 export { insertMathComponent, detachMathComponentToElements } from "./mathActions";
 
+import { PRIMARY_MATH_TEMPLATES } from "./primaryMathTemplates";
+import { CATALOGUE_TEMPLATES } from "./templates";
+
 // In-memory registry map
 const REGISTRY: Record<string, MathTemplate> = {};
 
 export function registerMathTemplate(template: MathTemplate) {
+  if ((!template.propSchema || template.propSchema.length === 0) && template.configFields && template.configFields.length > 0) {
+    template.propSchema = template.configFields;
+  }
+  if (!template.propSchema || template.propSchema.length === 0) {
+    template.propSchema = Object.keys(template.defaultData || {}).map((k) => ({
+      key: k,
+      label: k.replace(/([a-z])([A-Z])/g, "$1 $2").replace(/_/g, " ").replace(/^./, (c) => c.toUpperCase()),
+      type: (typeof template.defaultData[k] === "number"
+        ? "number"
+        : typeof template.defaultData[k] === "boolean"
+        ? "boolean"
+        : "text") as any,
+      defaultValue: template.defaultData[k],
+    }));
+    if (template.propSchema.length === 0) {
+      template.propSchema = [{ key: "showLabels", label: "Show Labels", type: "boolean", defaultValue: true }];
+    }
+  }
+  if (!template.configFields || template.configFields.length === 0) {
+    template.configFields = template.propSchema;
+  }
+  if (!template.a11yDescription) {
+    template.a11yDescription = `${template.name} mathematical visual model for ${template.category}`;
+  }
   REGISTRY[template.id] = template;
 }
 
@@ -182,6 +209,7 @@ export function saveCustomMathTemplate(entry: CustomMathTemplateEntry) {
   const next = [entry, ...current.filter((x) => x.id !== entry.id)];
   try {
     localStorage.setItem(CUSTOM_KEY, JSON.stringify(next));
+    window.dispatchEvent(new Event("nexmaxx-math-custom-changed"));
   } catch {}
 }
 
@@ -1602,6 +1630,9 @@ registerMathTemplate({
   ],
 });
 
+PRIMARY_MATH_TEMPLATES.forEach(registerMathTemplate);
+CATALOGUE_TEMPLATES.forEach(registerMathTemplate);
+
 // ----------------------------------------------------------------------------
 // Search & Filter Helper
 // ----------------------------------------------------------------------------
@@ -1610,6 +1641,7 @@ export function searchMathTemplates(options: {
   topic?: string;
   grade?: number | "all";
   type?: string;
+  chapter?: string | "all";
 }): MathTemplate[] {
   const all = getAllMathTemplates();
   const q = options.query?.trim().toLowerCase() || "";
@@ -1627,9 +1659,13 @@ export function searchMathTemplates(options: {
     if (options.type && options.type !== "all" && tpl.type !== options.type) {
       return false;
     }
-    // Search query matching name, category, subcategory, tags
+    // Chapter filter
+    if (options.chapter && options.chapter !== "all" && tpl.chapterTag !== options.chapter) {
+      return false;
+    }
+    // Search query matching name, category, subcategory, chapterTag, tags
     if (q) {
-      const haystack = `${tpl.name} ${tpl.category} ${tpl.subcategory || ""} ${tpl.tags.join(" ")}`.toLowerCase();
+      const haystack = `${tpl.name} ${tpl.category} ${tpl.subcategory || ""} ${tpl.chapterTag || ""} ${tpl.tags.join(" ")}`.toLowerCase();
       if (!haystack.includes(q)) return false;
     }
     return true;

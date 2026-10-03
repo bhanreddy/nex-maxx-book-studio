@@ -492,13 +492,13 @@ export function generateSimilarQuestion(topic: string, rules: any = {}): Record<
 
     case "addition": {
       const a = randInt(min, max);
-      const b = randInt(Math.max(1, Math.floor(min / 2)), max);
+      const b = randInt(min, max);
       return { num1: a, num2: b, sum: a + b };
     }
 
     case "subtraction": {
       const a = randInt(min, max);
-      const b = randInt(Math.max(1, Math.floor(min / 2)), a);
+      const b = randInt(min, a);
       return { num1: a, num2: b, diff: a - b };
     }
 

@@ -62,7 +62,9 @@ export type GradeBand =
   | "middle-school"   // Grades 6 - 8
   | "secondary-plus"; // Grades 9+
 
-export type ReferenceElementKind = "exercise" | "mental" | "quick-check" | "activity" | "example" | "puzzle" | "hots" | "refresh" | "dive-in" | "example-arrow";
+export type ReferenceElementKind = "exercise" | "mental" | "quick-check" | "activity" | "example" | "puzzle" | "hots" | "refresh" | "dive-in" | "example-arrow"
+  | "premium-exercise" | "premium-mental" | "premium-check" | "premium-activity" | "premium-challenge" | "premium-investigate"
+  | "premium-discuss" | "premium-recap" | "premium-project" | "premium-reading" | "premium-vocabulary" | "premium-world";
 export type ReferenceIcon = "check" | "book" | "target" | "bulb" | "puzzle" | "leaf" | "flask" | "globe" | "computer" | "none";
 export interface ReferenceElementStyle {
   kind: ReferenceElementKind;

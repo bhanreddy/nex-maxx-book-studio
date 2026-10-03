@@ -83,6 +83,8 @@ export interface MathTemplate {
   category: MathTopic;
   subcategory?: string;
   grades: MathGrade[];
+  grade?: MathGrade;
+  chapterTag?: string;
   type: MathTemplateType;
   tags: string[];
   defaultData: Record<string, any>;
@@ -91,6 +93,8 @@ export interface MathTemplate {
   styleVariants: MathStyleVariant[];
   renderer: React.FC<MathRendererProps>;
   configFields: MathConfigField[];
+  propSchema?: MathConfigField[];
+  a11yDescription?: string | ((data: Record<string, any>) => string);
   generator?: (rules: MathGeneratorRule) => Record<string, any>;
   previewSvgSnippet?: (data: Record<string, any>, variant: MathStyleVariant) => React.ReactNode;
 }
@@ -104,4 +108,9 @@ export interface CustomMathTemplateEntry {
   data: Record<string, any>;
   styleVariant: MathStyleVariant;
   createdAt: string;
+  appearance?: import("./mathEditableTree").MathAppearance;
+  overrides?: Record<string, import("./mathEditableTree").MathPartOverride>;
+  width?: number;
+  height?: number;
+  mode?: MathAnswerMode;
 }

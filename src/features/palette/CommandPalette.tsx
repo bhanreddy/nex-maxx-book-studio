@@ -5,6 +5,7 @@ import { useUiStore } from "../../editor/stores/uiStore";
 import { useEditorStore } from "../../editor/stores/editorStore";
 import { useLayoutPartnerStore } from "../../editor/layoutPartner/layoutPartnerStore";
 import {
+  BookOpen,
   Search,
   Plus,
   Copy,
@@ -87,6 +88,15 @@ export const CommandPalette: React.FC = () => {
 
   // All actionable commands (Directives 58: Natural beginner commands)
   const commands = [
+    {
+      id: "cmd-import-manuscript",
+      title: "Import & Continue Manuscript",
+      subtitle: "Bring in a partial Word document, PDF, or text and continue writing",
+      keywords: ["import", "docx", "word", "pdf", "upload", "unfinished", "continue", "manuscript"],
+      category: "Book",
+      icon: BookOpen,
+      action: () => useUiStore.getState().setManuscriptImportOpen(true),
+    },
     // Natural Layout & Page Arrangement
     {
       id: "cmd-auto-arrange",

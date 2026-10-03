@@ -3,9 +3,11 @@
 import React, { useState } from "react";
 import { useEditorStore } from "../../editor/stores/editorStore";
 import { useUiStore } from "../../editor/stores/uiStore";
+import { ManuscriptImportModal } from "../publishing/ManuscriptImportModal";
 import { PublisherLogo } from '../ui/PublisherLogo';
 import {
   BookOpen,
+  FileUp,
   Plus,
   Search,
   Clock,
@@ -19,7 +21,7 @@ interface BookDashboardProps {
 
 export const BookDashboard: React.FC<BookDashboardProps> = ({ onOpenBook }) => {
   const { books, selectBook, resetToDemo } = useEditorStore();
-  const { setWizardOpen } = useUiStore();
+  const { setWizardOpen, setManuscriptImportOpen } = useUiStore();
 
   const [search, setSearch] = useState("");
   const [selectedSubject, setSelectedSubject] = useState<string>("all");
@@ -37,6 +39,7 @@ export const BookDashboard: React.FC<BookDashboardProps> = ({ onOpenBook }) => {
 
   return (
     <div className="min-h-screen bg-[#f8fafc] dark:bg-[#090d14] text-slate-900 dark:text-slate-100 flex flex-col select-none transition-colors">
+      <ManuscriptImportModal onImported={onOpenBook} />
       {/* Dashboard Glass Header */}
       <header className="h-16 border-b border-slate-200 dark:border-white/10 bg-white/80 dark:bg-[#0f141f]/80 backdrop-blur-xl px-8 flex items-center justify-between sticky top-0 z-30">
         <div className="flex items-center gap-3">
@@ -54,6 +57,7 @@ export const BookDashboard: React.FC<BookDashboardProps> = ({ onOpenBook }) => {
         </div>
 
         <div className="flex items-center gap-3">
+          <button onClick={() => setManuscriptImportOpen(true)} className="min-h-11 px-4 rounded-xl border border-slate-200 dark:border-white/10 text-xs font-semibold flex items-center gap-2 hover:bg-slate-100 dark:hover:bg-white/5"><FileUp size={16}/> Import & Continue</button>
           <button
             onClick={resetToDemo}
             className="px-3.5 py-2 rounded-xl bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 text-xs font-medium border border-slate-200 dark:border-white/5 transition-colors"

@@ -87,18 +87,20 @@ export function makeReferenceLibraryBlock(kind: ReferenceElementKind, grade: Cur
   const block = makeLibraryBlock(preset.type, grade, subject);
   const key = /evs|environment/i.test(subject) ? "Science" : subject === "Social Studies" ? "History" : subject;
   const sample = SUBJECT_EXAMPLES[key];
-  const title = kind === "mental" ? `MENTAL ${/math/i.test(subject) ? "MATHS" : subject.toUpperCase()}`
+  const contentKind = kind === "premium-exercise" ? "exercise" : kind === "premium-mental" ? "mental" : kind === "premium-check" ? "quick-check" : kind === "premium-challenge" ? "hots" : ["premium-activity", "premium-investigate", "premium-project"].includes(kind) ? "activity" : kind;
+  const title = preset.premium?.title || (kind === "mental" ? `MENTAL ${/math/i.test(subject) ? "MATHS" : subject.toUpperCase()}`
     : kind === "example" || kind === "example-arrow" ? "EXAMPLE"
-    : preset.name.toUpperCase();
+    : preset.name.toUpperCase());
   block.semanticContent = { title,
-    ...(kind === "mental" || kind === "exercise" || kind === "quick-check" ? { questions: structuredClone(sample?.questions || [{prompt: "Explain one key idea from this chapter."}, {prompt: "Give an example and explain your reasoning."}]) }
-      : kind === "puzzle" ? { subtitle: "WHO AM I?", introText: "Read the clues and find me!", items: ["Add a clue about your chosen topic.", "Add another clue to narrow the possibilities.", "Add a final clue to check your answer."] }
-      : kind === "hots" ? { questions: [{prompt: "How would changing one part of this idea affect the result? Explain with evidence."}] }
-      : kind === "activity" ? { introText: sample?.intro || "Explore your topic through observation and making.", steps: [{stepNumber:1,title:"Explore",body:"Choose an example from this chapter."},{stepNumber:2,title:"Create",body:"Draw, build or demonstrate your idea."},{stepNumber:3,title:"Share",body:"Explain what you discovered."}] }
+    ...(contentKind === "mental" || contentKind === "exercise" || contentKind === "quick-check" ? { questions: structuredClone(sample?.questions || [{prompt: "Explain one key idea from this chapter."}, {prompt: "Give an example and explain your reasoning."}]) }
+      : contentKind === "puzzle" ? { subtitle: "WHO AM I?", introText: "Read the clues and find me!", items: ["Add a clue about your chosen topic.", "Add another clue to narrow the possibilities.", "Add a final clue to check your answer."] }
+      : contentKind === "hots" ? { questions: [{prompt: "How would changing one part of this idea affect the result? Explain with evidence."}] }
+      : contentKind === "activity" ? { introText: sample?.intro || "Explore your topic through observation and making.", steps: [{stepNumber:1,title:"Explore",body:"Choose an example from this chapter."},{stepNumber:2,title:"Create",body:"Draw, build or demonstrate your idea."},{stepNumber:3,title:"Share",body:"Explain what you discovered."}] }
+      : kind === "premium-reading" ? { passage: sample?.passage || "Add a reading passage for your lesson.", questions: structuredClone(sample?.questions || [{ prompt: "What is the main idea of the passage?" }]) }
       : { introText: sample?.intro || "Add an introduction for your subject.", items: sample?.items || ["Add your first learning point.", "Add a second example."], calloutText: sample?.takeaway || "Summarise the key idea." }) };
   block.styleOverrides = { ...block.styleOverrides, customPalette: undefined, referenceElement: { kind, icon: preset.icon,
-    skillLabel: preset.skill || "", number: kind === "exercise" ? "1.1" : undefined,
+    skillLabel: preset.skill || "", number: kind === "exercise" || kind === "premium-exercise" ? "1.1" : undefined,
     hint: kind === "hots" ? "Connect this question to something you already know." : undefined,
-    answerLabel: kind === "puzzle" ? "I am" : undefined, answerLines: 1, showBody: true } };
+    answerLabel: kind === "puzzle" ? "I am" : undefined, answerLines: 1, showBody: !preset.premium } };
   return block;
 }

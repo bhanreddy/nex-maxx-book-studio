@@ -4,16 +4,22 @@
 // for crisp, vector-first PDF export and commercial print production
 // ============================================================================
 
+import { mathDomScene } from "./mathDomScene";
 import { PageElement } from "../../domain/element/types";
 import { PublicationScene, SceneNode } from "../educational/publicationScene";
 import { getMathTemplate } from "./mathRegistry";
-import { formatIndianNumber, parseMathNumber } from "./mathAlgorithms";
+import { formatIndianNumber } from "./mathAlgorithms";
 
 export function mathSceneForElement(el: PageElement): PublicationScene {
   const w = el.transform.width;
   const h = el.transform.height;
   const templateId = el.content?.mathTemplateId || el.presetId || "math-place-value-indian";
   const template = getMathTemplate(templateId);
+
+  if (template) {
+    const faithfulScene = mathDomScene(el, template);
+    if (faithfulScene) return faithfulScene;
+  }
 
   const mathData = el.content?.mathData || el.content || {};
   const mode = el.content?.mathMode || "teacher";

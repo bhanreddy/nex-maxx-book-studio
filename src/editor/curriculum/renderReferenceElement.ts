@@ -2,6 +2,8 @@ import type { SmartBlockInstance, ReferenceIcon } from "../../domain/educational
 import { CLASS_TYPOGRAPHY, REFERENCE_ELEMENT_TOKENS as T } from "../../domain/educational/designTokens";
 import type { PublicationScene, SceneNode } from "../educational/publicationScene";
 import type { AtelierHelpers } from "../educational/atelier/render";
+import { REFERENCE_ELEMENTS } from "./referenceElements";
+import { premiumReferenceHeader } from "./premiumReferenceHeader";
 
 /** Real text and vector primitives: one composition for editor, previews, layers and PDF. */
 export function renderReferenceElement(block: SmartBlockInstance, h: AtelierHelpers, options: { teacher?: boolean } = {}): PublicationScene {
@@ -83,8 +85,14 @@ export function renderReferenceElement(block: SmartBlockInstance, h: AtelierHelp
   const titleSize = Math.min(40, Math.max(18, Math.min(w*.07, fs*2.4)));
   const number = r.kind === "exercise" ? r.number || "" : "";
   const title = `${c.title}${number ? ` ${number}` : ""}`;
-  const headerH = Math.max(iconSize + 18, h.wrapText(title, titleW, titleSize, true).length*titleSize*1.42 + 26);
+  let headerH = Math.max(iconSize + 18, h.wrapText(title, titleW, titleSize, true).length*titleSize*1.42 + 26);
   let headerY = 12;
+  let y: number;
+  const premium = REFERENCE_ELEMENTS.find(preset => preset.kind === r.kind && preset.premium);
+  if (premium) {
+    const header = premiumReferenceHeader(block, premium, h, nodes, icon);
+    headerY = header.headerY; headerH = header.headerH; y = header.endY;
+  } else {
   if (r.skillLabel && r.kind !== "activity") {
     const skillW = Math.min(w-pad*2, h.textWidth(r.skillLabel, 10, true)+30);
     const sh = h.wrapText(r.skillLabel, skillW-20, 10, true).length*14.2+12;
@@ -125,10 +133,11 @@ export function renderReferenceElement(block: SmartBlockInstance, h: AtelierHelp
       if(twoTone){const advance=h.textWidth(first.trimEnd(),titleSize,true,r.kind==="exercise")*(typeof document==="undefined"?1.22:1)+titleSize*.4;text(value.slice(split+1),titleX+advance,yy,titleW-advance,titleSize,true,quiet?primary:accent,r.kind==="exercise");}
     });
   }
-  let y = headerY + headerH + 16;
+  y = headerY + headerH + 16;
   if (r.kind === "activity" && r.skillLabel) {
     rect(pad, y-5, w-pad*2, 30, paper, 15, accent);
     y = text(r.skillLabel, pad+12, y, w-pad*2-24, fs, true, ink)+14;
+  }
   }
   const bodyStart = y;
   if(card)y+=16;

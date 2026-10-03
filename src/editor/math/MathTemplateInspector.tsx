@@ -17,9 +17,9 @@ import {
   RefreshCw,
   Eye,
   EyeOff,
-  Ungroup,
 } from "lucide-react";
-import { detachMathComponentToElements } from "./mathActions";
+import { MathDesignControls } from "./MathDesignControls";
+import { MathDataFields } from "./MathDataFields";
 
 interface MathTemplateInspectorProps {
   element: PageElement;
@@ -73,7 +73,11 @@ export const MathTemplateInspector: React.FC<MathTemplateInspectorProps> = ({ el
       allowCarry: true,
       allowBorrow: true,
     };
-    const generated = generateSimilarQuestion(template.category, rules);
+    const generated = template.generator ? template.generator(rules) : Object.fromEntries(Object.entries(generateSimilarQuestion(template.category, rules)).filter(([key]) => key in mathData));
+    if (!Object.keys(generated).length) {
+      showToast({ type: "info", title: "Edit this template’s content", message: "Use the fields below to create your own question." });
+      return;
+    }
     handleUpdate(generated);
     showToast({
       type: "success",
@@ -89,17 +93,13 @@ export const MathTemplateInspector: React.FC<MathTemplateInspectorProps> = ({ el
 
     // First clone the element
     duplicateSelectedElements();
-    setTimeout(() => {
-      // Find newly selected element and apply new data
-      const selected = useEditorStore.getState().selectedElementIds;
-      if (selected.length > 0) {
-        const newId = selected[0];
-        useEditorStore.getState().updateElementContent(newId, {
-          mathData: { ...mathData, number: parsed },
-          number: parsed,
-        });
-      }
-    }, 50);
+    const newId = useEditorStore.getState().selectedElementIds[0];
+    if (newId && newId !== element.id) {
+      useEditorStore.getState().updateElementContent(newId, {
+        mathData: { ...mathData, ["number" in mathData ? "number" : "num1"]: parsed },
+        ["number" in mathData ? "number" : "num1"]: parsed,
+      });
+    }
 
     setDupPromptOpen(false);
     setNewDupNumber("");
@@ -122,6 +122,11 @@ export const MathTemplateInspector: React.FC<MathTemplateInspectorProps> = ({ el
       data: mathData,
       styleVariant: currentVariant,
       createdAt: new Date().toISOString(),
+      appearance: element.content.mathAppearance,
+      overrides: element.content.mathOverrides,
+      width: element.transform.width,
+      height: element.transform.height,
+      mode: currentMode,
     });
     setSaveModalOpen(false);
     setCustomTemplateName("");
@@ -133,7 +138,7 @@ export const MathTemplateInspector: React.FC<MathTemplateInspectorProps> = ({ el
   };
 
   return (
-    <div className="p-3 border-b border-slate-200 dark:border-white/10 bg-slate-50/50 dark:bg-white/[0.02] text-xs space-y-3 select-none">
+    <fieldset disabled={element.locked} className="math-inspector p-3 border-b border-slate-200 dark:border-white/10 bg-slate-50/50 dark:bg-white/[0.02] text-xs space-y-3 select-none">
       {/* 1. Header with Template Info */}
       <div className="flex items-center justify-between pb-2 border-b border-slate-200/80 dark:border-white/10">
         <div>
@@ -148,6 +153,8 @@ export const MathTemplateInspector: React.FC<MathTemplateInspectorProps> = ({ el
           {template.category}
         </span>
       </div>
+
+      <MathDesignControls element={element} template={template} />
 
       {/* 2. Teacher Mode vs Student Mode Toggle (Section 33) */}
       <div>
@@ -186,7 +193,7 @@ export const MathTemplateInspector: React.FC<MathTemplateInspectorProps> = ({ el
           Style Variant
         </label>
         <div className="grid grid-cols-3 gap-1">
-          {(["clean", "color-coded", "visual"] as MathStyleVariant[]).map((v) => (
+          {template.styleVariants.map((v) => (
             <button
               key={v}
               onClick={() => handleVariantChange(v)}
@@ -208,83 +215,7 @@ export const MathTemplateInspector: React.FC<MathTemplateInspectorProps> = ({ el
           Mathematical Content
         </label>
 
-        {template.configFields.map((field) => {
-          const val = mathData[field.key] ?? field.defaultValue;
-
-          if (field.type === "number") {
-            return (
-              <div key={field.key} className="flex items-center justify-between gap-2">
-                <span className="text-slate-600 dark:text-slate-300 font-medium text-[11px]">
-                  {field.label}:
-                </span>
-                <input
-                  type="number"
-                  value={val ?? ""}
-                  min={field.min}
-                  max={field.max}
-                  step={field.step || 1}
-                  onChange={(e) => handleUpdate({ [field.key]: Number(e.target.value) })}
-                  className="w-28 px-2 py-1 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-md font-mono text-xs text-right outline-none focus:border-indigo-500"
-                />
-              </div>
-            );
-          }
-
-          if (field.type === "text") {
-            return (
-              <div key={field.key} className="space-y-1">
-                <span className="text-slate-600 dark:text-slate-300 font-medium text-[11px] block">
-                  {field.label}:
-                </span>
-                <input
-                  type="text"
-                  value={val ?? ""}
-                  onChange={(e) => handleUpdate({ [field.key]: e.target.value })}
-                  className="w-full px-2 py-1 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-md font-sans text-xs outline-none focus:border-indigo-500"
-                />
-              </div>
-            );
-          }
-
-          if (field.type === "select" && field.options) {
-            return (
-              <div key={field.key} className="flex items-center justify-between gap-2">
-                <span className="text-slate-600 dark:text-slate-300 font-medium text-[11px]">
-                  {field.label}:
-                </span>
-                <select
-                  value={val}
-                  onChange={(e) => handleUpdate({ [field.key]: e.target.value })}
-                  className="px-2 py-1 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-md text-xs outline-none focus:border-indigo-500"
-                >
-                  {field.options.map((opt) => (
-                    <option key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            );
-          }
-
-          if (field.type === "boolean") {
-            return (
-              <label key={field.key} className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={Boolean(val)}
-                  onChange={(e) => handleUpdate({ [field.key]: e.target.checked })}
-                  className="w-3.5 h-3.5 rounded text-indigo-600"
-                />
-                <span className="text-slate-700 dark:text-slate-300 text-[11px] font-medium">
-                  {field.label}
-                </span>
-              </label>
-            );
-          }
-
-          return null;
-        })}
+        <MathDataFields key={element.id} template={template} data={mathData} onUpdate={handleUpdate} />
       </div>
 
       {/* 5. Smart Actions: Generate Similar, Duplicate with New Data, Save Template */}
@@ -299,7 +230,7 @@ export const MathTemplateInspector: React.FC<MathTemplateInspectorProps> = ({ el
         </button>
 
         {/* Duplicate with New Data */}
-        {dupPromptOpen ? (
+        {dupPromptOpen && ("number" in mathData || "num1" in mathData) ? (
           <div className="p-2 rounded-lg bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800 space-y-1.5">
             <span className="text-[10px] font-bold text-indigo-700 dark:text-indigo-300 block">
               Enter New Number:
@@ -323,23 +254,13 @@ export const MathTemplateInspector: React.FC<MathTemplateInspectorProps> = ({ el
           </div>
         ) : (
           <button
-            onClick={() => setDupPromptOpen(true)}
+            onClick={() => ("number" in mathData || "num1" in mathData) ? setDupPromptOpen(true) : duplicateSelectedElements()}
             className="w-full flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-white/5 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 font-semibold text-xs transition-colors"
           >
             <Copy className="w-3.5 h-3.5" />
             <span>Duplicate with New Data...</span>
           </button>
         )}
-
-        {/* Convert / Detach to Vector Elements (Section 3 & 29) */}
-        <button
-          onClick={() => detachMathComponentToElements(element.id)}
-          className="w-full flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-lg border border-indigo-200 dark:border-indigo-800 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 font-semibold text-xs transition-colors"
-          title="Convert to editable ungrouped vector shapes and text"
-        >
-          <Ungroup className="w-3.5 h-3.5" />
-          <span>Convert to Editable Elements</span>
-        </button>
 
         {/* Save to My Templates */}
         {saveModalOpen ? (
@@ -374,6 +295,6 @@ export const MathTemplateInspector: React.FC<MathTemplateInspectorProps> = ({ el
           </button>
         )}
       </div>
-    </div>
+    </fieldset>
   );
 };

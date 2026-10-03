@@ -16,11 +16,19 @@ import type { EducationalBlockDefinition } from "../../domain/educational/blockS
 
 import { LIBRARY_BY_TYPE, LESSON_STAGES, RECOMMENDED_BLOCK_IDS } from "../../editor/educational/library/catalog";
 import { recentEducationalPresets, resolveBookGrade, resolveBookSubject } from "../../editor/educational/library/preferences";
+import { ReferenceElementsLibrary } from "../curriculum/ReferenceElementsLibrary";
+import { PREMIUM_REFERENCE_ELEMENTS } from "../../editor/curriculum/referenceElements";
+import type { CurriculumGrade } from "../../domain/educational/curriculum";
 
 function subjectForBook(subject?:string){ return resolveBookSubject(subject || "General Knowledge"); }
+function bannerGradeForBook(grade = "Grade 3"): CurriculumGrade {
+  const early = grade.trim().toUpperCase();
+  if (early === "NURSERY" || early === "LKG" || early === "UKG") return early;
+  return Math.max(1, Math.min(12, Number(grade.match(/\d+/)?.[0]) || 3)) as CurriculumGrade;
+}
 
 const cachedFilters = {
-  tab: "blocks" as "blocks" | "pages" | "artwork",
+  tab: "blocks" as "blocks" | "banners" | "pages" | "artwork",
   search: "",
   category: "recommended",
   family: "all",
@@ -61,7 +69,7 @@ export const EducationalBlocksPanel: React.FC = () => {
   const demo = useEditorStore((s) => s.createPublicationDemo);
   const addArt = useEditorStore((s) => s.addPublicationArtwork);
 
-  const [tab, setTab] = useState<"blocks" | "pages" | "artwork">(cachedFilters.tab);
+  const [tab, setTab] = useState<"blocks" | "banners" | "pages" | "artwork">(cachedFilters.tab);
   const [search, setSearch] = useState(cachedFilters.search);
   const [category, setCategory] = useState(cachedFilters.category);
   const [family, setFamily] = useState(cachedFilters.family);
@@ -151,23 +159,23 @@ export const EducationalBlocksPanel: React.FC = () => {
   return (
     <div className="publication-panel educational-publishing-panel flex flex-1 flex-col min-h-0 overflow-hidden">
       {/* 1. Compact Sticky Top Tabs */}
-      <div className="flex px-3 pt-2 gap-1 border-b border-slate-200 dark:border-white/10 shrink-0 bg-white dark:bg-[#0d121e]">
-        {(["blocks", "pages", "artwork"] as const).map((t) => {
+      <div className="flex px-2.5 pt-1.5 gap-1 border-b border-slate-200 dark:border-white/10 shrink-0 bg-white dark:bg-[#0d121e]">
+        {(["blocks", "banners", "pages", "artwork"] as const).map((t) => {
           const isActive = tab === t;
           const count =
-            t === "blocks" ? (category === "saved" ? filteredSaved.length : filtered.length) : t === "pages" ? PUBLICATION_PAGES.length : ARTWORKS.length;
+            t === "blocks" ? (category === "saved" ? filteredSaved.length : filtered.length) : t === "banners" ? PREMIUM_REFERENCE_ELEMENTS.length : t === "pages" ? PUBLICATION_PAGES.length : ARTWORKS.length;
           return (
             <button
               key={t}
               onClick={() => setTab(t)}
-              className={`flex-1 pb-2 text-xs capitalize border-b-2 font-semibold transition-colors flex items-center justify-center gap-1.5 ${
+              className={`flex-1 pb-1.5 text-[11px] capitalize border-b-2 font-semibold transition-colors flex items-center justify-center gap-1.5 ${
                 isActive
                   ? "border-amber-600 text-amber-800 dark:border-amber-400 dark:text-amber-200"
                   : "border-transparent text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200"
               }`}
             >
               <span>{t}</span>
-              <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono ${isActive ? "bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300" : "bg-slate-100 dark:bg-white/5 text-slate-500"}`}>
+              <span className={`text-[9.5px] px-1.5 py-0.2 rounded-full font-mono ${isActive ? "bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300" : "bg-slate-100 dark:bg-white/5 text-slate-500"}`}>
                 {count}
               </span>
             </button>
@@ -177,11 +185,11 @@ export const EducationalBlocksPanel: React.FC = () => {
 
       {/* 2. Compact Search & Filter Controls (Sticky, low-profile) */}
       {tab === "blocks" && (
-        <div className="shrink-0 p-2.5 space-y-2 border-b border-slate-200 dark:border-white/10 bg-slate-50/60 dark:bg-white/[0.02]">
+        <div className="shrink-0 px-2.5 py-1.5 space-y-1.5 border-b border-slate-200 dark:border-white/10 bg-slate-50/60 dark:bg-white/[0.02]">
           <div className="flex items-center gap-1.5">
             {/* Search Input */}
             <div className="relative flex-1 min-w-0">
-              <Search size={13} className="absolute top-2 left-2.5 text-slate-400" />
+              <Search size={12} className="absolute top-2 left-2 text-slate-400" />
               <input
                 aria-label="Search educational templates"
                 value={search}
@@ -191,15 +199,15 @@ export const EducationalBlocksPanel: React.FC = () => {
                   setLimit(12);
                 }}
                 placeholder="Search templates, warm-up…"
-                className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-white/15 rounded-lg pl-8 pr-7 py-1 text-xs text-slate-800 dark:text-slate-200 outline-none focus:border-amber-500 transition-colors"
+                className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-white/15 rounded-md pl-7 pr-6 py-1 text-[11px] text-slate-800 dark:text-slate-200 outline-none focus:border-amber-500 transition-colors"
               />
               {search && (
                 <button
                   type="button"
                   onClick={() => setSearch("")}
-                  className="absolute top-1.5 right-1.5 p-0.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded"
+                  className="absolute top-1 right-1 p-0.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded"
                 >
-                  <X size={12} />
+                  <X size={11} />
                 </button>
               )}
             </div>
@@ -208,17 +216,17 @@ export const EducationalBlocksPanel: React.FC = () => {
             <button
               type="button"
               onClick={() => setFiltersOpen((o) => !o)}
-              className={`h-7 px-2 rounded-lg text-xs font-medium border flex items-center gap-1.5 transition-colors cursor-pointer shrink-0 ${
+              className={`h-6.5 px-2 rounded-md text-[10.5px] font-medium border flex items-center gap-1 transition-colors cursor-pointer shrink-0 ${
                 filtersOpen || activeFilterCount > 0
                   ? "bg-amber-100/80 border-amber-300 text-amber-900 dark:bg-amber-950/40 dark:border-amber-500/40 dark:text-amber-200 font-semibold"
                   : "bg-white dark:bg-slate-900 border-slate-300 dark:border-white/15 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/5"
               }`}
               title="Show filter dropdowns"
             >
-              <SlidersHorizontal size={12} />
+              <SlidersHorizontal size={11} />
               <span>Filters</span>
               {activeFilterCount > 0 && (
-                <span className="w-4 h-4 rounded-full bg-amber-600 text-white text-[9px] font-bold flex items-center justify-center">
+                <span className="w-3.5 h-3.5 rounded-full bg-amber-600 text-white text-[8px] font-bold flex items-center justify-center">
                   {activeFilterCount}
                 </span>
               )}
@@ -232,61 +240,76 @@ export const EducationalBlocksPanel: React.FC = () => {
                   resetFilters();
                   setSignature(false);
                 }}
-                className="h-7 w-7 rounded-lg text-slate-400 hover:text-amber-600 dark:hover:text-amber-300 border border-slate-200 dark:border-white/10 flex items-center justify-center shrink-0 hover:bg-white dark:hover:bg-slate-800 transition-colors"
+                className="h-6.5 w-6.5 rounded-md text-slate-400 hover:text-amber-600 dark:hover:text-amber-300 border border-slate-200 dark:border-white/10 flex items-center justify-center shrink-0 hover:bg-white dark:hover:bg-slate-800 transition-colors"
                 title="Reset all filters"
               >
-                <RotateCcw size={12} />
+                <RotateCcw size={11} />
               </button>
             )}
           </div>
 
-          <nav aria-label="Educational block categories" className="educational-library-stages">{[["recommended","Recommended"],["all","All blocks"],...LESSON_STAGES,["favorites","Favourites"],["recent","Recent"],["saved","My Blocks"]].map(([id,label])=><button key={id} type="button" aria-pressed={category===id} onClick={()=>{setCategory(id);setLimit(12);}}>{label}</button>)}</nav>
-          {/* Quick Segmented Toggle (All vs Signature) */}
-          <div className="flex items-center justify-between gap-2">
-            {legacy && <div className="inline-flex p-0.5 bg-slate-200/70 dark:bg-white/10 rounded-lg text-[11px] font-medium">
+          {/* Stage Filter Chips - Sleek horizontal scroll strip */}
+          <nav aria-label="Educational block categories" className="educational-library-stages flex gap-1 overflow-x-auto pb-0.5 scrollbar-none text-[10px]">
+            {[["recommended","Recommended"],["all","All blocks"],...LESSON_STAGES,["favorites","Favourites"],["recent","Recent"],["saved","My Blocks"]].map(([id,label]) => (
               <button
+                key={id}
                 type="button"
-                aria-pressed={!signature}
-                onClick={() => {
-                  setSignature(false);
-                  setLimit(12);
-                }}
-                className={`px-2.5 py-0.5 rounded-md transition-all ${
-                  !signature
-                    ? "bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-xs font-semibold"
-                    : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
-                }`}
+                aria-pressed={category === id}
+                onClick={() => { setCategory(id); setLimit(12); }}
               >
-                All layouts
+                {label}
               </button>
-              <button
-                type="button"
-                aria-pressed={signature}
-                onClick={() => {
-                  setSignature(true);
-                  setLimit(12);
-                }}
-                className={`px-2.5 py-0.5 rounded-md transition-all flex items-center gap-1 ${
-                  signature
-                    ? "bg-amber-500 text-white shadow-xs font-semibold"
-                    : "text-amber-700 dark:text-amber-400 hover:text-amber-800"
-                }`}
-              >
-                <span>✦ Signature</span>
-              </button>
-            </div>}
+            ))}
+          </nav>
 
-            <span className="text-[10px] text-slate-500 dark:text-slate-400 font-mono">
+          {/* Quick Segmented Toggle (All vs Signature) & Layout Counter */}
+          <div className="flex items-center justify-between gap-2 pt-0.5">
+            {legacy && (
+              <div className="inline-flex p-0.5 bg-slate-200/70 dark:bg-white/10 rounded-md text-[10px] font-medium">
+                <button
+                  type="button"
+                  aria-pressed={!signature}
+                  onClick={() => {
+                    setSignature(false);
+                    setLimit(12);
+                  }}
+                  className={`px-2 py-0.5 rounded transition-all ${
+                    !signature
+                      ? "bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-xs font-semibold"
+                      : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
+                  }`}
+                >
+                  All layouts
+                </button>
+                <button
+                  type="button"
+                  aria-pressed={signature}
+                  onClick={() => {
+                    setSignature(true);
+                    setLimit(12);
+                  }}
+                  className={`px-2 py-0.5 rounded transition-all flex items-center gap-1 ${
+                    signature
+                      ? "bg-amber-500 text-white shadow-xs font-semibold"
+                      : "text-amber-700 dark:text-amber-400 hover:text-amber-800"
+                  }`}
+                >
+                  <span>✦ Signature</span>
+                </button>
+              </div>
+            )}
+
+            <span className="text-[9.5px] text-slate-500 dark:text-slate-400 font-mono ml-auto">
               {category === "saved" ? filteredSaved.length : filtered.length} {category === "saved" ? "saved blocks" : "layouts"}
             </span>
           </div>
 
           {/* Expandable Filter Tray */}
           {filtersOpen && (
-            <div className="pt-2 border-t border-slate-200 dark:border-white/10 space-y-2 animate-fadeIn">
-              <div className="grid grid-cols-2 gap-1.5">
+            <div className="pt-1.5 border-t border-slate-200 dark:border-white/10 space-y-1.5 animate-fadeIn">
+              <div className="grid grid-cols-2 gap-1">
                 <div>
-                  <label className="text-[9px] uppercase tracking-wider font-semibold text-slate-500 dark:text-slate-400 block mb-0.5">Purpose</label>
+                  <label className="text-[8px] uppercase tracking-wider font-semibold text-slate-500 dark:text-slate-400 block mb-0.5">Purpose</label>
                   <select
                     aria-label="Teaching purpose"
                     value={category}
@@ -294,7 +317,7 @@ export const EducationalBlocksPanel: React.FC = () => {
                       setCategory(e.target.value);
                       setLimit(12);
                     }}
-                    className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-white/15 rounded-md px-2 py-1 text-[11px] text-slate-800 dark:text-slate-200 outline-none"
+                    className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-white/15 rounded px-1.5 py-0.5 text-[10px] h-6 text-slate-800 dark:text-slate-200 outline-none"
                   >
                     <option value="all">All purposes</option>
                     <option value="recommended">Recommended</option>
@@ -309,7 +332,7 @@ export const EducationalBlocksPanel: React.FC = () => {
                 </div>
 
                 <div>
-                  <label className="text-[9px] uppercase tracking-wider font-semibold text-slate-500 dark:text-slate-400 block mb-0.5">Collection</label>
+                  <label className="text-[8px] uppercase tracking-wider font-semibold text-slate-500 dark:text-slate-400 block mb-0.5">Collection</label>
                   <select
                     aria-label="Design collection"
                     value={family}
@@ -317,7 +340,7 @@ export const EducationalBlocksPanel: React.FC = () => {
                       setFamily(e.target.value);
                       setLimit(12);
                     }}
-                    className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-white/15 rounded-md px-2 py-1 text-[11px] text-slate-800 dark:text-slate-200 outline-none"
+                    className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-white/15 rounded px-1.5 py-0.5 text-[10px] h-6 text-slate-800 dark:text-slate-200 outline-none"
                   >
                     <option value="all">All collections</option>
                     {Object.entries(COLLECTIONS).map(([id, c]) => (
@@ -327,14 +350,14 @@ export const EducationalBlocksPanel: React.FC = () => {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-1.5">
+              <div className="grid grid-cols-2 gap-1">
                 <div>
-                  <label className="text-[9px] uppercase tracking-wider font-semibold text-slate-500 dark:text-slate-400 block mb-0.5">Subject</label>
+                  <label className="text-[8px] uppercase tracking-wider font-semibold text-slate-500 dark:text-slate-400 block mb-0.5">Subject</label>
                   <select
                     aria-label="Subject"
                     value={subject}
                     onChange={(e) => setSubject(e.target.value)}
-                    className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-white/15 rounded-md px-2 py-1 text-[11px] text-slate-800 dark:text-slate-200 outline-none"
+                    className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-white/15 rounded px-1.5 py-0.5 text-[10px] h-6 text-slate-800 dark:text-slate-200 outline-none"
                   >
                     <option value="all">Any subject</option>
                     {["mathematics", "science", "english", "social-studies", "environmental", "computer-science", "early-learning", "general"].map((v) => (
@@ -346,12 +369,12 @@ export const EducationalBlocksPanel: React.FC = () => {
                 </div>
 
                 <div>
-                  <label className="text-[9px] uppercase tracking-wider font-semibold text-slate-500 dark:text-slate-400 block mb-0.5">Grade</label>
+                  <label className="text-[8px] uppercase tracking-wider font-semibold text-slate-500 dark:text-slate-400 block mb-0.5">Grade</label>
                   <select
                     aria-label="Grade band"
                     value={grade}
                     onChange={(e) => setGrade(e.target.value)}
-                    className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-white/15 rounded-md px-2 py-1 text-[11px] text-slate-800 dark:text-slate-200 outline-none"
+                    className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-white/15 rounded px-1.5 py-0.5 text-[10px] h-6 text-slate-800 dark:text-slate-200 outline-none"
                   >
                     <option value="all">Any grade</option>
                     <option value="early-years">Early years</option>
@@ -363,13 +386,13 @@ export const EducationalBlocksPanel: React.FC = () => {
                 </div>
               </div>
 
-              <div className="flex justify-between items-center pt-1 text-[10px] text-slate-600 dark:text-slate-400">
-                <label className="flex items-center gap-1.5 cursor-pointer">
+              <div className="flex justify-between items-center pt-0.5 text-[9.5px] text-slate-600 dark:text-slate-400">
+                <label className="flex items-center gap-1 cursor-pointer">
                   <input
                     type="checkbox"
                     checked={legacy}
                     onChange={(e) => setLegacy(e.target.checked)}
-                    className="rounded border-slate-300 dark:border-white/20 text-amber-600"
+                    className="rounded border-slate-300 dark:border-white/20 text-amber-600 scale-90"
                   />
                   <span>Include earlier layouts</span>
                 </label>
@@ -491,6 +514,10 @@ export const EducationalBlocksPanel: React.FC = () => {
           )}
         </div>
       )}
+
+      {tab === "banners" && <div className="flex-1 min-h-0 overflow-y-auto px-3 py-3 custom-scrollbar">
+        <ReferenceElementsLibrary grade={bannerGradeForBook(book?.grade)} subject={book?.subject || "Science"} initialOpen showToggle={false} />
+      </div>}
 
       {/* Pages Tab */}
       {tab === "pages" && (

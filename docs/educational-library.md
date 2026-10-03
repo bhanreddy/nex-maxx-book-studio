@@ -18,6 +18,10 @@ Existing publishing blocks that need more space are measured on recovery. The re
 
 ## Author workflow
 
+The **Blocks → Banners** tab adds 12 premium section banners alongside the original 10 reference designs. Six measured vector compositions cover Exercise Folio, Mental Lab, Quick Check Seal, Activity Workshop, Challenge Summit, Investigate, Think & Discuss, Chapter Recap, Project Studio, Reading Room, Word Lab and Real World Atlas. The 196 publishing variants remain a separate collection.
+
+Choose **Banner only** for a chapter marker or **Banner + worksheet** for its accompanying editable content. Content controls edit the heading and questions; Style controls edit the design, icon, colours, skill caption and exercise number. Free Edit separates the design into editable text and vector layers. Narrow columns wrap headings and stack long exercise numbers without shrinking their type. The canvas, preview, detached layers and native PDF share the same measured scene.
+
 Open **Blocks → Educational Blocks · publishing library**, or **More → Educational Blocks**. Recommended shows six starting choices. The seven lesson stages, search, favourites, recent, and My Blocks expose the rest without mounting the entire catalog.
 
 Insert a preview or drag it to the page. Click a selected heading/body to edit its source field; Enter commits, Shift+Enter adds a line, and Escape cancels. Click an illustration to replace it. Click an accent to change its colour. Inactive blocks mount no textareas, colour inputs, or file inputs.
@@ -50,7 +54,8 @@ This remains an **RGB proof workflow**. ICC-managed CMYK conversion, PDF/X certi
 ## Verification
 
 - An isolated production build completed successfully. Existing repository lint warnings remain.
-- Full suite: 344 passing tests at the final complete run, including 19 library tests and the concurrently added shape tests.
+- Full suite: 347 passing tests at the final complete run, including 19 library tests and 11 reference-element tests.
+- The 12 new banners passed native PDF text, grayscale, separate-layer, source-preservation, and English/Hindi/Telugu heading checks at 180, 320, 517 and 900 pt widths. Browser verification covered banner-only insertion, heading and number edits, and toggling worksheet content. `output/premium-banner-collection.jpg` shows all 12 designs.
 - All 196 variants checked at widths 180, 320, and 480 pt for finite geometry and bounded readable text.
 - Source-field reflow, context adaptation, image treatment data and rotated fit/fill geometry, insertion/collision/history, narrow custom-page rejection, saved-template continuation undo, purpose conversion, legacy copy migration, notation, and student print expansion are covered.
 - Actual React static rendering of 500 inactive blocks took about 148 ms while running the full suite in the isolated test and mounted no input/editor controls. This is not a low-end-device drag/frame-rate benchmark. Existing page-window rendering remains in place.

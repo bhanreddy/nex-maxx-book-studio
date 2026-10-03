@@ -16,7 +16,7 @@ export function ReferenceElementControls({block,onChange,chapterId}: {block:Smar
     </select></label>
     {r && <>
       <label className="curriculum-field"><span>Editable vector icon</span><select value={r.icon || "book"} onChange={e=>change({icon:e.target.value as ReferenceIcon})}>{["check","book","target","bulb","puzzle","leaf","flask","globe","computer","none"].map(icon=><option key={icon} value={icon}>{icon}</option>)}</select></label>
-      {r.kind==="exercise" && field("Exercise number (e.g. 1.1 or 2.3)","number")}
+      {(r.kind==="exercise" || r.kind==="premium-exercise") && field("Exercise number (e.g. 1.1 or 2.3)","number")}
       {field("Skill badge (leave blank to hide)","skillLabel")}
       {field("Hint (leave blank to hide)","hint")}
       {field("Answer label (leave blank to hide)","answerLabel")}

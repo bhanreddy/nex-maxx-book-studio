@@ -14,6 +14,7 @@ export interface PlaceColorConfig {
 }
 
 export const MATH_TOKENS: {
+  print: { ink: string; muted: string; line: string; paper: string; wash: string };
   primary: {
     indigo: string;
     indigoAccent: string;
@@ -35,6 +36,7 @@ export const MATH_TOKENS: {
     accentBorder: string;
   }>;
 } = {
+  print: { ink: "#1e293b", muted: "#64748b", line: "#cbd5e1", paper: "#ffffff", wash: "#f8fafc" },
   // Domain Theme Colors (Section 27)
   primary: {
     indigo: "#312e81",       // Maths Primary Deep Indigo
@@ -269,3 +271,76 @@ export const MATH_TOKENS: {
     },
   },
 };
+
+/**
+ * Phase 4 — Grade Content Palettes
+ * Maximum 5 high-contrast, print-safe colors per grade.
+ */
+export const MATH_GRADE_PALETTES: Record<1 | 2 | 3 | 4 | 5, {
+  name: string;
+  colors: [string, string, string, string, string];
+  labels: [string, string, string, string, string];
+}> = {
+  1: {
+    name: "Class 1: Playful Primary",
+    colors: ["#1e293b", "#1d4ed8", "#dc2626", "#d97706", "#16a34a"],
+    labels: ["Deep Ink", "Primary Blue", "Ruby Red", "Sun Amber", "Meadow Green"],
+  },
+  2: {
+    name: "Class 2: Vibrant Discovery",
+    colors: ["#1e293b", "#4338ca", "#e11d48", "#ca8a04", "#0d9488"],
+    labels: ["Deep Ink", "Royal Indigo", "Coral Rose", "Warm Gold", "Teal Mint"],
+  },
+  3: {
+    name: "Class 3: Structured Concepts",
+    colors: ["#1e293b", "#1e40af", "#7e22ce", "#b45309", "#047857"],
+    labels: ["Deep Ink", "Deep Cobalt", "Amethyst", "Amber Ochre", "Forest Emerald"],
+  },
+  4: {
+    name: "Class 4: Analytical Focus",
+    colors: ["#0f172a", "#1e3a8a", "#991b1b", "#78350f", "#0e7490"],
+    labels: ["Deep Ink", "Sapphire", "Crimson Wine", "Bronze Brown", "Dark Cyan"],
+  },
+  5: {
+    name: "Class 5: Rigorous Mastery",
+    colors: ["#020617", "#172554", "#581c87", "#7c2d12", "#064e3b"],
+    labels: ["Deep Ink", "Oxford Navy", "Plum Violet", "Copper Rust", "Deep Spruce"],
+  },
+};
+
+/**
+ * Phase 4 — Grade Content Typography Standards
+ * Strict minimum text sizes: Class 1 ≥ 20px, Class 2–3 ≥ 16px, Class 4–5 ≥ 14px.
+ * Rounded sans for Class 1–2, bilingual Noto Sans Telugu for regional textbook publishing.
+ */
+export const MATH_GRADE_TYPOGRAPHY = {
+  minTextSizes: {
+    1: 20, // Class 1 minimum text size ≥ 20px
+    2: 16, // Class 2 minimum text size ≥ 16px
+    3: 16, // Class 3 minimum text size ≥ 16px
+    4: 14, // Class 4 minimum text size ≥ 14px
+    5: 14, // Class 5 minimum text size ≥ 14px
+  },
+  fonts: {
+    roundedSans: '"Fredoka", "Outfit", system-ui, sans-serif',
+    standardSans: '"Inter", system-ui, sans-serif',
+    telugu: '"Noto Sans Telugu", sans-serif',
+  },
+};
+
+/**
+ * Phase 4 — Chrome vs Printed Page Content Theming Tokens
+ * Editor dark mode themes the tool chrome, while the printed page remains paper-pure.
+ */
+export const CHROME_VS_PRINT_TOKENS = {
+  page: {
+    paper: "#ffffff", // Pure un-tinted paper white
+    ink: "#0f172a",   // 100% K / deep slate ink
+    line: "#cbd5e1",  // Crisp technical vector rule
+  },
+  chrome: {
+    selection: "var(--editor-selection, #4f46e5)",
+    selectionFill: "var(--editor-selection-fill, rgba(79, 70, 229, 0.08))",
+  },
+};
+
