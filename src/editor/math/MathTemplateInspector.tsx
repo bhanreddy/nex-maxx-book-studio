@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import { MathDesignControls } from "./MathDesignControls";
 import { MathDataFields } from "./MathDataFields";
+import { updateMathTemplateData } from "./mathActions";
 
 interface MathTemplateInspectorProps {
   element: PageElement;
@@ -52,10 +53,7 @@ export const MathTemplateInspector: React.FC<MathTemplateInspectorProps> = ({ el
   }
 
   const handleUpdate = (patch: Record<string, any>) => {
-    updateElementContent(element.id, {
-      mathData: { ...mathData, ...patch },
-      ...patch,
-    });
+    updateMathTemplateData(element.id, patch);
   };
 
   const handleModeChange = (mode: MathAnswerMode) => {
@@ -216,18 +214,19 @@ export const MathTemplateInspector: React.FC<MathTemplateInspectorProps> = ({ el
         </label>
 
         <MathDataFields key={element.id} template={template} data={mathData} onUpdate={handleUpdate} />
+        {Array.isArray(mathData.questions) && template.measureHeight && <p className="text-[11px] leading-relaxed text-slate-500 dark:text-slate-400">Questions and their answer keys are authored separately. Update the answer when you change a question.</p>}
       </div>
 
       {/* 5. Smart Actions: Generate Similar, Duplicate with New Data, Save Template */}
       <div className="pt-2 border-t border-slate-200/80 dark:border-white/10 space-y-1.5">
         {/* Local Deterministic Generator */}
-        <button
+        {(!template.measureHeight || template.generator) && <button
           onClick={handleGenerateSimilar}
           className="w-full flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-lg bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/40 dark:hover:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300 font-semibold text-xs border border-indigo-200 dark:border-indigo-800 transition-colors"
         >
           <RefreshCw className="w-3.5 h-3.5" />
           <span>Generate Similar (Local)</span>
-        </button>
+        </button>}
 
         {/* Duplicate with New Data */}
         {dupPromptOpen && ("number" in mathData || "num1" in mathData) ? (
@@ -258,7 +257,7 @@ export const MathTemplateInspector: React.FC<MathTemplateInspectorProps> = ({ el
             className="w-full flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-white/5 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 font-semibold text-xs transition-colors"
           >
             <Copy className="w-3.5 h-3.5" />
-            <span>Duplicate with New Data...</span>
+            <span>{template.measureHeight ? "Duplicate this exercise" : "Duplicate with New Data..."}</span>
           </button>
         )}
 

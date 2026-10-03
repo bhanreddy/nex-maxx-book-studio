@@ -12,7 +12,7 @@ export function MathDesignControls({ element, template }: { element: PageElement
   const target = useUiStore(s => s.mathEditingTarget);
   const appearance = element.content.mathAppearance || {};
   const overrides: Record<string, MathPartOverride> = useMemo(() => element.content.mathOverrides || {}, [element.content.mathOverrides]);
-  const frame = mathRenderFrame(template, element.transform.width, element.transform.height, appearance);
+  const frame = mathRenderFrame(template, element.transform.width, element.transform.height, appearance, element.content.mathData || element.content);
   const parts = useMemo(() => buildEditableMathTree(template, {
     data: element.content.mathData || element.content, mode: element.content.mathMode || "teacher",
     styleVariant: element.content.styleVariant || "color-coded", width: frame.renderWidth, height: frame.renderHeight,
@@ -50,7 +50,7 @@ export function MathDesignControls({ element, template }: { element: PageElement
   return (
     <fieldset disabled={element.locked} className="math-design-controls space-y-3">
       <div className="math-edit-hint">
-        Double-click any text to edit it. Double-click a shape to select its design controls. Change values in Mathematical Content to recalculate answers.
+        Double-click any text to edit it. Double-click a shape to select its design controls. {template.measureHeight ? "Edit questions, answers and writing space in Mathematical Content." : "Change values in Mathematical Content to recalculate answers."}
       </div>
       <div className="math-control-grid">
         {numberInput("Template width (pt)", element.transform.width, width => updateTransform(element.id, { width }, true), 48, 2400)}

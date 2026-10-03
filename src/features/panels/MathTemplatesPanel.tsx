@@ -9,6 +9,7 @@ import {
   MathTopic,
   MathTemplateType,
   CustomMathTemplateEntry,
+  MathAnswerMode,
 } from "../../editor/math/types";
 import {
   getAllMathTemplates,
@@ -26,8 +27,14 @@ import {
   Calculator,
 } from "lucide-react";
 
+import { READY_MADE_MATH_TEMPLATES, WORKSHEET_TEMPLATES, PlainQuestionAnswerTemplate } from "../../editor/math/templates/worksheetTemplates";
+
+const READY_MADE_IDS = new Set(READY_MADE_MATH_TEMPLATES.map(t => t.id));
+
 export const MathTemplatesPanel: React.FC = () => {
   const [topTab, setTopTab] = useState<"nex-maxx" | "favorites" | "recent" | "custom">("nex-maxx");
+  const [collection, setCollection] = useState<"all" | "ready-made">("all");
+  const [answerMode, setAnswerMode] = useState<MathAnswerMode>("student");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedGrade, setSelectedGrade] = useState<number | "all">("all");
   const [selectedChapter, setSelectedChapter] = useState<string | "all">("all");
@@ -92,17 +99,18 @@ export const MathTemplatesPanel: React.FC = () => {
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
       list = list.filter((t) =>
-        `${t.name} ${t.category} ${t.chapterTag || ""} ${t.tags.join(" ")}`.toLowerCase().includes(q)
+        `${t.name} ${t.category} ${t.subcategory || ""} ${t.chapterTag || ""} ${t.tags.join(" ")}`.toLowerCase().includes(q)
       );
     }
 
     return list.filter(t =>
+      (collection === "all" || READY_MADE_IDS.has(t.id)) &&
       (selectedGrade === "all" || t.grades.includes(selectedGrade as 1 | 2 | 3 | 4 | 5)) &&
       (selectedTopic === "all" || t.category === selectedTopic) &&
       (selectedType === "all" || t.type === selectedType) &&
       (selectedChapter === "all" || t.chapterTag === selectedChapter)
     );
-  }, [topTab, searchQuery, selectedGrade, selectedTopic, selectedType, selectedChapter, favorites, recents]);
+  }, [topTab, searchQuery, selectedGrade, selectedTopic, selectedType, selectedChapter, favorites, recents, collection]);
 
   const visibleCustomTemplates = useMemo(() => customTemplates.filter(c => {
     const base = getAllMathTemplates().find(t => t.id === c.baseTemplateId);
@@ -115,7 +123,7 @@ export const MathTemplatesPanel: React.FC = () => {
 
   // Insert template onto canvas
   const handleInsert = (template: MathTemplate, customData?: Record<string, unknown>, settings?: Partial<CustomMathTemplateEntry>) => {
-    insertMathComponent(template.id, undefined, undefined, customData, settings);
+    insertMathComponent(template.id, undefined, undefined, customData, settings || (READY_MADE_IDS.has(template.id) ? { mode: answerMode } : undefined));
     setRecents(getRecentMathIds());
   };
 
@@ -163,6 +171,22 @@ export const MathTemplatesPanel: React.FC = () => {
           })}
         </div>
       </div>
+
+      <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar">
+      {topTab === "nex-maxx" && <div className="math-ready-made">
+        <div className="math-ready-made-eyebrow">QUESTION & ANSWER STUDIO</div>
+        <h3>Ready to teach.<br />Yours to edit.</h3>
+        <p>Complete exercises, generous answer spaces, and a separate answer key.</p>
+        <div className="math-answer-switch" role="group" aria-label="Insert worksheet as">
+          {(["student", "teacher"] as const).map(mode => <button key={mode} aria-pressed={answerMode === mode} onClick={() => setAnswerMode(mode)}>{mode === "student" ? "Student worksheet" : "Teacher answer key"}</button>)}
+        </div>
+        <button className="math-ready-made-insert" onClick={() => handleInsert(WORKSHEET_TEMPLATES[0])}><Plus size={15} />Insert Q&A template</button>
+        <button className="math-quiet-button w-full mt-1" onClick={() => handleInsert(PlainQuestionAnswerTemplate)}>Insert plain Q&A</button>
+        <div className="math-collection-switch" role="group" aria-label="Template collection">
+          <button aria-pressed={collection === "all"} onClick={() => setCollection("all")}>Full library</button>
+          <button aria-pressed={collection === "ready-made"} onClick={() => { setCollection("ready-made"); setSearchQuery(""); setSelectedTopic("all"); setSelectedType("all"); setSelectedChapter("all"); }}>Ready-made · {READY_MADE_MATH_TEMPLATES.length}</button>
+        </div>
+      </div>}
 
       {/* 2. Search & Filters Bar */}
       <div className="shrink-0 px-2.5 py-1.5 space-y-1.5 border-b border-slate-200 dark:border-white/10 bg-slate-50/30 dark:bg-white/[0.01]">
@@ -313,7 +337,7 @@ export const MathTemplatesPanel: React.FC = () => {
       </div>
 
       {/* 3. Live Templates Grid */}
-      <div className="flex-1 overflow-y-auto p-3 space-y-3 custom-scrollbar">
+      <div className="p-3 space-y-3">
         {topTab === "custom" && visibleCustomTemplates.length > 0 ? (
           <div className="space-y-2">
             {visibleCustomTemplates.map((cust) => {
@@ -350,7 +374,7 @@ export const MathTemplatesPanel: React.FC = () => {
           <div className="py-12 text-center text-xs text-slate-400">
             <Calculator className="w-8 h-8 mx-auto mb-3 text-indigo-400" />
             <p>{topTab === "custom" ? "Save your edited templates to build a personal collection." : topTab === "favorites" ? "Star a template to keep it here." : topTab === "recent" ? "Your recently used templates appear here." : "No templates match these filters."}</p>
-            <button className="math-quiet-button mt-3" onClick={() => { setTopTab("nex-maxx"); setSearchQuery(""); setSelectedGrade("all"); setSelectedChapter("all"); setSelectedTopic("all"); setSelectedType("all"); }}>Browse all templates</button>
+            <button className="math-quiet-button mt-3" onClick={() => { setTopTab("nex-maxx"); setSearchQuery(""); setSelectedGrade("all"); setSelectedChapter("all"); setSelectedTopic("all"); setSelectedType("all"); setCollection("all"); }}>Browse all templates</button>
           </div>
         ) : (
           filteredTemplates.map((template) => {
@@ -367,20 +391,21 @@ export const MathTemplatesPanel: React.FC = () => {
                 draggable
                 onDragStart={(e) => {
                   e.dataTransfer.setData("application/x-nexmaxx-math-template", template.id);
+                  if (READY_MADE_IDS.has(template.id)) e.dataTransfer.setData("application/x-nexmaxx-math-settings", JSON.stringify({ mode: answerMode }));
                   e.dataTransfer.effectAllowed = "copy";
                 }}
                 className="group relative rounded-xl border border-slate-200 dark:border-white/10 hover:border-indigo-500/80 bg-white dark:bg-slate-900/80 transition-transform overflow-hidden flex flex-col cursor-grab active:cursor-grabbing"
                 onClick={() => handleInsert(template)}
               >
                 {/* Miniature Live Preview Frame - Compact Size */}
-                <div className="h-20 w-full bg-slate-50/70 dark:bg-slate-950/40 border-b border-slate-100 dark:border-white/5 relative overflow-hidden flex items-center justify-center p-1.5">
+                <div className={`${READY_MADE_IDS.has(template.id) ? "h-44" : "h-20"} w-full bg-slate-50/70 dark:bg-slate-950/40 border-b border-slate-100 dark:border-white/5 relative overflow-hidden flex items-center justify-center p-1.5`}>
                   <div
                     style={{
                       width: template.defaultWidth,
                       height: template.defaultHeight,
                       transform: `scale(${Math.min(
                         260 / template.defaultWidth,
-                        68 / template.defaultHeight
+                        (READY_MADE_IDS.has(template.id) ? 160 : 68) / template.defaultHeight
                       )})`,
                       transformOrigin: "center center",
                     }}
@@ -388,7 +413,7 @@ export const MathTemplatesPanel: React.FC = () => {
                   >
                     <Renderer
                       data={template.defaultData}
-                      mode="teacher"
+                      mode={READY_MADE_IDS.has(template.id) ? answerMode : "teacher"}
                       styleVariant="color-coded"
                       width={template.defaultWidth}
                       height={template.defaultHeight}
@@ -406,7 +431,7 @@ export const MathTemplatesPanel: React.FC = () => {
                   {/* Favorite Button */}
                   <button
                     onClick={(e) => handleToggleFavorite(template.id, e)}
-                    className="absolute top-2 right-2 p-1 rounded-full bg-white/80 dark:bg-black/60 text-slate-400 hover:text-amber-500 transition-colors z-10"
+                    className="absolute top-2 right-2 min-w-11 min-h-11 flex items-center justify-center p-1 rounded-full bg-white/80 dark:bg-black/60 text-slate-400 hover:text-amber-500 transition-colors z-10"
                     title={isFav ? "Starred" : "Star template"}
                   >
                     <Star
@@ -421,7 +446,7 @@ export const MathTemplatesPanel: React.FC = () => {
                 <div className="p-2 flex items-center justify-between">
                   <div className="flex-1 min-w-0 pr-2">
                     <div className="flex items-center gap-1.5 mb-0.5">
-                      <span className="font-semibold text-xs text-slate-800 dark:text-slate-100 truncate group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+                      <span className="font-semibold text-xs text-slate-800 dark:text-slate-100 leading-relaxed group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
                         {template.name}
                       </span>
                     </div>
@@ -452,6 +477,7 @@ export const MathTemplatesPanel: React.FC = () => {
             );
           })
         )}
+      </div>
       </div>
     </div>
   );

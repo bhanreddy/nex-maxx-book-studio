@@ -43,7 +43,7 @@ function color(value: string): string {
 export function mathDomScene(element: PageElement, template: MathTemplate): PublicationScene | null {
   if (typeof document === "undefined" || typeof document.createElementNS !== "function" || !document.body) return null;
   const { width, height } = element.transform;
-  const frame = mathRenderFrame(template, width, height, element.content.mathAppearance);
+  const frame = mathRenderFrame(template, width, height, element.content.mathAppearance, element.content.mathData || element.content);
   const { tree } = buildEditableMathTree(template, { data: element.content.mathData || element.content,
     mode: element.content.mathMode || "teacher", styleVariant: element.content.styleVariant || "color-coded",
     width: frame.renderWidth, height: frame.renderHeight,

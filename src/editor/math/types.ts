@@ -91,6 +91,8 @@ export interface MathTemplate {
   defaultData: Record<string, any>;
   defaultWidth: number;
   defaultHeight: number;
+  /** Intrinsic height for editable content that grows as rows or text are added. */
+  measureHeight?: (data: Record<string, any>, width: number) => number;
   styleVariants: MathStyleVariant[];
   renderer: React.FC<MathRendererProps>;
   configFields: MathConfigField[];

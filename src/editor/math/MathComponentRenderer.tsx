@@ -5,6 +5,7 @@ import { getMathTemplate } from "./mathRegistry";
 import { useEditorStore } from "../stores/editorStore";
 import { useUiStore } from "../stores/uiStore";
 import { buildEditableMathTree, mathRenderFrame, type MathPart, type MathPartOverride } from "./mathEditableTree";
+import { updateMathTemplateData } from "./mathActions";
 
 interface MathComponentRendererProps {
   element: PageElement;
@@ -34,7 +35,7 @@ export const MathComponentRenderer: React.FC<MathComponentRendererProps> = ({ el
   }, [element.id]);
 
   if (!template) return <div className="p-3 text-xs text-rose-700">Maths template unavailable: {element.content.mathTemplateId}</div>;
-  const frame = mathRenderFrame(template, element.transform.width, element.transform.height, appearance);
+  const frame = mathRenderFrame(template, element.transform.width, element.transform.height, appearance, data);
   const selectPart = (part: MathPart) => {
     useUiStore.getState().setMathEditingTarget({ elementId: element.id, partId: part.id });
     useUiStore.getState().setRightInspectorOpen(true);
@@ -54,7 +55,7 @@ export const MathComponentRenderer: React.FC<MathComponentRendererProps> = ({ el
   const { tree } = buildEditableMathTree(template, {
     data, mode: element.content.mathMode || "teacher", styleVariant: element.content.styleVariant || "color-coded",
     width: frame.renderWidth, height: frame.renderHeight, elementId: element.id, zoom,
-    onUpdateData: element.locked ? undefined : patch => updateContent(element.id, { mathData: { ...data, ...patch }, ...patch }),
+    onUpdateData: element.locked ? undefined : patch => updateMathTemplateData(element.id, patch),
   }, {
     overrides, appearance, interactive: !element.locked && isSelected,
     selectedPartId: target?.elementId === element.id ? target.partId : undefined,

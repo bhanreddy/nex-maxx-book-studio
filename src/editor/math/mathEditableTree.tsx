@@ -215,12 +215,13 @@ export function buildEditableMathTree(template: MathTemplate, props: MathRendere
   return { tree, parts };
 }
 
-export function mathRenderFrame(template: MathTemplate, width: number, height: number, appearance: MathAppearance = {}) {
+export function mathRenderFrame(template: MathTemplate, width: number, height: number, appearance: MathAppearance = {}, data = template.defaultData) {
   const padding = Math.max(0, Math.min(appearance.padding || 0, Math.min(width, height) / 4));
   const mode = appearance.resizeMode || "scale";
   const isReflow = mode === "reflow";
   const renderWidth = isReflow ? Math.max(24, width - padding * 2) : template.defaultWidth;
-  const renderHeight = isReflow ? Math.max(24, height - padding * 2) : template.defaultHeight;
+  const minimumHeight = template.measureHeight?.(data, renderWidth) ?? template.defaultHeight;
+  const renderHeight = isReflow ? Math.max(24, height - padding * 2, template.measureHeight ? minimumHeight : 0) : minimumHeight;
   const rawScaleX = (width - padding * 2) / renderWidth;
   const rawScaleY = (height - padding * 2) / renderHeight;
 

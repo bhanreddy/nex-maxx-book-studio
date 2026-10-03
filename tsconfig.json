@@ -29,14 +29,15 @@
     }
   },
   "include": [
+    ".next-new-three-check/types/**/*.ts",
+    ".next-new-three-final/types/**/*.ts",
     ".next-reference-check/types/**/*.ts",
     ".next-worksheet-check/types/**/*.ts",
     ".next/types/**/*.ts",
     "next-env.d.ts",
     "next.config.ts",
     "src/**/*.ts",
-    "src/**/*.tsx",
-    ".next-new-three-check/types/**/*.ts"
+    "src/**/*.tsx"
   ],
   "exclude": [
     "node_modules",

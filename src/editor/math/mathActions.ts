@@ -11,6 +11,23 @@ import { useUiStore } from "../stores/uiStore";
 import { getMathTemplate, recordRecentMathId } from "./mathRegistry";
 import { mathSceneForElement } from "./mathScene";
 import { PageElement } from "../../domain/element/types";
+import { mathRenderFrame } from "./mathEditableTree";
+
+/** Keep an exercise's writing size when edited content needs more vertical space. */
+export function updateMathTemplateData(elementId: string, patch: Record<string, any>): void {
+  const store = useEditorStore.getState();
+  const element = store.elements[elementId];
+  if (!element || element.locked) return;
+  const template = getMathTemplate(element.content.mathTemplateId || element.presetId || "");
+  const data = { ...(element.content.mathData || element.content), ...patch };
+  const content = { ...element.content, ...patch, mathData: data };
+  if (!template?.measureHeight) { store.updateElement(elementId, { content }); return; }
+  const appearance = element.content.mathAppearance || {};
+  const before = mathRenderFrame(template, element.transform.width, element.transform.height, appearance, element.content.mathData || element.content);
+  const after = mathRenderFrame(template, element.transform.width, element.transform.height, appearance, data);
+  const height = Math.max(element.transform.height, after.renderHeight * before.scaleY + 2 * before.padding);
+  store.updateElement(elementId, { content, transform: { ...element.transform, height } });
+}
 
 /**
  * Insert a Math Template onto the active page at an optional (x, y) coordinate
@@ -44,15 +61,14 @@ export function insertMathComponent(
   const id = `el-math-${Math.random().toString(36).substring(2, 9)}`;
 
   const width = settings?.width || template.defaultWidth;
-  const height = settings?.height || template.defaultHeight;
+  const dataPayload = { ...template.defaultData, ...customData };
+  const height = settings?.height || template.measureHeight?.(dataPayload, template.defaultWidth) || template.defaultHeight;
   const posX =
     targetX !== undefined
       ? Math.max(10, Math.min(book.dimensions.widthPt - width - 10, targetX))
       : Math.max(40, Math.round((book.dimensions.widthPt - width) / 2));
 
   const posY = targetY !== undefined ? Math.max(20, targetY) : 140;
-
-  const dataPayload = { ...template.defaultData, ...customData };
 
   const newElement: PageElement = {
     id,
