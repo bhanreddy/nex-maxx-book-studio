@@ -53,11 +53,18 @@ export function transformGroupChildren(group: PageElement, next: ElementTransfor
 
 export function cloneElementTree(items: PageElement[], pageId: string, offset: { dx: number; dy: number }) {
   const ids = Object.fromEntries(items.map(el => [el.id, crypto.randomUUID()]));
+  const stories = Object.fromEntries([...new Set(items.map(el => el.flowStoryId).filter((id): id is string => Boolean(id)))].map(id => [id, crypto.randomUUID()]));
   const elements = Object.fromEntries(items.map(source => {
     const el = structuredClone(source);
     el.id = ids[source.id]; el.pageId = pageId;
     el.groupId = source.groupId ? ids[source.groupId] : undefined;
     el.childElementIds = source.childElementIds?.map(id => ids[id]).filter(Boolean);
+    el.linkedNextId = source.linkedNextId ? ids[source.linkedNextId] : undefined;
+    el.linkedPrevId = source.linkedPrevId ? ids[source.linkedPrevId] : undefined;
+    el.flowStoryId = source.flowStoryId ? stories[source.flowStoryId] : undefined;
+    // Detached artwork copies must not remain owned by the original chapter.
+    delete el.content.curriculumBlockId;
+    delete el.content.curriculumChapterId;
     el.transform = { ...el.transform, x: el.transform.x + offset.dx, y: el.transform.y + offset.dy, zIndex: el.transform.zIndex + 1 };
     if (el.smartBlockData) {
       el.smartBlockData = { ...el.smartBlockData, id: el.id, pageId, transform: el.transform,

@@ -26,12 +26,15 @@ import {
 import { useEditorStore } from "../../editor/stores/editorStore";
 import { useUiStore } from "../../editor/stores/uiStore";
 import { directPasteImageFromClipboard } from "../../editor/clipboard/universalClipboard";
+import { clipboardRoots, cutSelectionIssue } from "../../editor/clipboard/elementClipboard";
 
 export interface ContextMenuState {
   isOpen: boolean;
   x: number;
   y: number;
   targetElementId?: string;
+  pageId?: string;
+  position?: { x: number; y: number };
 }
 
 interface CanvasContextMenuProps {
@@ -48,7 +51,10 @@ export const CanvasContextMenu: React.FC<CanvasContextMenuProps> = ({
     selectedElementIds,
     elements,
     copySelection,
+    cutSelection,
     pasteSelection,
+    clipboardElements,
+    getActivePage,
     duplicateSelectedElements,
     deleteSelectedElements,
     bringToFront,
@@ -104,12 +110,14 @@ export const CanvasContextMenu: React.FC<CanvasContextMenuProps> = ({
   const singleElement =
     selectedElementIds.length === 1 ? elements[selectedElementIds[0]] : null;
   const isLocked = selectedElementIds.length > 0 && selectedElementIds.every(id => elements[id]?.locked);
+  const isGroup = Boolean(singleElement?.childElementIds?.length);
+  const cutIssue = cutSelectionIssue(clipboardRoots(selectedElementIds, elements, getActivePage()?.id || ""), elements);
 
   // Viewport clamping
   const menuWidth = 210;
-  const menuHeight = hasSelection ? 340 : 210;
-  const posX = Math.min(menuState.x, window.innerWidth - menuWidth - 12);
-  const posY = Math.min(menuState.y, window.innerHeight - menuHeight - 12);
+  const menuHeight = Math.min(hasSelection ? 560 : 260, window.innerHeight - 24);
+  const posX = Math.max(12, Math.min(menuState.x, window.innerWidth - menuWidth - 12));
+  const posY = Math.max(12, Math.min(menuState.y, window.innerHeight - menuHeight - 12));
 
   return (
     <div
@@ -117,7 +125,7 @@ export const CanvasContextMenu: React.FC<CanvasContextMenuProps> = ({
       data-canvas-controls
       onPointerDown={e => e.stopPropagation()}
       onMouseDown={e => e.stopPropagation()}
-      style={{ left: `${posX}px`, top: `${posY}px` }}
+      style={{ left: `${posX}px`, top: `${posY}px`, maxHeight: "calc(100vh - 24px)", overflowY: "auto" }}
       className="fixed z-50 w-52 bg-[#0e1320]/95 backdrop-blur-2xl border border-white/12 rounded-xl shadow-2xl p-1.5 text-xs text-slate-200 select-none animate-in fade-in zoom-in-95 duration-100 font-sans"
       onClick={(e) => e.stopPropagation()}
     >
@@ -147,20 +155,34 @@ export const CanvasContextMenu: React.FC<CanvasContextMenuProps> = ({
           >
             <span className="flex items-center gap-2">
               <Clipboard className="w-3.5 h-3.5 text-slate-400" />
-              <span>Copy</span>
+              <span>{isGroup ? "Copy Group" : "Copy"}</span>
             </span>
             <span className="text-[10px] text-slate-500 font-mono">⌘C</span>
           </button>
 
           <button
+            disabled={Boolean(cutIssue)}
+            title={cutIssue || "The selection moves when you paste it on the destination page."}
+            onClick={() => {
+              cutSelection();
+              onClose();
+            }}
+            className="w-full min-h-11 flex items-center justify-between px-2.5 py-1.5 rounded-lg hover:bg-white/10 hover:text-white disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+          >
+            <span className="flex items-center gap-2"><Scissors className="w-3.5 h-3.5 text-slate-400"/><span>{isGroup ? "Cut Group" : "Cut"}</span></span>
+            <span className="text-[10px] text-slate-500 font-mono">⌘/Ctrl X</span>
+          </button>
+
+          <button
+            disabled={clipboardElements.length === 0}
             onClick={() => {
               pasteSelection();
               onClose();
             }}
-            className="w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg hover:bg-white/10 hover:text-white transition-colors"
+            className="w-full min-h-11 flex items-center justify-between px-2.5 py-1.5 rounded-lg hover:bg-white/10 hover:text-white disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
           >
             <span className="flex items-center gap-2">
-              <Scissors className="w-3.5 h-3.5 text-slate-400" />
+              <Clipboard className="w-3.5 h-3.5 text-slate-400" />
               <span>Paste</span>
             </span>
             <span className="text-[10px] text-slate-500 font-mono">⌘V</span>
@@ -388,11 +410,12 @@ export const CanvasContextMenu: React.FC<CanvasContextMenuProps> = ({
         <>
           {/* Empty Space Menu */}
           <button
+            disabled={clipboardElements.length === 0}
             onClick={() => {
-              pasteSelection();
+              pasteSelection({ pageId: menuState.pageId, position: menuState.position });
               onClose();
             }}
-            className="w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg hover:bg-white/10 hover:text-white transition-colors"
+            className="w-full min-h-11 flex items-center justify-between px-2.5 py-1.5 rounded-lg hover:bg-white/10 hover:text-white disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
           >
             <span className="flex items-center gap-2">
               <Clipboard className="w-3.5 h-3.5 text-slate-400" />

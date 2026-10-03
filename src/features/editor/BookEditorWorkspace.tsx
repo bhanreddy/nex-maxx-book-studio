@@ -52,6 +52,7 @@ export const BookEditorWorkspace: React.FC<BookEditorWorkspaceProps> = ({
     deleteSelectedElements,
     duplicateSelectedElements,
     copySelection,
+    cutSelection,
     pasteSelection,
     groupSelectedElements,
     groupAndLockSelectedElements,
@@ -161,8 +162,9 @@ export const BookEditorWorkspace: React.FC<BookEditorWorkspaceProps> = ({
         const hasNodeSelection = uiState.selectedNodeIds.length > 0;
         const hasCrop = uiState.cropElementId !== null;
         const hasTextEdit = uiState.editingTextElementId !== null;
+        const hasPendingCut = useEditorStore.getState().clipboardMode === "cut";
 
-        if (hasSelection || hasNodeSelection || hasCrop || hasTextEdit) {
+        if (hasSelection || hasNodeSelection || hasCrop || hasTextEdit || hasPendingCut) {
           e.preventDefault();
           e.stopPropagation();
           if (target && typeof target.blur === "function") {
@@ -172,6 +174,7 @@ export const BookEditorWorkspace: React.FC<BookEditorWorkspaceProps> = ({
             activeEl.blur();
           }
           clearSelection();
+          if (hasPendingCut) useEditorStore.getState().cancelCutSelection();
           if (hasNodeSelection) uiState.setSelectedNodeIds([]);
           if (hasCrop) uiState.setCropElementId(null);
           if (hasTextEdit) uiState.setEditingTextElementId(null);
@@ -182,10 +185,12 @@ export const BookEditorWorkspace: React.FC<BookEditorWorkspaceProps> = ({
       if (
         target?.tagName === "INPUT" ||
         target?.tagName === "TEXTAREA" ||
+        target?.tagName === "SELECT" ||
         target?.isContentEditable ||
         Boolean(target?.closest?.('[contenteditable="true"]')) ||
         activeEl?.tagName === "INPUT" ||
         activeEl?.tagName === "TEXTAREA" ||
+        activeEl?.tagName === "SELECT" ||
         activeEl?.isContentEditable ||
         Boolean(activeEl?.closest?.('[contenteditable="true"]'))
       ) {
@@ -277,10 +282,17 @@ export const BookEditorWorkspace: React.FC<BookEditorWorkspaceProps> = ({
         return;
       }
 
-      // Copy / Paste
+      // Copy / Cut / Paste (native text editing is handled by the guard above).
       if ((e.metaKey || e.ctrlKey) && !e.altKey && e.key.toLowerCase() === "c") {
         e.preventDefault();
         copySelection();
+        return;
+      }
+      if ((e.metaKey || e.ctrlKey) && !e.altKey && e.key.toLowerCase() === "x") {
+        if (useEditorStore.getState().selectedElementIds.length) {
+          e.preventDefault();
+          cutSelection();
+        }
         return;
       }
       if ((e.metaKey || e.ctrlKey) && !e.altKey && e.key.toLowerCase() === "v") {
@@ -441,6 +453,7 @@ export const BookEditorWorkspace: React.FC<BookEditorWorkspaceProps> = ({
     undo,
     redo,
     copySelection,
+    cutSelection,
     pasteSelection,
     duplicateSelectedElements,
     deleteSelectedElements,

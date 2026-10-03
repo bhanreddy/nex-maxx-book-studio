@@ -292,7 +292,7 @@ export const ElementRenderer: React.FC<ElementRendererProps> = memo(function Ele
     width: `${transform.width}pt`,
     height: `${transform.height}pt`,
     transform: transform.rotation ? `rotate(${transform.rotation}deg)` : undefined,
-    zIndex: transform.zIndex,
+    zIndex: isEditingText ? 50000 : transform.zIndex,
     backgroundColor: style.textHighlight?.color || (type === "smart-block" || type === "shape" || content.publicationPrimitive ? undefined : style.backgroundColor),
     borderRadius: type === "shape" ? undefined : (style.borderRadius ? `${style.borderRadius}pt` : undefined),
     ...(type === "smart-block" || type === "shape" || content.publicationPrimitive ? {} : borderStyle(style)),

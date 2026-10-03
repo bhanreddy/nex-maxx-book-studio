@@ -74,6 +74,7 @@ import { acceptCloudChapter, connectNewCloudChapter, getCloudChapterController, 
 import { composeChapter } from "../curriculum/chapterEngine";
 import { editCurriculumBlock, editFramework, deleteCurriculumSelection, duplicateCurriculumSelection, reshuffleCurriculumBlock, unlockCurriculumLayers, curriculumSource, insertCurriculumBlock, convertBlock } from "../curriculum/actions";
 import { localDb, type StorageProjectPayload } from "../persistence/indexedDbStorage";
+import { clipboardRoots, clipboardOffset, cutSelectionIssue, type PasteSelectionOptions } from "../clipboard/elementClipboard";
 
 const STORAGE_KEY = "nex_maxx_book_studio_data_v1";
 
@@ -84,6 +85,9 @@ interface EditorState {
   elements: Record<string, PageElement>;
   selectedElementIds: string[];
   clipboardElements: PageElement[];
+  clipboardMode: "copy" | "cut";
+  clipboardSourceBookId: string | null;
+  clipboardPasteCounts: Record<string, number>;
 
   // Book Lifecycle
   getActiveBook: () => Book | undefined;
@@ -197,7 +201,9 @@ interface EditorState {
 
   // Clipboard
   copySelection: () => void;
-  pasteSelection: () => void;
+  cutSelection: () => void;
+  cancelCutSelection: () => void;
+  pasteSelection: (options?: PasteSelectionOptions) => void;
 
   // Adaptive Layout Engine (Directives 9-21, 106, 146)
   createAdaptiveGroup: (
@@ -293,6 +299,9 @@ export const useEditorStore = create<EditorState>((set, get) => {
     elements: demo.elements,
     selectedElementIds: [],
     clipboardElements: [],
+    clipboardMode: "copy",
+    clipboardSourceBookId: null,
+    clipboardPasteCounts: {},
     publicationPresets: {},
     userCustomLayouts: {},
 
@@ -2367,37 +2376,120 @@ export const useEditorStore = create<EditorState>((set, get) => {
     distributeSelectedElements: (direction) => get().arrangeSelection(direction,"selection"),
 
     copySelection: () => {
-      const { selectedElementIds, elements } = get();
-      const copies = structuredClone(elementTree(selectedElementIds, elements));
-      set({ clipboardElements: copies });
-      useUiStore.getState().showToast({
-        type: "info",
-        title: `Copied ${copies.length} Element(s)`,
-      });
+      const state = get(), page = state.getActivePage();
+      if (!page) return;
+      const roots = clipboardRoots(state.selectedElementIds, state.elements, page.id);
+      if (!roots.length) return;
+      set({ clipboardElements: structuredClone(elementTree(roots, state.elements)), clipboardMode: "copy",
+        clipboardSourceBookId: state.activeBookId, clipboardPasteCounts: {} });
+      useUiStore.getState().showToast({ type: "info", title: `Copied ${roots.length} object(s)`,
+        message: "Choose any page and paste. Groups stay together." });
     },
 
-    pasteSelection: () => {
-      const { clipboardElements } = get();
-      const page = get().getActivePage();
-      if (!page || clipboardElements.length === 0) return;
+    cutSelection: () => {
+      const state = get(), page = state.getActivePage();
+      if (!page) return;
+      const roots = clipboardRoots(state.selectedElementIds, state.elements, page.id);
+      if (!roots.length) return;
+      const issue = cutSelectionIssue(roots, state.elements);
+      if (issue) {
+        useUiStore.getState().showToast({ type: "warning", title: "Cannot cut this selection", message: issue });
+        return;
+      }
+      set({ clipboardElements: structuredClone(elementTree(roots, state.elements)), clipboardMode: "cut",
+        clipboardSourceBookId: state.activeBookId, clipboardPasteCounts: {} });
+      useUiStore.getState().showToast({ type: "info", title: `Ready to move ${roots.length} object(s)`,
+        message: "Choose a destination page and paste to complete the cut. Cancel keeps the original." });
+    },
 
-      const { elements: newElements, roots } = cloneElementTree(clipboardElements, page.id, { dx: 20, dy: 20 });
-      const newIds = Object.keys(newElements);
+    cancelCutSelection: () => {
+      if (get().clipboardMode !== "cut") return;
+      set({ clipboardElements: [], clipboardMode: "copy", clipboardSourceBookId: null, clipboardPasteCounts: {} });
+      useUiStore.getState().showToast({ type: "info", title: "Cut cancelled", message: "The original objects remain on their page." });
+    },
+
+    pasteSelection: (options = {}) => {
+      const state = get(), book = state.getActiveBook();
+      const page = options.pageId ? book?.pages.find(p => p.id === options.pageId) : state.getActivePage();
+      if (!book || !page || !state.clipboardElements.length) return;
+      const moving = state.clipboardMode === "cut";
+      const sourcePageId = state.clipboardElements[0].pageId;
+      const sourceBook = state.books.find(b => b.id === state.clipboardSourceBookId);
+      const sourcePage = sourceBook?.pages.find(p => p.id === sourcePageId);
+      const snapshotIds = new Set(state.clipboardElements.map(el => el.id));
+      const sourceRoots = state.clipboardElements.filter(el => !el.groupId || !snapshotIds.has(el.groupId)).map(el => el.id);
+      if (moving && book.id !== sourceBook?.id) {
+        useUiStore.getState().showToast({ type: "warning", title: "Paste into the source book", message: "Cut moves between pages of the same book. Use Copy to place this group in another book." });
+        return;
+      }
+      if (moving && (!sourcePage || sourceRoots.some(id => !state.elements[id] || state.elements[id].pageId !== sourcePageId || state.elements[id].groupId))) {
+        useUiStore.getState().showToast({ type: "warning", title: "Cut source changed", message: "Select the original group and cut it again." });
+        set({ clipboardElements: [], clipboardMode: "copy", clipboardSourceBookId: null, clipboardPasteCounts: {} });
+        return;
+      }
+      // Re-read a pending cut so edits made before pasting are retained.
+      const items = moving ? structuredClone(elementTree(sourceRoots, state.elements)) : state.clipboardElements;
+      const treeIds = new Set(items.map(el => el.id));
+      if (moving && items.some(el => el.pageId !== sourcePageId || !sourcePage?.elementIds.includes(el.id)
+        || el.childElementIds?.some(id => !treeIds.has(id)))) {
+        useUiStore.getState().showToast({ type: "warning", title: "Cut source changed", message: "The group changed after Cut. Select it and cut it again." });
+        set({ clipboardElements: [], clipboardMode: "copy", clipboardSourceBookId: null, clipboardPasteCounts: {} });
+        return;
+      }
+      const issue = moving ? cutSelectionIssue(sourceRoots, state.elements) : undefined;
+      if (issue) { useUiStore.getState().showToast({ type: "warning", title: "Cannot move this selection", message: issue }); return; }
+      const offset = moving ? 0 : 20 * ((state.clipboardPasteCounts[page.id] || 0) + (page.id === sourcePageId ? 1 : 0));
+      const placement = clipboardOffset(items, book.dimensions, offset, options.position);
+      const cloned = moving ? null : cloneElementTree(items, page.id, placement);
+      const newElements: Record<string, PageElement> = moving
+        ? Object.fromEntries(items.map(el => {
+            const transform = { ...el.transform, x: el.transform.x + placement.dx, y: el.transform.y + placement.dy };
+            const content = { ...el.content };
+            if (content.curriculumChapterId && content.curriculumChapterId !== page.chapterId) {
+              delete content.curriculumChapterId;
+              delete content.curriculumBlockId;
+            }
+            return [el.id, { ...el, pageId: page.id, transform, content,
+              smartBlockData: el.smartBlockData ? { ...el.smartBlockData, pageId: page.id, transform } : undefined }];
+          }))
+        : cloned!.elements;
+      const roots = moving ? sourceRoots : cloned!.roots;
+      const newIds = Object.keys(newElements), movedIds = new Set(newIds);
+      // A single uniform z shift preserves internal layering and puts the result above destination artwork.
+      const maxZ = page.elementIds.filter(id => !moving || !movedIds.has(id)).reduce((max, id) => Math.max(max, state.elements[id]?.transform.zIndex || 0), 0);
+      const minZ = Math.min(...Object.values(newElements).map(el => el.transform.zIndex));
+      const zShift = Math.max(0, maxZ + 1 - minZ);
+      Object.values(newElements).forEach(el => {
+        el.transform = { ...el.transform, zIndex: el.transform.zIndex + zShift };
+        if (el.smartBlockData) el.smartBlockData = { ...el.smartBlockData, transform: el.transform };
+      });
+      const beforeElements = moving ? Object.fromEntries(items.map(el => [el.id, el])) : {};
+      const pageListsBefore = new Map([[page.id, page.elementIds], ...(moving && sourcePage ? [[sourcePage.id, sourcePage.elementIds] as const] : [])]);
+      const pageListsAfter = new Map([...pageListsBefore].map(([id, ids]) => [id,
+        [...ids.filter(elId => !movedIds.has(elId)), ...(id === page.id ? newIds : [])]]));
+      const previousSelection = state.selectedElementIds;
+      const previousPageId = state.getActivePage()?.id;
       const apply = (forward: boolean) => {
-        set(state => {
-          const elements = { ...state.elements };
-          if (forward) Object.assign(elements, newElements); else newIds.forEach(id => delete elements[id]);
-          return { elements, books: state.books.map(book => ({ ...book, pages: book.pages.map(p => p.id === page.id ? { ...p, elementIds: forward ? [...p.elementIds, ...newIds] : p.elementIds.filter(id => !newIds.includes(id)) } : p) })), selectedElementIds: forward ? roots : [] };
-        }); get().saveToStorage();
+        set(current => {
+          const elements = { ...current.elements };
+          if (forward) Object.assign(elements, newElements);
+          else if (moving) Object.assign(elements, beforeElements);
+          else newIds.forEach(id => delete elements[id]);
+          const lists = forward ? pageListsAfter : pageListsBefore;
+          const focusPageId = forward ? page.id : moving ? sourcePageId : previousPageId;
+          const focusIndex = current.books.find(b => b.id === book.id)?.pages.findIndex(p => p.id === focusPageId) ?? -1;
+          return { elements, books: current.books.map(b => b.id === book.id ? { ...b, pages: b.pages.map(p => lists.has(p.id) ? { ...p, elementIds: lists.get(p.id)! } : p) } : b),
+            activeBookId: book.id, activePageIndex: Math.max(0, focusIndex),
+            selectedElementIds: (forward ? roots : moving ? sourceRoots : previousSelection).filter(id => elements[id]?.pageId === focusPageId) };
+        });
+        get().saveToStorage();
       };
       apply(true);
-      useHistoryStore.getState().pushAction({ description: "Paste elements", undo: () => apply(false), redo: () => apply(true) });
-
-      get().saveToStorage();
-      useUiStore.getState().showToast({
-        type: "success",
-        title: `Pasted ${newIds.length} Element(s)`,
-      });
+      set(moving ? { clipboardElements: [], clipboardMode: "copy", clipboardSourceBookId: null, clipboardPasteCounts: {} }
+        : { clipboardPasteCounts: { ...state.clipboardPasteCounts, [page.id]: (state.clipboardPasteCounts[page.id] || 0) + 1 } });
+      useHistoryStore.getState().pushAction({ description: moving ? "Move selection between pages" : "Paste selection", undo: () => apply(false), redo: () => apply(true) });
+      useUiStore.getState().showToast({ type: placement.oversized ? "warning" : "success", title: `${moving ? "Moved" : "Pasted"} ${roots.length} object(s) onto page ${page.displayNumber}`,
+        message: placement.oversized ? "The group is larger than this page. Its size is preserved; resize it to fit." : "Groups and their contents stay together. Undo restores the previous state." });
     },
 
     saveToStorage: () => {

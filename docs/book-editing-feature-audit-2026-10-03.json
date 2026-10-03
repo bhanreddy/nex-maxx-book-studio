@@ -1,0 +1,3533 @@
+{
+  "scope": {
+    "date": "2026-10-03",
+    "timezone": "Asia/Kolkata",
+    "workspace": "/Users/bhanureddy/Desktop/Single Source of truth/NEX MAXX Book Studio ",
+    "gitHead": "f2f88f114774fe46b1a57e3b0dab3b5aaf507f19",
+    "dirtyWorkingTree": true,
+    "method": "Read current working tree including uncommitted changes; trace model, UI, store, renderer and export boundaries; read official benchmark sources; inspect existing localhost:3000 UI without editing book content; rerun current tests and typecheck; directly invoke fill/upscale provider methods.",
+    "limitations": [
+      "Implemented means a real code path was found; not every feature received a browser interaction test.",
+      "Missing means no usable implementation was found in inspected src paths. Negative findings are bounded by this repository snapshot.",
+      "Unverified means an implementation exists but depends on authenticated backend, configured API, or target environment that this audit did not exercise.",
+      "Existing production-browser audit reports are historical evidence, not a freshly rerun production release or printer/device certification.",
+      "Counts are checklist items, not a percentage of Canva/Docs/PowerPoint parity; items differ in scope.",
+      "Full PowerPoint, advanced graphics and ebook features are expansion scope; P3 items are optional for static book creation."
+    ]
+  },
+  "counts": {
+    "Implemented": 64,
+    "Partial": 30,
+    "Unverified": 9,
+    "Missing": 41,
+    "Stub": 8
+  },
+  "validation": {
+    "tests": {
+      "passed": 420,
+      "failed": 0,
+      "command": "npm test"
+    },
+    "typecheck": {
+      "exitCode": 0,
+      "command": "npm run typecheck"
+    },
+    "browserObserved": [
+      "Existing selected block has text-wrap modes and gap controls, content editing/detach, transforms, alignment and local editorial comments.",
+      "Edit menu exposes undo/redo/page operations and command palette; no manuscript-wide find/replace tool.",
+      "Layout menu exposes masters, global styles, structure/TOC, pagination and preflight.",
+      "Export modal exposes PDF proofs with complete-book/chapter/range scopes; explicitly states RGB, not PDF/X or colour-managed CMYK."
+    ],
+    "directProviderProbe": {
+      "generativeFillReturnsOriginal": true,
+      "upscaleReturnsOriginal": true,
+      "reportedUpscaleDpi": 600
+    },
+    "productionBuild": "Not rerun; no application source changes made."
+  },
+  "phases": [
+    {
+      "name": "P0 — Correct misleading actions",
+      "goal": "Prevent false success and harmful replacements in existing tools.",
+      "work": [
+        "Disable or implement generative fill, expand, upscale and quick rewrite/simplify with truthful status.",
+        "Derive resolution and DPI from decoded output pixels; do not inflate dimensions in metadata.",
+        "Preserve source images and provide undo for image edits."
+      ],
+      "examples": [
+        "Expanding a photo preserves its original subject rather than replacing it with a gradient.",
+        "An 800-pixel image stays 800 pixels until real resampling/generation produces more pixels."
+      ]
+    },
+    {
+      "name": "P1 — Finish the book and document workflow",
+      "goal": "Make authoring, editorial review and delivery complete for a static book.",
+      "work": [
+        "Add book-wide find/replace and tracked changes on stable semantic text ranges.",
+        "Build real native table structure, merge/split, selected insertion and continuation.",
+        "Add note anchors/pagination, link/bookmark authoring and editable DOCX export.",
+        "Build full-wrap cover/spine/barcode and rights/credits workflows.",
+        "Provide accessible PDF and printer profiles where the target deliverable requires them.",
+        "Validate central review/save/restore and real offline recovery in the intended account/deployment."
+      ],
+      "examples": [
+        "A copyeditor accepts individual corrections and returns an editable Word manuscript.",
+        "A complete paperback produces separate verified interior and correctly sized cover files."
+      ]
+    },
+    {
+      "name": "P2 — Expand design, research and teaching reuse",
+      "goal": "Extend existing engines before adding a second editor.",
+      "work": [
+        "Complete font/character styles, citations/index/glossary, true boolean geometry and subject-removal quality.",
+        "Add asset exports, OCR and EPUB when required by the publishing workflow.",
+        "Use the current scene and semantic models for a dedicated slide mode with PPTX import/export and chapter-to-deck conversion.",
+        "Validate simultaneous editing infrastructure before promising real-time collaboration."
+      ],
+      "examples": [
+        "One reviewed lesson becomes a book chapter and an editable classroom deck.",
+        "A publisher can export a licensed illustration as SVG and its worksheet as PNG."
+      ]
+    },
+    {
+      "name": "P3 — Optional presentation/media features",
+      "goal": "Add only after classroom presentation delivery is a product requirement.",
+      "work": [
+        "Presenter notes, audience slideshow, handouts and navigation.",
+        "Animations, transitions, embedded media, narration and slide recording.",
+        "Improve 3D mockup accuracy if marketing previews are required."
+      ],
+      "examples": [
+        "A teacher reads private notes while pupils see only the slides.",
+        "An answer appears on click and the narrated lesson can be recorded."
+      ]
+    }
+  ],
+  "sources": [
+    {
+      "title": "Canva feature catalog",
+      "url": "https://www.canva.com/features/",
+      "use": "Benchmark for design, asset, image, AI and format adaptation capabilities; this checklist does not claim every Canva capability is essential for books."
+    },
+    {
+      "title": "Canva background remover",
+      "url": "https://www.canva.com/features/background-remover/",
+      "use": "Reference for image subject removal; local segmentation quality must be evaluated separately."
+    },
+    {
+      "title": "Google Docs suggestions",
+      "url": "https://support.google.com/docs/answer/6033474?hl=en",
+      "use": "Benchmark for reviewable insertions/deletions and accept/reject, distinct from comments."
+    },
+    {
+      "title": "Google Docs citations",
+      "url": "https://support.google.com/docs/answer/10090962?hl=en",
+      "use": "Reference for source records and automatic citations/bibliographies."
+    },
+    {
+      "title": "PowerPoint slide masters",
+      "url": "https://support.microsoft.com/en-us/PowerPoint/training/customize-a-slide-master",
+      "use": "Benchmark for slide layout inheritance and master editing."
+    },
+    {
+      "title": "PowerPoint presenter view",
+      "url": "https://support.microsoft.com/en-us/powerpoint/training/start-the-presentation-and-see-your-notes-in-presenter-view",
+      "use": "Benchmark for separate presenter notes and audience display."
+    },
+    {
+      "title": "KDP paperback formatting",
+      "url": "https://kdp.amazon.com/en_US/help/topic/G201834190",
+      "use": "Book-specific benchmark: separate interior and front/spine/back cover, trim, margins and front/back matter. Printer profiles vary; generic crop-mark settings are not universal compliance."
+    },
+    {
+      "title": "EPUB 3.3 specification",
+      "url": "https://www.w3.org/TR/epub-33/",
+      "use": "Reference for an ebook packaging/navigation deliverable; generating a PDF does not produce EPUB."
+    }
+  ],
+  "features": [
+    {
+      "id": "F001",
+      "category": "Workspace and everyday editing",
+      "name": "Book creation and metadata",
+      "status": "Implemented",
+      "priority": "P1",
+      "finding": "Wizard creates titled subject/grade books with language and binding fields in the model.",
+      "examples": [
+        "Create a Grade 3 science workbook",
+        "Create an English story book"
+      ],
+      "evidence": [
+        {
+          "file": "src/features/wizard/BookWizardModal.tsx",
+          "line": 18,
+          "kind": "implementation"
+        },
+        {
+          "file": "src/domain/book/types.ts",
+          "line": 195,
+          "kind": "implementation"
+        }
+      ]
+    },
+    {
+      "id": "F002",
+      "category": "Workspace and everyday editing",
+      "name": "Page size and orientation",
+      "status": "Partial",
+      "priority": "P1",
+      "finding": "A4/A5/Letter and orientation are available; Custom is modeled but the creation wizard does not provide arbitrary dimension entry.",
+      "examples": [
+        "Create an A5 portrait book",
+        "Enter a 6-by-9-inch custom trim size"
+      ],
+      "evidence": [
+        {
+          "file": "src/features/wizard/BookWizardModal.tsx",
+          "line": 18,
+          "kind": "implementation"
+        },
+        {
+          "file": "src/domain/book/types.ts",
+          "line": 195,
+          "kind": "implementation"
+        }
+      ]
+    },
+    {
+      "id": "F003",
+      "category": "Workspace and everyday editing",
+      "name": "Page add, duplicate, delete and reorder",
+      "status": "Implemented",
+      "priority": "P1",
+      "finding": "Page operations and thumbnail navigation use the existing book store.",
+      "examples": [
+        "Duplicate an exercise page",
+        "Move a chapter opener before its exercises"
+      ],
+      "evidence": [
+        {
+          "file": "src/features/panels/LeftSidebar.tsx",
+          "line": 45,
+          "kind": "implementation"
+        },
+        {
+          "file": "src/editor/stores/editorStore.ts",
+          "line": 284,
+          "kind": "implementation"
+        }
+      ]
+    },
+    {
+      "id": "F004",
+      "category": "Workspace and everyday editing",
+      "name": "Page and element navigation",
+      "status": "Implemented",
+      "priority": "P1",
+      "finding": "Page strip/sidebar and active canvas are wired; large books use bounded windows.",
+      "examples": [
+        "Jump to physical page 180",
+        "Select a specific page object"
+      ],
+      "evidence": [
+        {
+          "file": "src/features/panels/LeftSidebar.tsx",
+          "line": 45,
+          "kind": "implementation"
+        },
+        {
+          "file": "src/features/canvas/PageCanvas.tsx",
+          "line": 37,
+          "kind": "implementation"
+        }
+      ]
+    },
+    {
+      "id": "F005",
+      "category": "Workspace and everyday editing",
+      "name": "Undo and redo",
+      "status": "Implemented",
+      "priority": "P1",
+      "finding": "History store and atomic transactions support undo/redo; not a substitute for permanent revision history.",
+      "examples": [
+        "Undo a block movement",
+        "Undo a manuscript import as one action"
+      ],
+      "evidence": [
+        {
+          "file": "src/editor/stores/historyStore.ts",
+          "line": 23,
+          "kind": "implementation"
+        },
+        {
+          "file": "src/editor/stores/editorStore.ts",
+          "line": 284,
+          "kind": "implementation"
+        }
+      ]
+    },
+    {
+      "id": "F006",
+      "category": "Workspace and everyday editing",
+      "name": "Copy, cut, paste and duplicate objects",
+      "status": "Implemented",
+      "priority": "P1",
+      "finding": "Universal clipboard and keyboard commands handle supported editor objects.",
+      "examples": [
+        "Copy a title and illustration together",
+        "Duplicate an activity card onto another page"
+      ],
+      "evidence": [
+        {
+          "file": "src/editor/clipboard/universalClipboard.ts",
+          "line": 7,
+          "kind": "implementation"
+        },
+        {
+          "file": "src/features/editor/BookEditorWorkspace.tsx",
+          "line": 152,
+          "kind": "implementation"
+        }
+      ]
+    },
+    {
+      "id": "F007",
+      "category": "Workspace and everyday editing",
+      "name": "Multi-select and marquee selection",
+      "status": "Implemented",
+      "priority": "P1",
+      "finding": "Canvas selection and modifier-key interactions exist with regression coverage.",
+      "examples": [
+        "Select three objects with Shift",
+        "Drag a marquee around a worksheet section"
+      ],
+      "evidence": [
+        {
+          "file": "src/features/canvas/PageCanvas.tsx",
+          "line": 37,
+          "kind": "implementation"
+        },
+        {
+          "file": "src/features/editor/BookEditorWorkspace.tsx",
+          "line": 152,
+          "kind": "implementation"
+        }
+      ]
+    },
+    {
+      "id": "F008",
+      "category": "Workspace and everyday editing",
+      "name": "Drag, resize, rotate and keyboard nudge",
+      "status": "Implemented",
+      "priority": "P1",
+      "finding": "Transform overlays and keyboard handlers are connected to the store.",
+      "examples": [
+        "Rotate an arrow 45 degrees",
+        "Move a selected picture by one point"
+      ],
+      "evidence": [
+        {
+          "file": "src/features/canvas/TransformOverlay.tsx",
+          "line": 42,
+          "kind": "implementation"
+        },
+        {
+          "file": "src/features/editor/BookEditorWorkspace.tsx",
+          "line": 152,
+          "kind": "implementation"
+        }
+      ]
+    },
+    {
+      "id": "F009",
+      "category": "Workspace and everyday editing",
+      "name": "Group, ungroup and nested group transforms",
+      "status": "Implemented",
+      "priority": "P1",
+      "finding": "Explicit group membership and transform propagation exist.",
+      "examples": [
+        "Group a picture and its caption",
+        "Ungroup a reusable banner"
+      ],
+      "evidence": [
+        {
+          "file": "src/editor/core/elementGroups.ts",
+          "line": 5,
+          "kind": "implementation"
+        },
+        {
+          "file": "src/editor/stores/editorStore.ts",
+          "line": 284,
+          "kind": "implementation"
+        }
+      ]
+    },
+    {
+      "id": "F010",
+      "category": "Workspace and everyday editing",
+      "name": "Lock, unlock, hide and show",
+      "status": "Implemented",
+      "priority": "P1",
+      "finding": "Lock-aware editing and visibility controls are implemented.",
+      "examples": [
+        "Lock a background",
+        "Hide a teacher-only draft annotation"
+      ],
+      "evidence": [
+        {
+          "file": "src/editor/core/elementGroups.ts",
+          "line": 5,
+          "kind": "implementation"
+        },
+        {
+          "file": "src/features/panels/LeftSidebar.tsx",
+          "line": 45,
+          "kind": "implementation"
+        }
+      ]
+    },
+    {
+      "id": "F011",
+      "category": "Workspace and everyday editing",
+      "name": "Layers and stacking order",
+      "status": "Implemented",
+      "priority": "P1",
+      "finding": "Layer controls support bring/send and ordering operations.",
+      "examples": [
+        "Send a background behind text",
+        "Bring a callout above an image"
+      ],
+      "evidence": [
+        {
+          "file": "src/features/panels/LeftSidebar.tsx",
+          "line": 45,
+          "kind": "implementation"
+        },
+        {
+          "file": "src/editor/stores/editorStore.ts",
+          "line": 284,
+          "kind": "implementation"
+        }
+      ]
+    },
+    {
+      "id": "F012",
+      "category": "Workspace and everyday editing",
+      "name": "Align and distribute objects",
+      "status": "Implemented",
+      "priority": "P1",
+      "finding": "Selection/page-margin alignment and equal spacing exist.",
+      "examples": [
+        "Align three boxes to their left edge",
+        "Give four images equal horizontal gaps"
+      ],
+      "evidence": [
+        {
+          "file": "src/editor/core/arrangement.ts",
+          "line": 2,
+          "kind": "implementation"
+        }
+      ]
+    },
+    {
+      "id": "F013",
+      "category": "Workspace and everyday editing",
+      "name": "Rulers, guides, grids and snapping",
+      "status": "Implemented",
+      "priority": "P1",
+      "finding": "User guides, column/baseline grids and snapping are wired into canvas placement.",
+      "examples": [
+        "Snap a caption to a column edge",
+        "Align headings to a baseline grid"
+      ],
+      "evidence": [
+        {
+          "file": "src/editor/core/snapping.ts",
+          "line": 16,
+          "kind": "implementation"
+        },
+        {
+          "file": "src/features/canvas/PageCanvas.tsx",
+          "line": 37,
+          "kind": "implementation"
+        }
+      ]
+    },
+    {
+      "id": "F014",
+      "category": "Workspace and everyday editing",
+      "name": "Zoom, pan, fit and fullscreen",
+      "status": "Implemented",
+      "priority": "P1",
+      "finding": "Navigation and fullscreen handlers exist and are visible in the browser.",
+      "examples": [
+        "Fit an A4 page in the editor",
+        "Pan at 200 percent zoom"
+      ],
+      "evidence": [
+        {
+          "file": "src/features/canvas/PageCanvas.tsx",
+          "line": 37,
+          "kind": "implementation"
+        },
+        {
+          "file": "src/features/editor/BookEditorWorkspace.tsx",
+          "line": 152,
+          "kind": "implementation"
+        }
+      ]
+    },
+    {
+      "id": "F015",
+      "category": "Workspace and everyday editing",
+      "name": "Keyboard shortcuts and command palette",
+      "status": "Implemented",
+      "priority": "P2",
+      "finding": "Editor commands and a searchable command palette exist; command search is not manuscript search.",
+      "examples": [
+        "Open export using the palette",
+        "Switch to the text tool using T"
+      ],
+      "evidence": [
+        {
+          "file": "src/features/editor/BookEditorWorkspace.tsx",
+          "line": 152,
+          "kind": "implementation"
+        },
+        {
+          "file": "src/features/panels/TopHeader.tsx",
+          "line": 49,
+          "kind": "implementation"
+        }
+      ]
+    },
+    {
+      "id": "F016",
+      "category": "Workspace and everyday editing",
+      "name": "Touch/mobile and cross-browser editing certification",
+      "status": "Unverified",
+      "priority": "P2",
+      "finding": "Responsive behaviors exist; current evidence does not establish reliable full editing on low-end Android, Safari or Firefox.",
+      "examples": [
+        "Resize a grouped block using touch",
+        "Edit Telugu text in Safari"
+      ],
+      "evidence": [
+        {
+          "file": "docs/production-engine-audit.md",
+          "line": 67,
+          "kind": "implementation"
+        }
+      ]
+    },
+    {
+      "id": "F017",
+      "category": "Document writing and typography",
+      "name": "Inline rich-text formatting",
+      "status": "Implemented",
+      "priority": "P1",
+      "finding": "Selection-level bold, italic, underline, strike, colour and size tools exist.",
+      "examples": [
+        "Bold one word in a paragraph",
+        "Highlight a key definition"
+      ],
+      "evidence": [
+        {
+          "file": "src/editor/renderer/RichTextInlineEditor.tsx",
+          "line": 128,
+          "kind": "implementation"
+        }
+      ]
+    },
+    {
+      "id": "F018",
+      "category": "Document writing and typography",
+      "name": "Fonts, text sizes and colour",
+      "status": "Implemented",
+      "priority": "P1",
+      "finding": "Font selection and typography controls exist; print export restricts fonts to its bundled registry.",
+      "examples": [
+        "Set body copy to 12 points",
+        "Use a supported display font for chapter titles"
+      ],
+      "evidence": [
+        {
+          "file": "src/features/inspector/TypographyInspector.tsx",
+          "line": 67,
+          "kind": "implementation"
+        },
+        {
+          "file": "src/editor/publishing/fontRegistry.ts",
+          "line": 1,
+          "kind": "implementation"
+        }
+      ]
+    },
+    {
+      "id": "F019",
+      "category": "Document writing and typography",
+      "name": "Superscript and subscript",
+      "status": "Implemented",
+      "priority": "P1",
+      "finding": "Selection-level superscript/subscript commands are exposed.",
+      "examples": [
+        "Write x squared with a superscript",
+        "Write H2O using a subscript"
+      ],
+      "evidence": [
+        {
+          "file": "src/editor/renderer/RichTextInlineEditor.tsx",
+          "line": 128,
+          "kind": "implementation"
+        }
+      ]
+    },
+    {
+      "id": "F020",
+      "category": "Document writing and typography",
+      "name": "Paragraph alignment and indentation",
+      "status": "Implemented",
+      "priority": "P1",
+      "finding": "Alignment, paragraph spacing and left/right/first-line indentation controls have rendering paths.",
+      "examples": [
+        "Justify a body paragraph",
+        "Apply a first-line paragraph indent"
+      ],
+      "evidence": [
+        {
+          "file": "src/editor/renderer/RichTextInlineEditor.tsx",
+          "line": 128,
+          "kind": "implementation"
+        },
+        {
+          "file": "src/features/inspector/TypographyInspector.tsx",
+          "line": 67,
+          "kind": "implementation"
+        },
+        {
+          "file": "src/editor/renderer/ElementRenderer.tsx",
+          "line": 226,
+          "kind": "implementation"
+        }
+      ]
+    },
+    {
+      "id": "F021",
+      "category": "Document writing and typography",
+      "name": "Line, letter and word spacing",
+      "status": "Implemented",
+      "priority": "P1",
+      "finding": "Typography inspector and renderer apply these spacing properties.",
+      "examples": [
+        "Increase line spacing for early readers",
+        "Adjust tracking on a heading"
+      ],
+      "evidence": [
+        {
+          "file": "src/features/inspector/TypographyInspector.tsx",
+          "line": 67,
+          "kind": "implementation"
+        },
+        {
+          "file": "src/editor/renderer/ElementRenderer.tsx",
+          "line": 226,
+          "kind": "implementation"
+        }
+      ]
+    },
+    {
+      "id": "F022",
+      "category": "Document writing and typography",
+      "name": "Bullet and numbered lists",
+      "status": "Partial",
+      "priority": "P1",
+      "finding": "Inline editor offers basic lists and Word imports retain lists; no full multilevel numbering/restart manager was found.",
+      "examples": [
+        "Create a five-item bullet list",
+        "Restart nested exercise numbering after a section break"
+      ],
+      "evidence": [
+        {
+          "file": "src/editor/renderer/RichTextInlineEditor.tsx",
+          "line": 128,
+          "kind": "implementation"
+        },
+        {
+          "file": "docs/manuscript-import.md",
+          "line": 13,
+          "kind": "implementation"
+        }
+      ]
+    },
+    {
+      "id": "F023",
+      "category": "Document writing and typography",
+      "name": "Paragraph and character style systems",
+      "status": "Partial",
+      "priority": "P1",
+      "finding": "Reusable text styles and global cascade exist; no full named character-style inheritance system was found.",
+      "examples": [
+        "Change every linked body paragraph style",
+        "Apply an independently named emphasis character style"
+      ],
+      "evidence": [
+        {
+          "file": "src/features/palette/TextStylesModal.tsx",
+          "line": 9,
+          "kind": "implementation"
+        },
+        {
+          "file": "src/features/inspector/TypographyInspector.tsx",
+          "line": 67,
+          "kind": "implementation"
+        }
+      ]
+    },
+    {
+      "id": "F024",
+      "category": "Document writing and typography",
+      "name": "Format painter and clear formatting",
+      "status": "Implemented",
+      "priority": "P2",
+      "finding": "Style capture/apply and reset actions are implemented.",
+      "examples": [
+        "Copy heading formatting to a caption",
+        "Remove pasted inline formatting"
+      ],
+      "evidence": [
+        {
+          "file": "src/features/inspector/TypographyInspector.tsx",
+          "line": 67,
+          "kind": "implementation"
+        },
+        {
+          "file": "src/editor/stores/editorStore.ts",
+          "line": 284,
+          "kind": "implementation"
+        }
+      ]
+    },
+    {
+      "id": "F025",
+      "category": "Document writing and typography",
+      "name": "Text frames and linked continuation",
+      "status": "Implemented",
+      "priority": "P1",
+      "finding": "Linked frames and measured continuation exist; arbitrary page artwork remains outside automatic reading flow.",
+      "examples": [
+        "Flow a long story into the next frame",
+        "Continue a paragraph on the following page"
+      ],
+      "evidence": [
+        {
+          "file": "src/editor/layoutPartner/linkedTextEngine.ts",
+          "line": 8,
+          "kind": "implementation"
+        },
+        {
+          "file": "src/features/canvas/PageCanvas.tsx",
+          "line": 37,
+          "kind": "implementation"
+        }
+      ]
+    },
+    {
+      "id": "F026",
+      "category": "Document writing and typography",
+      "name": "Auto-pagination, widow/orphan and keep rules",
+      "status": "Implemented",
+      "priority": "P1",
+      "finding": "Generic flow uses stable boundaries and keep rules; canonical curriculum content has its own compositor.",
+      "examples": [
+        "Keep a heading with its next paragraph",
+        "Prevent a single final line on the next page"
+      ],
+      "evidence": [
+        {
+          "file": "src/editor/core/paginationEngine.ts",
+          "line": 7,
+          "kind": "implementation"
+        }
+      ]
+    },
+    {
+      "id": "F027",
+      "category": "Document writing and typography",
+      "name": "Object text wrap and contour wrap",
+      "status": "Implemented",
+      "priority": "P1",
+      "finding": "Both-side, tight, contour, largest-side, above/below and no-wrap layouts exist.",
+      "examples": [
+        "Wrap text around a transparent animal image",
+        "Place a paragraph above and below a table"
+      ],
+      "evidence": [
+        {
+          "file": "src/editor/layoutPartner/textWrapLayout.ts",
+          "line": 6,
+          "kind": "implementation"
+        }
+      ]
+    },
+    {
+      "id": "F028",
+      "category": "Document writing and typography",
+      "name": "Book-wide find and replace",
+      "status": "Missing",
+      "priority": "P1",
+      "finding": "No manuscript-wide find/replace UI or engine was found; asset/command search does not cover book text.",
+      "examples": [
+        "Replace a term across all chapters",
+        "Find a misspelled name with whole-word matching"
+      ],
+      "evidence": [
+        {
+          "file": "src/features/panels/TopHeader.tsx",
+          "line": 49,
+          "kind": "inspected boundary"
+        },
+        {
+          "file": "src/editor/renderer/RichTextInlineEditor.tsx",
+          "line": 128,
+          "kind": "inspected boundary"
+        }
+      ]
+    },
+    {
+      "id": "F029",
+      "category": "Document writing and typography",
+      "name": "Word count and reading statistics",
+      "status": "Missing",
+      "priority": "P2",
+      "finding": "No author-facing word-count, reading-time or chapter statistics tool was found.",
+      "examples": [
+        "Count words in chapter 4",
+        "Check a 500-word story target"
+      ],
+      "evidence": [
+        {
+          "file": "src/editor/renderer/RichTextInlineEditor.tsx",
+          "line": 128,
+          "kind": "inspected boundary"
+        },
+        {
+          "file": "src/features/palette/BookStructureModal.tsx",
+          "line": 48,
+          "kind": "inspected boundary"
+        }
+      ]
+    },
+    {
+      "id": "F030",
+      "category": "Document writing and typography",
+      "name": "Spell checking and grammar review",
+      "status": "Partial",
+      "priority": "P1",
+      "finding": "Native contenteditable spellCheck is enabled; no dedicated book-wide grammar or multilingual proofreading workflow was found.",
+      "examples": [
+        "Underline a spelling error while typing",
+        "Review grammar across the full book"
+      ],
+      "evidence": [
+        {
+          "file": "src/editor/renderer/RichTextInlineEditor.tsx",
+          "line": 128,
+          "kind": "implementation"
+        }
+      ]
+    },
+    {
+      "id": "F031",
+      "category": "Document writing and typography",
+      "name": "Automatic footnotes and endnotes",
+      "status": "Missing",
+      "priority": "P1",
+      "finding": "Footnote-looking styles and block text exist; no numbered note anchors, renumbering or note pagination engine was found.",
+      "examples": [
+        "Insert a source note after a sentence",
+        "Renumber notes after deleting the first note"
+      ],
+      "evidence": [
+        {
+          "file": "src/editor/structure/bookStructureEngine.ts",
+          "line": 123,
+          "kind": "inspected boundary"
+        },
+        {
+          "file": "src/domain/book/types.ts",
+          "line": 195,
+          "kind": "inspected boundary"
+        }
+      ]
+    },
+    {
+      "id": "F032",
+      "category": "Document writing and typography",
+      "name": "Citations and bibliography manager",
+      "status": "Missing",
+      "priority": "P2",
+      "finding": "No structured citation records or generated bibliography workflow was found.",
+      "examples": [
+        "Insert an APA citation",
+        "Generate a bibliography from cited sources"
+      ],
+      "evidence": [
+        {
+          "file": "src/editor/structure/bookStructureEngine.ts",
+          "line": 123,
+          "kind": "inspected boundary"
+        },
+        {
+          "file": "src/domain/book/types.ts",
+          "line": 195,
+          "kind": "inspected boundary"
+        }
+      ]
+    },
+    {
+      "id": "F033",
+      "category": "Document writing and typography",
+      "name": "Index and glossary generation",
+      "status": "Missing",
+      "priority": "P2",
+      "finding": "No term marking, alphabetical index or generated glossary engine was found.",
+      "examples": [
+        "Index every occurrence of photosynthesis",
+        "Generate an alphabetized vocabulary glossary"
+      ],
+      "evidence": [
+        {
+          "file": "src/editor/structure/bookStructureEngine.ts",
+          "line": 123,
+          "kind": "inspected boundary"
+        }
+      ]
+    },
+    {
+      "id": "F034",
+      "category": "Document writing and typography",
+      "name": "Tracked changes with accept/reject",
+      "status": "Missing",
+      "priority": "P1",
+      "finding": "Comments and revision snapshots exist; they do not record individual insertions/deletions for acceptance.",
+      "examples": [
+        "Review a deleted sentence",
+        "Accept one correction and reject another"
+      ],
+      "evidence": [
+        {
+          "file": "src/editor/stores/editorStore.ts",
+          "line": 2019,
+          "kind": "inspected boundary"
+        },
+        {
+          "file": "src/editor/renderer/RichTextInlineEditor.tsx",
+          "line": 128,
+          "kind": "inspected boundary"
+        }
+      ]
+    },
+    {
+      "id": "F035",
+      "category": "Document writing and typography",
+      "name": "Clickable hyperlinks and document bookmarks",
+      "status": "Missing",
+      "priority": "P1",
+      "finding": "No supported native link/bookmark authoring and PDF link-annotation workflow was found; QR resources are separate.",
+      "examples": [
+        "Link a citation to its website",
+        "Jump from a digital TOC item to a chapter"
+      ],
+      "evidence": [
+        {
+          "file": "src/editor/renderer/RichTextInlineEditor.tsx",
+          "line": 128,
+          "kind": "inspected boundary"
+        },
+        {
+          "file": "src/features/publishing/ExportModal.tsx",
+          "line": 25,
+          "kind": "inspected boundary"
+        }
+      ]
+    },
+    {
+      "id": "F036",
+      "category": "Document writing and typography",
+      "name": "English, Hindi and Telugu text handling",
+      "status": "Implemented",
+      "priority": "P1",
+      "finding": "Bundled scripts, Unicode input and composition-aware inline editing exist; use the font-embedded proof for Indic text.",
+      "examples": [
+        "Write a Telugu explanation",
+        "Export a Hindi worksheet using bundled fonts"
+      ],
+      "evidence": [
+        {
+          "file": "src/editor/publishing/fontRegistry.ts",
+          "line": 1,
+          "kind": "implementation"
+        },
+        {
+          "file": "src/editor/renderer/RichTextInlineEditor.tsx",
+          "line": 128,
+          "kind": "implementation"
+        }
+      ]
+    },
+    {
+      "id": "F037",
+      "category": "Document writing and typography",
+      "name": "RTL and vertical writing",
+      "status": "Missing",
+      "priority": "P2",
+      "finding": "No exposed text direction or vertical-writing layout workflow was found; layout-group direction is unrelated.",
+      "examples": [
+        "Compose an Arabic paragraph right to left",
+        "Set a vertical bilingual title"
+      ],
+      "evidence": [
+        {
+          "file": "src/editor/renderer/RichTextInlineEditor.tsx",
+          "line": 128,
+          "kind": "inspected boundary"
+        },
+        {
+          "file": "src/editor/renderer/ElementRenderer.tsx",
+          "line": 226,
+          "kind": "inspected boundary"
+        }
+      ]
+    },
+    {
+      "id": "F038",
+      "category": "Document writing and typography",
+      "name": "Automatic hyphenation and advanced line breaking",
+      "status": "Missing",
+      "priority": "P2",
+      "finding": "Measured wrapping exists; no language hyphenation dictionary or production hyphenation controls were found.",
+      "examples": [
+        "Hyphenate a long word in a narrow column",
+        "Disable hyphenation in a heading"
+      ],
+      "evidence": [
+        {
+          "file": "src/editor/layoutPartner/linkedTextEngine.ts",
+          "line": 8,
+          "kind": "inspected boundary"
+        },
+        {
+          "file": "src/editor/core/paginationEngine.ts",
+          "line": 7,
+          "kind": "inspected boundary"
+        }
+      ]
+    },
+    {
+      "id": "F039",
+      "category": "Document writing and typography",
+      "name": "Custom font upload and licensing metadata",
+      "status": "Missing",
+      "priority": "P2",
+      "finding": "Print registry requires bundled fonts; no font upload/embedding/license-management workflow was found.",
+      "examples": [
+        "Upload a licensed publisher font",
+        "Block export when its font file is unavailable"
+      ],
+      "evidence": [
+        {
+          "file": "src/editor/publishing/fontRegistry.ts",
+          "line": 1,
+          "kind": "inspected boundary"
+        }
+      ]
+    },
+    {
+      "id": "F040",
+      "category": "Canva-style design and reusable layouts",
+      "name": "Shapes and editable geometric objects",
+      "status": "Implemented",
+      "priority": "P1",
+      "finding": "Parametric shapes, shape drawing and inspectors exist.",
+      "examples": [
+        "Draw and edit a rounded rectangle",
+        "Add a star badge for an exercise"
+      ],
+      "evidence": [
+        {
+          "file": "src/features/inspector/ShapeInspector.tsx",
+          "line": 39,
+          "kind": "implementation"
+        },
+        {
+          "file": "src/features/canvas/ShapeDrawOverlay.tsx",
+          "line": 16,
+          "kind": "implementation"
+        }
+      ]
+    },
+    {
+      "id": "F041",
+      "category": "Canva-style design and reusable layouts",
+      "name": "Fills, gradients, strokes and dash styles",
+      "status": "Implemented",
+      "priority": "P1",
+      "finding": "Shape inspector and SVG renderer support the corresponding style families.",
+      "examples": [
+        "Apply a gradient to a banner",
+        "Give an answer box a dashed border"
+      ],
+      "evidence": [
+        {
+          "file": "src/features/inspector/ShapeInspector.tsx",
+          "line": 39,
+          "kind": "implementation"
+        },
+        {
+          "file": "src/editor/renderer/ElementRenderer.tsx",
+          "line": 226,
+          "kind": "implementation"
+        }
+      ]
+    },
+    {
+      "id": "F042",
+      "category": "Canva-style design and reusable layouts",
+      "name": "Opacity and visual effects",
+      "status": "Partial",
+      "priority": "P2",
+      "finding": "Editor opacity/shadow/effect controls exist; print does not preserve every editor decoration.",
+      "examples": [
+        "Make a highlight translucent",
+        "Check that a decorative shadow survives PDF export"
+      ],
+      "evidence": [
+        {
+          "file": "src/features/inspector/ShapeInspector.tsx",
+          "line": 39,
+          "kind": "implementation"
+        },
+        {
+          "file": "src/features/inspector/TypographyInspector.tsx",
+          "line": 67,
+          "kind": "implementation"
+        },
+        {
+          "file": "docs/production-engine-audit.md",
+          "line": 67,
+          "kind": "implementation"
+        }
+      ]
+    },
+    {
+      "id": "F043",
+      "category": "Canva-style design and reusable layouts",
+      "name": "Pen tool and freeform paths",
+      "status": "Implemented",
+      "priority": "P2",
+      "finding": "Vector pen creation is wired to editable curve elements.",
+      "examples": [
+        "Draw a curved connector",
+        "Close a custom outline around an illustration"
+      ],
+      "evidence": [
+        {
+          "file": "src/features/canvas/VectorPenOverlay.tsx",
+          "line": 13,
+          "kind": "implementation"
+        }
+      ]
+    },
+    {
+      "id": "F044",
+      "category": "Canva-style design and reusable layouts",
+      "name": "Bézier node and handle editing",
+      "status": "Implemented",
+      "priority": "P2",
+      "finding": "Node overlays and curve-handle operations exist.",
+      "examples": [
+        "Smooth an angular curve",
+        "Move one handle without moving the endpoint"
+      ],
+      "evidence": [
+        {
+          "file": "src/features/canvas/NodeToolOverlay.tsx",
+          "line": 14,
+          "kind": "implementation"
+        }
+      ]
+    },
+    {
+      "id": "F045",
+      "category": "Canva-style design and reusable layouts",
+      "name": "Shape boolean union, subtract, intersect and exclude",
+      "status": "Partial",
+      "priority": "P2",
+      "finding": "Implementation combines subpaths and fill rules; intersect/exclude are not true geometric clipping operations.",
+      "examples": [
+        "Subtract a circle from a rectangle",
+        "Keep only the overlap of two circles"
+      ],
+      "evidence": [
+        {
+          "file": "src/editor/vector/bezier.ts",
+          "line": 187,
+          "kind": "implementation"
+        }
+      ]
+    },
+    {
+      "id": "F046",
+      "category": "Canva-style design and reusable layouts",
+      "name": "Image tracing to vector",
+      "status": "Partial",
+      "priority": "P2",
+      "finding": "A local image-to-path tracer exists; fidelity and complex artwork conversion remain limited.",
+      "examples": [
+        "Trace a simple black icon",
+        "Preserve a detailed multicolour illustration as editable paths"
+      ],
+      "evidence": [
+        {
+          "file": "src/editor/vector/imageTrace.ts",
+          "line": 3,
+          "kind": "implementation"
+        }
+      ]
+    },
+    {
+      "id": "F047",
+      "category": "Canva-style design and reusable layouts",
+      "name": "Text inside shapes",
+      "status": "Implemented",
+      "priority": "P1",
+      "finding": "Shapes can hold editable inline labels.",
+      "examples": [
+        "Label a flowchart box",
+        "Put a number inside a circle"
+      ],
+      "evidence": [
+        {
+          "file": "src/features/inspector/ShapeInspector.tsx",
+          "line": 39,
+          "kind": "implementation"
+        },
+        {
+          "file": "src/editor/renderer/ElementRenderer.tsx",
+          "line": 226,
+          "kind": "implementation"
+        }
+      ]
+    },
+    {
+      "id": "F048",
+      "category": "Canva-style design and reusable layouts",
+      "name": "Curved text and text on path",
+      "status": "Missing",
+      "priority": "P2",
+      "finding": "No textPath or curved-text authoring/rendering pipeline was found.",
+      "examples": [
+        "Set a title on a circular badge",
+        "Place a label along a curved arrow"
+      ],
+      "evidence": [
+        {
+          "file": "src/features/inspector/TypographyInspector.tsx",
+          "line": 67,
+          "kind": "inspected boundary"
+        },
+        {
+          "file": "src/editor/renderer/ElementRenderer.tsx",
+          "line": 226,
+          "kind": "inspected boundary"
+        }
+      ]
+    },
+    {
+      "id": "F049",
+      "category": "Canva-style design and reusable layouts",
+      "name": "Page templates and layout galleries",
+      "status": "Implemented",
+      "priority": "P1",
+      "finding": "Reusable page/layout registries and insertion controls exist.",
+      "examples": [
+        "Insert a chapter opener",
+        "Apply a two-column exercise layout"
+      ],
+      "evidence": [
+        {
+          "file": "src/editor/registry/templates.ts",
+          "line": 4,
+          "kind": "implementation"
+        },
+        {
+          "file": "src/features/panels/LeftSidebar.tsx",
+          "line": 45,
+          "kind": "implementation"
+        }
+      ]
+    },
+    {
+      "id": "F050",
+      "category": "Canva-style design and reusable layouts",
+      "name": "Save custom layouts and reusable blocks",
+      "status": "Implemented",
+      "priority": "P1",
+      "finding": "Selection-to-layout and My Blocks/preset saving workflows exist.",
+      "examples": [
+        "Save a custom activity card",
+        "Reuse a locally saved worksheet layout"
+      ],
+      "evidence": [
+        {
+          "file": "src/features/panels/CreateLayoutModal.tsx",
+          "line": 17,
+          "kind": "implementation"
+        },
+        {
+          "file": "src/features/educational/EducationalBlocksPanel.tsx",
+          "line": 65,
+          "kind": "implementation"
+        }
+      ]
+    },
+    {
+      "id": "F051",
+      "category": "Canva-style design and reusable layouts",
+      "name": "Global theme and style tokens",
+      "status": "Implemented",
+      "priority": "P1",
+      "finding": "Book-scoped global colours, typography and linked block styles exist.",
+      "examples": [
+        "Change the book accent colour",
+        "Increase all linked body-text sizes"
+      ],
+      "evidence": [
+        {
+          "file": "src/editor/theme/designTokens.ts",
+          "line": 8,
+          "kind": "implementation"
+        },
+        {
+          "file": "src/editor/design/applyDesign.ts",
+          "line": 13,
+          "kind": "implementation"
+        }
+      ]
+    },
+    {
+      "id": "F052",
+      "category": "Canva-style design and reusable layouts",
+      "name": "Publisher logos and branding",
+      "status": "Implemented",
+      "priority": "P1",
+      "finding": "Publisher image/footer integration and page furniture exist.",
+      "examples": [
+        "Place the publisher logo on the cover",
+        "Apply a branded footer across book pages"
+      ],
+      "evidence": [
+        {
+          "file": "src/editor/branding/bookBranding.ts",
+          "line": 8,
+          "kind": "implementation"
+        },
+        {
+          "file": "src/features/panels/PageFrameControls.tsx",
+          "line": 15,
+          "kind": "implementation"
+        }
+      ]
+    },
+    {
+      "id": "F053",
+      "category": "Canva-style design and reusable layouts",
+      "name": "Organization-wide brand kit and locked brand policy",
+      "status": "Partial",
+      "priority": "P2",
+      "finding": "Book branding exists; no complete shared organization brand-kit library or policy enforcement was found.",
+      "examples": [
+        "Share approved fonts across five books",
+        "Prevent use of an unapproved logo"
+      ],
+      "evidence": [
+        {
+          "file": "src/editor/branding/bookBranding.ts",
+          "line": 8,
+          "kind": "implementation"
+        },
+        {
+          "file": "src/editor/theme/designTokens.ts",
+          "line": 8,
+          "kind": "implementation"
+        }
+      ]
+    },
+    {
+      "id": "F054",
+      "category": "Canva-style design and reusable layouts",
+      "name": "Smart layout suggestions and auto-arrangement",
+      "status": "Implemented",
+      "priority": "P2",
+      "finding": "Local layout analysis and deterministic arrangement engines exist; these are not proof of generative design.",
+      "examples": [
+        "Balance pictures and captions on a page",
+        "Detect an overlapping activity card"
+      ],
+      "evidence": [
+        {
+          "file": "src/editor/layoutPartner/partnerEngine.ts",
+          "line": 14,
+          "kind": "implementation"
+        },
+        {
+          "file": "src/editor/core/arrangement.ts",
+          "line": 2,
+          "kind": "implementation"
+        }
+      ]
+    },
+    {
+      "id": "F055",
+      "category": "Canva-style design and reusable layouts",
+      "name": "Resize designs across multiple output formats",
+      "status": "Partial",
+      "priority": "P2",
+      "finding": "Page-size constraints exist; no Canva-like multi-format duplication and automatic content adaptation workflow was found.",
+      "examples": [
+        "Adapt an A4 worksheet to A5",
+        "Create a landscape lesson slide from a book page"
+      ],
+      "evidence": [
+        {
+          "file": "src/domain/book/types.ts",
+          "line": 195,
+          "kind": "implementation"
+        },
+        {
+          "file": "src/editor/stores/editorStore.ts",
+          "line": 284,
+          "kind": "implementation"
+        }
+      ]
+    },
+    {
+      "id": "F056",
+      "category": "Canva-style design and reusable layouts",
+      "name": "Template search, favorites and recents",
+      "status": "Implemented",
+      "priority": "P2",
+      "finding": "Library search, filters and favorites/recent collections are exposed.",
+      "examples": [
+        "Find mathematics practice blocks",
+        "Reinsert a recently used banner"
+      ],
+      "evidence": [
+        {
+          "file": "src/features/educational/EducationalBlocksPanel.tsx",
+          "line": 65,
+          "kind": "implementation"
+        },
+        {
+          "file": "src/features/panels/LeftSidebar.tsx",
+          "line": 45,
+          "kind": "implementation"
+        }
+      ]
+    },
+    {
+      "id": "F057",
+      "category": "Canva-style design and reusable layouts",
+      "name": "Professional facing-page/spread editing",
+      "status": "Partial",
+      "priority": "P1",
+      "finding": "Binding and inside/outside margin data exist; only the active page is edited, with no complete two-page spread authoring workspace.",
+      "examples": [
+        "Check a left/right gutter pair",
+        "Edit an illustration spanning both pages"
+      ],
+      "evidence": [
+        {
+          "file": "src/features/canvas/PageCanvas.tsx",
+          "line": 37,
+          "kind": "implementation"
+        },
+        {
+          "file": "src/domain/book/types.ts",
+          "line": 195,
+          "kind": "implementation"
+        }
+      ]
+    },
+    {
+      "id": "F058",
+      "category": "Images, assets and pixel editing",
+      "name": "Upload, paste and replace images",
+      "status": "Implemented",
+      "priority": "P1",
+      "finding": "Image input, direct paste and replacement paths exist.",
+      "examples": [
+        "Paste a diagram from the clipboard",
+        "Replace a picture without rebuilding its frame"
+      ],
+      "evidence": [
+        {
+          "file": "src/features/ui/DirectPasteImageModal.tsx",
+          "line": 15,
+          "kind": "implementation"
+        },
+        {
+          "file": "src/features/educational/ImageControls.tsx",
+          "line": 10,
+          "kind": "implementation"
+        }
+      ]
+    },
+    {
+      "id": "F059",
+      "category": "Images, assets and pixel editing",
+      "name": "Crop, focal position, scale and flip",
+      "status": "Implemented",
+      "priority": "P1",
+      "finding": "Image treatments and frame transformations provide these controls.",
+      "examples": [
+        "Crop a landscape photo to a square",
+        "Flip a character to face the text"
+      ],
+      "evidence": [
+        {
+          "file": "src/features/educational/ImageControls.tsx",
+          "line": 10,
+          "kind": "implementation"
+        },
+        {
+          "file": "src/features/canvas/TransformOverlay.tsx",
+          "line": 42,
+          "kind": "implementation"
+        }
+      ]
+    },
+    {
+      "id": "F060",
+      "category": "Images, assets and pixel editing",
+      "name": "Picture frames and image masks",
+      "status": "Implemented",
+      "priority": "P1",
+      "finding": "Built-in masks and custom path masks exist.",
+      "examples": [
+        "Put a portrait inside a circle",
+        "Use a custom SVG silhouette mask"
+      ],
+      "evidence": [
+        {
+          "file": "src/features/educational/ImageControls.tsx",
+          "line": 10,
+          "kind": "implementation"
+        }
+      ]
+    },
+    {
+      "id": "F061",
+      "category": "Images, assets and pixel editing",
+      "name": "Image colour adjustments and filters",
+      "status": "Implemented",
+      "priority": "P2",
+      "finding": "Non-destructive colour/filter treatment is implemented.",
+      "examples": [
+        "Reduce saturation on a photo",
+        "Increase brightness on a dark illustration"
+      ],
+      "evidence": [
+        {
+          "file": "src/features/educational/ImageControls.tsx",
+          "line": 10,
+          "kind": "implementation"
+        },
+        {
+          "file": "src/editor/renderer/ElementRenderer.tsx",
+          "line": 226,
+          "kind": "implementation"
+        }
+      ]
+    },
+    {
+      "id": "F062",
+      "category": "Images, assets and pixel editing",
+      "name": "Local background removal",
+      "status": "Partial",
+      "priority": "P1",
+      "finding": "Real edge-aware local segmentation and matte refinement exist; quality is not equivalent to a semantic AI subject remover for all photographs.",
+      "examples": [
+        "Remove a white background from a diagram",
+        "Cut out hair against a complex background"
+      ],
+      "evidence": [
+        {
+          "file": "src/editor/pixel/backgroundRemoval.ts",
+          "line": 32,
+          "kind": "implementation"
+        }
+      ]
+    },
+    {
+      "id": "F063",
+      "category": "Images, assets and pixel editing",
+      "name": "Brush and eraser",
+      "status": "Implemented",
+      "priority": "P2",
+      "finding": "Raster strokes and eraser compositing are implemented.",
+      "examples": [
+        "Paint a coloured annotation",
+        "Erase part of a bitmap layer"
+      ],
+      "evidence": [
+        {
+          "file": "src/features/canvas/PixelBrushOverlay.tsx",
+          "line": 186,
+          "kind": "implementation"
+        }
+      ]
+    },
+    {
+      "id": "F064",
+      "category": "Images, assets and pixel editing",
+      "name": "Raster selection and masks",
+      "status": "Partial",
+      "priority": "P2",
+      "finding": "Selection algorithms exist; a complete integrated production selection/refinement workflow is not established by this audit.",
+      "examples": [
+        "Select a flat background by colour",
+        "Refine a complex lasso selection"
+      ],
+      "evidence": [
+        {
+          "file": "src/editor/pixel/selectionEngine.ts",
+          "line": 7,
+          "kind": "implementation"
+        }
+      ]
+    },
+    {
+      "id": "F065",
+      "category": "Images, assets and pixel editing",
+      "name": "Clone stamp",
+      "status": "Stub",
+      "priority": "P2",
+      "finding": "cloneStamp activates the pixel overlay, but the stroke commit branch has no cloneStamp drawing implementation.",
+      "examples": [
+        "Sample a source region with Alt",
+        "Paint a copied texture onto another region"
+      ],
+      "evidence": [
+        {
+          "file": "src/features/canvas/PixelBrushOverlay.tsx",
+          "line": 186,
+          "kind": "implementation"
+        }
+      ]
+    },
+    {
+      "id": "F066",
+      "category": "Images, assets and pixel editing",
+      "name": "Healing and object removal",
+      "status": "Partial",
+      "priority": "P2",
+      "finding": "Healing uses a fixed-offset patch at dx 30 with feathering; no semantic object removal or source-aware healing was found.",
+      "examples": [
+        "Remove a small blemish",
+        "Remove an object without duplicating nearby content"
+      ],
+      "evidence": [
+        {
+          "file": "src/features/canvas/PixelBrushOverlay.tsx",
+          "line": 186,
+          "kind": "implementation"
+        }
+      ]
+    },
+    {
+      "id": "F067",
+      "category": "Images, assets and pixel editing",
+      "name": "Local picture and illustration presets",
+      "status": "Implemented",
+      "priority": "P1",
+      "finding": "Bundled educational artwork and starter/preset browsing exist, including the current clay additions.",
+      "examples": [
+        "Insert a clay calculator illustration",
+        "Find an existing mathematics diagram"
+      ],
+      "evidence": [
+        {
+          "file": "src/editor/media/picturePresetCatalog.ts",
+          "line": 3,
+          "kind": "implementation"
+        },
+        {
+          "file": "src/features/panels/PicturePresetLibrary.tsx",
+          "line": 34,
+          "kind": "implementation"
+        }
+      ]
+    },
+    {
+      "id": "F068",
+      "category": "Images, assets and pixel editing",
+      "name": "Cloud picture repository and verified asset revisions",
+      "status": "Unverified",
+      "priority": "P2",
+      "finding": "Authenticated upload/confirm and revision-pinned delivery paths exist; live backend success was not exercised in this audit.",
+      "examples": [
+        "Upload an illustration and confirm its checksum",
+        "Reuse its pinned cloud revision in another book"
+      ],
+      "evidence": [
+        {
+          "file": "src/features/panels/PicturePresetLibrary.tsx",
+          "line": 34,
+          "kind": "implementation"
+        }
+      ]
+    },
+    {
+      "id": "F069",
+      "category": "Images, assets and pixel editing",
+      "name": "Asset rights and attribution tracking",
+      "status": "Missing",
+      "priority": "P1",
+      "finding": "No complete per-asset rights/license/attribution review and generated credits workflow was found.",
+      "examples": [
+        "Record an illustrator permission",
+        "Generate a picture-credit page"
+      ],
+      "evidence": [
+        {
+          "file": "src/domain/book/types.ts",
+          "line": 195,
+          "kind": "inspected boundary"
+        },
+        {
+          "file": "src/features/panels/PicturePresetLibrary.tsx",
+          "line": 34,
+          "kind": "inspected boundary"
+        }
+      ]
+    },
+    {
+      "id": "F070",
+      "category": "Images, assets and pixel editing",
+      "name": "AI image generation from arbitrary prompts",
+      "status": "Stub",
+      "priority": "P2",
+      "finding": "The current provider draws a few procedural canvas scenes from keyword/style branches; no real image model call is made.",
+      "examples": [
+        "Generate a specific jungle scene",
+        "Produce a custom illustration matching a detailed brief"
+      ],
+      "evidence": [
+        {
+          "file": "src/editor/ai/aiProvider.ts",
+          "line": 64,
+          "kind": "implementation"
+        }
+      ]
+    },
+    {
+      "id": "F071",
+      "category": "Images, assets and pixel editing",
+      "name": "AI vector generation from arbitrary prompts",
+      "status": "Stub",
+      "priority": "P2",
+      "finding": "Provider returns preset SVG content under invented model metadata; no generative vector service is called.",
+      "examples": [
+        "Generate a custom plant diagram",
+        "Create a matching original mascot pose"
+      ],
+      "evidence": [
+        {
+          "file": "src/editor/ai/aiProvider.ts",
+          "line": 231,
+          "kind": "implementation"
+        }
+      ]
+    },
+    {
+      "id": "F072",
+      "category": "Images, assets and pixel editing",
+      "name": "Generative fill/inpainting",
+      "status": "Stub",
+      "priority": "P0",
+      "finding": "Direct invocation confirmed the method returns the original image URL and reports ready without editing pixels.",
+      "examples": [
+        "Replace only a masked sky region",
+        "Remove an object while preserving the surrounding image"
+      ],
+      "evidence": [
+        {
+          "file": "src/editor/ai/aiProvider.ts",
+          "line": 324,
+          "kind": "implementation"
+        }
+      ]
+    },
+    {
+      "id": "F073",
+      "category": "Images, assets and pixel editing",
+      "name": "Generative expand/outpainting",
+      "status": "Stub",
+      "priority": "P0",
+      "finding": "Method creates a gradient canvas without drawing the input image; the store replaces the source with that result.",
+      "examples": [
+        "Extend a photo beyond its edges",
+        "Keep the original subject intact after expansion"
+      ],
+      "evidence": [
+        {
+          "file": "src/editor/ai/aiProvider.ts",
+          "line": 343,
+          "kind": "implementation"
+        }
+      ]
+    },
+    {
+      "id": "F074",
+      "category": "Images, assets and pixel editing",
+      "name": "Real image upscaling and truthful DPI",
+      "status": "Stub",
+      "priority": "P0",
+      "finding": "Direct invocation returned the original image with reported 600 DPI; store multiplies rawWidthPx and claims a completed upscale.",
+      "examples": [
+        "Increase actual pixels from 800 to 3200",
+        "Keep preflight DPI tied to decoded image dimensions"
+      ],
+      "evidence": [
+        {
+          "file": "src/editor/stores/editorStore.ts",
+          "line": 1734,
+          "kind": "implementation"
+        }
+      ]
+    },
+    {
+      "id": "F075",
+      "category": "Tables, charts and scientific content",
+      "name": "Editable table headers and cell text",
+      "status": "Implemented",
+      "priority": "P1",
+      "finding": "Native table renderer exposes editable headers/cells with store updates.",
+      "examples": [
+        "Edit a rubric cell",
+        "Rename a data-table column"
+      ],
+      "evidence": [
+        {
+          "file": "src/editor/renderer/ElementRenderer.tsx",
+          "line": 226,
+          "kind": "implementation"
+        },
+        {
+          "file": "src/editor/stores/editorStore.ts",
+          "line": 995,
+          "kind": "implementation"
+        }
+      ]
+    },
+    {
+      "id": "F076",
+      "category": "Tables, charts and scientific content",
+      "name": "Table row and column insertion/deletion",
+      "status": "Partial",
+      "priority": "P1",
+      "finding": "Actions append/pop rows and columns; insertion at a chosen cell and general reorder operations were not found.",
+      "examples": [
+        "Add one row at the end",
+        "Insert a row above the selected middle row"
+      ],
+      "evidence": [
+        {
+          "file": "src/editor/stores/editorStore.ts",
+          "line": 995,
+          "kind": "implementation"
+        }
+      ]
+    },
+    {
+      "id": "F077",
+      "category": "Tables, charts and scientific content",
+      "name": "Merge/split cells and advanced table sizing",
+      "status": "Missing",
+      "priority": "P1",
+      "finding": "Native model uses headers and string-array rows without merged-cell spans or a full cell sizing engine.",
+      "examples": [
+        "Merge a heading across three columns",
+        "Resize a single column independently"
+      ],
+      "evidence": [
+        {
+          "file": "src/editor/stores/editorStore.ts",
+          "line": 995,
+          "kind": "inspected boundary"
+        }
+      ]
+    },
+    {
+      "id": "F078",
+      "category": "Tables, charts and scientific content",
+      "name": "Table continuation with repeated headers",
+      "status": "Partial",
+      "priority": "P1",
+      "finding": "Manuscript conversion can paginate table content as text frames; native tables are indivisible in generic flow and lack true repeated-header continuation.",
+      "examples": [
+        "Flow a 60-row table over three pages",
+        "Repeat headers on every continuation page"
+      ],
+      "evidence": [
+        {
+          "file": "src/editor/core/paginationEngine.ts",
+          "line": 7,
+          "kind": "implementation"
+        },
+        {
+          "file": "docs/manuscript-import.md",
+          "line": 13,
+          "kind": "implementation"
+        }
+      ]
+    },
+    {
+      "id": "F079",
+      "category": "Tables, charts and scientific content",
+      "name": "Spreadsheet-linked charts and generic chart editor",
+      "status": "Missing",
+      "priority": "P2",
+      "finding": "Educational data visuals exist; no general chart editor with CSV/XLSX/live spreadsheet data binding was found.",
+      "examples": [
+        "Import sales data into a chart",
+        "Change source values and update the plot"
+      ],
+      "evidence": [
+        {
+          "file": "src/editor/math/mathRegistry.ts",
+          "line": 111,
+          "kind": "inspected boundary"
+        },
+        {
+          "file": "src/editor/stores/editorStore.ts",
+          "line": 995,
+          "kind": "inspected boundary"
+        }
+      ]
+    },
+    {
+      "id": "F080",
+      "category": "Tables, charts and scientific content",
+      "name": "Educational charts and pictographs",
+      "status": "Implemented",
+      "priority": "P1",
+      "finding": "Math templates include editable data/chart/pictograph families.",
+      "examples": [
+        "Build a fruit-vote pictograph",
+        "Show classroom counts in a bar chart"
+      ],
+      "evidence": [
+        {
+          "file": "src/editor/math/mathRegistry.ts",
+          "line": 111,
+          "kind": "implementation"
+        },
+        {
+          "file": "src/editor/math/MathTemplateInspector.tsx",
+          "line": 28,
+          "kind": "implementation"
+        }
+      ]
+    },
+    {
+      "id": "F081",
+      "category": "Tables, charts and scientific content",
+      "name": "Mathematics symbols and Unicode glyphs",
+      "status": "Implemented",
+      "priority": "P1",
+      "finding": "Glyph and mathematics symbol insertion tools exist.",
+      "examples": [
+        "Insert a multiplication sign",
+        "Insert a Greek alpha symbol"
+      ],
+      "evidence": [
+        {
+          "file": "src/features/palette/GlyphBrowserModal.tsx",
+          "line": 35,
+          "kind": "implementation"
+        },
+        {
+          "file": "src/editor/renderer/RichTextInlineEditor.tsx",
+          "line": 128,
+          "kind": "implementation"
+        }
+      ]
+    },
+    {
+      "id": "F082",
+      "category": "Tables, charts and scientific content",
+      "name": "Structured equation editing and LaTeX/MathML",
+      "status": "Missing",
+      "priority": "P1",
+      "finding": "Math templates and superscripts exist; no general equation tree or LaTeX/MathML import/edit/export pipeline was found.",
+      "examples": [
+        "Edit a nested algebraic fraction",
+        "Insert an integral from LaTeX"
+      ],
+      "evidence": [
+        {
+          "file": "src/editor/math/mathRegistry.ts",
+          "line": 111,
+          "kind": "inspected boundary"
+        },
+        {
+          "file": "src/editor/renderer/RichTextInlineEditor.tsx",
+          "line": 128,
+          "kind": "inspected boundary"
+        }
+      ]
+    },
+    {
+      "id": "F083",
+      "category": "Tables, charts and scientific content",
+      "name": "Editable primary mathematics diagrams",
+      "status": "Implemented",
+      "priority": "P1",
+      "finding": "Number lines, fractions, place value, geometry, time and measurement templates have editable data/design controls.",
+      "examples": [
+        "Create a fraction strip",
+        "Edit a clock to show half past three"
+      ],
+      "evidence": [
+        {
+          "file": "src/editor/math/mathRegistry.ts",
+          "line": 111,
+          "kind": "implementation"
+        },
+        {
+          "file": "src/editor/math/MathTemplateInspector.tsx",
+          "line": 28,
+          "kind": "implementation"
+        }
+      ]
+    },
+    {
+      "id": "F084",
+      "category": "Tables, charts and scientific content",
+      "name": "Diagram connectors that stay attached",
+      "status": "Missing",
+      "priority": "P2",
+      "finding": "Arrows and lines exist; no endpoint attachment/rerouting graph model was found.",
+      "examples": [
+        "Move a flowchart box and keep its arrows attached",
+        "Automatically route a connector around another box"
+      ],
+      "evidence": [
+        {
+          "file": "src/features/inspector/ShapeInspector.tsx",
+          "line": 39,
+          "kind": "inspected boundary"
+        },
+        {
+          "file": "src/editor/renderer/ElementRenderer.tsx",
+          "line": 226,
+          "kind": "inspected boundary"
+        }
+      ]
+    },
+    {
+      "id": "F085",
+      "category": "Book structure and print production",
+      "name": "Units, chapters and semantic hierarchy",
+      "status": "Implemented",
+      "priority": "P1",
+      "finding": "Book-to-question hierarchy is derived from chapter frameworks and typed content.",
+      "examples": [
+        "Add a unit with three chapters",
+        "Inspect questions within an exercise"
+      ],
+      "evidence": [
+        {
+          "file": "src/editor/structure/bookStructureEngine.ts",
+          "line": 123,
+          "kind": "implementation"
+        },
+        {
+          "file": "src/editor/curriculum/chapterEngine.ts",
+          "line": 21,
+          "kind": "implementation"
+        }
+      ]
+    },
+    {
+      "id": "F086",
+      "category": "Book structure and print production",
+      "name": "Chapter/lesson outline and structure navigation",
+      "status": "Implemented",
+      "priority": "P1",
+      "finding": "Structure tree and chapter panels expose derived content navigation.",
+      "examples": [
+        "Jump to a lesson from the outline",
+        "Inspect chapter page ownership"
+      ],
+      "evidence": [
+        {
+          "file": "src/features/palette/BookStructureModal.tsx",
+          "line": 48,
+          "kind": "implementation"
+        },
+        {
+          "file": "src/features/panels/LeftSidebar.tsx",
+          "line": 45,
+          "kind": "implementation"
+        }
+      ]
+    },
+    {
+      "id": "F087",
+      "category": "Book structure and print production",
+      "name": "Automatic table of contents",
+      "status": "Implemented",
+      "priority": "P1",
+      "finding": "Live TOC generation and page targets are implemented; clickable PDF navigation is a separate gap.",
+      "examples": [
+        "Generate TOC entries from chapters",
+        "Update page references after moving pages"
+      ],
+      "evidence": [
+        {
+          "file": "src/editor/structure/bookStructureEngine.ts",
+          "line": 123,
+          "kind": "implementation"
+        },
+        {
+          "file": "src/features/palette/BookStructureModal.tsx",
+          "line": 48,
+          "kind": "implementation"
+        }
+      ]
+    },
+    {
+      "id": "F088",
+      "category": "Book structure and print production",
+      "name": "Roman/Arabic and chapter/page numbering",
+      "status": "Implemented",
+      "priority": "P1",
+      "finding": "Continuous and front-matter numbering modes plus structural numbering exist.",
+      "examples": [
+        "Use Roman numbers for front matter",
+        "Restart visible Arabic numbering at chapter 1"
+      ],
+      "evidence": [
+        {
+          "file": "src/editor/structure/bookStructureEngine.ts",
+          "line": 123,
+          "kind": "implementation"
+        },
+        {
+          "file": "src/domain/book/types.ts",
+          "line": 195,
+          "kind": "implementation"
+        }
+      ]
+    },
+    {
+      "id": "F089",
+      "category": "Book structure and print production",
+      "name": "Figure/question numbering and cross-references",
+      "status": "Implemented",
+      "priority": "P1",
+      "finding": "Native figure/question labels and stored reference templates synchronize with structure.",
+      "examples": [
+        "Update a figure reference after reorder",
+        "Flag a deleted question reference"
+      ],
+      "evidence": [
+        {
+          "file": "src/editor/structure/bookStructureEngine.ts",
+          "line": 123,
+          "kind": "implementation"
+        }
+      ]
+    },
+    {
+      "id": "F090",
+      "category": "Book structure and print production",
+      "name": "Running headers, footers and master pages",
+      "status": "Implemented",
+      "priority": "P1",
+      "finding": "Preset masters propagate page furniture with explicit override preservation.",
+      "examples": [
+        "Change every linked exercise footer",
+        "Preserve a manually overridden page header"
+      ],
+      "evidence": [
+        {
+          "file": "src/editor/layout/masterPageEngine.ts",
+          "line": 20,
+          "kind": "implementation"
+        }
+      ]
+    },
+    {
+      "id": "F091",
+      "category": "Book structure and print production",
+      "name": "Margins, bleed and binding settings",
+      "status": "Implemented",
+      "priority": "P1",
+      "finding": "Inside/outside margins, bleed and binding fields feed layout and proofs; settings alone do not certify a printer profile.",
+      "examples": [
+        "Set extra inside gutter space",
+        "Add configured bleed around artwork"
+      ],
+      "evidence": [
+        {
+          "file": "src/domain/book/types.ts",
+          "line": 195,
+          "kind": "implementation"
+        },
+        {
+          "file": "src/editor/layout/masterPageEngine.ts",
+          "line": 20,
+          "kind": "implementation"
+        }
+      ]
+    },
+    {
+      "id": "F092",
+      "category": "Book structure and print production",
+      "name": "Page borders and imported border artwork",
+      "status": "Implemented",
+      "priority": "P2",
+      "finding": "Editable page furniture plus Word/PDF border import workflows exist.",
+      "examples": [
+        "Apply a border across the book",
+        "Import a border from a Word template"
+      ],
+      "evidence": [
+        {
+          "file": "src/features/panels/PageFrameControls.tsx",
+          "line": 15,
+          "kind": "implementation"
+        }
+      ]
+    },
+    {
+      "id": "F093",
+      "category": "Book structure and print production",
+      "name": "Front and back matter templates",
+      "status": "Partial",
+      "priority": "P1",
+      "finding": "Title/copyright/preface and cover-like templates exist; no comprehensive structured publication-metadata workflow was found.",
+      "examples": [
+        "Add a title and copyright page",
+        "Generate edition/imprint/ISBN details consistently"
+      ],
+      "evidence": [
+        {
+          "file": "src/editor/registry/templates.ts",
+          "line": 4,
+          "kind": "implementation"
+        },
+        {
+          "file": "src/domain/book/types.ts",
+          "line": 195,
+          "kind": "implementation"
+        }
+      ]
+    },
+    {
+      "id": "F094",
+      "category": "Book structure and print production",
+      "name": "Full wrap cover and spine calculator",
+      "status": "Missing",
+      "priority": "P1",
+      "finding": "spineWidthPt and cover preview fields exist; no production front-plus-spine-plus-back cover editor/calculator was found.",
+      "examples": [
+        "Calculate a 200-page paperback spine",
+        "Export a continuous full-wrap cover PDF"
+      ],
+      "evidence": [
+        {
+          "file": "src/domain/book/types.ts",
+          "line": 195,
+          "kind": "inspected boundary"
+        },
+        {
+          "file": "src/features/three/Book3dPreviewModal.tsx",
+          "line": 80,
+          "kind": "inspected boundary"
+        }
+      ]
+    },
+    {
+      "id": "F095",
+      "category": "Book structure and print production",
+      "name": "ISBN/EAN barcode generation and validation",
+      "status": "Missing",
+      "priority": "P1",
+      "finding": "Smart QR is implemented; no publishing ISBN/EAN-13 barcode workflow was found.",
+      "examples": [
+        "Generate a valid ISBN barcode",
+        "Reserve its safe area on the back cover"
+      ],
+      "evidence": [
+        {
+          "file": "src/domain/book/types.ts",
+          "line": 195,
+          "kind": "inspected boundary"
+        },
+        {
+          "file": "src/features/media/SmartQrPanel.tsx",
+          "line": 18,
+          "kind": "inspected boundary"
+        }
+      ]
+    },
+    {
+      "id": "F096",
+      "category": "Book structure and print production",
+      "name": "3D book mockup preview",
+      "status": "Partial",
+      "priority": "P3",
+      "finding": "A generic Three.js book preview exists; printer-accurate binding dimensions and page/cover proof fidelity are not established.",
+      "examples": [
+        "Rotate a book mockup",
+        "Preview the actual exported full-wrap cover"
+      ],
+      "evidence": [
+        {
+          "file": "src/features/three/Book3dPreviewModal.tsx",
+          "line": 80,
+          "kind": "implementation"
+        }
+      ]
+    },
+    {
+      "id": "F097",
+      "category": "Book structure and print production",
+      "name": "Preflight for overflow, assets, fonts and references",
+      "status": "Implemented",
+      "priority": "P1",
+      "finding": "Worker checks cover key content/layout/font/asset/QR/reference issues and can block export.",
+      "examples": [
+        "Block export of overset text",
+        "Report a missing image or broken reference"
+      ],
+      "evidence": [
+        {
+          "file": "src/editor/publishing/preflightEngine.ts",
+          "line": 4,
+          "kind": "implementation"
+        }
+      ]
+    },
+    {
+      "id": "F098",
+      "category": "Book structure and print production",
+      "name": "Printer profiles, colour separations and ink checks",
+      "status": "Missing",
+      "priority": "P1",
+      "finding": "No ICC CMYK/PDF-X/spot-colour/overprint/ink-limit production pipeline exists.",
+      "examples": [
+        "Use a printer supplied ICC profile",
+        "Inspect excessive total ink coverage"
+      ],
+      "evidence": [
+        {
+          "file": "docs/production-engine-audit.md",
+          "line": 67,
+          "kind": "inspected boundary"
+        },
+        {
+          "file": "src/features/publishing/ExportModal.tsx",
+          "line": 25,
+          "kind": "inspected boundary"
+        }
+      ]
+    },
+    {
+      "id": "F099",
+      "category": "Book structure and print production",
+      "name": "Imposition and signatures",
+      "status": "Missing",
+      "priority": "P2",
+      "finding": "No booklet signature imposition or binding-specific sheet output workflow was found.",
+      "examples": [
+        "Arrange a 16-page saddle-stitch signature",
+        "Export duplex printer sheets"
+      ],
+      "evidence": [
+        {
+          "file": "src/features/publishing/ExportModal.tsx",
+          "line": 25,
+          "kind": "inspected boundary"
+        }
+      ]
+    },
+    {
+      "id": "F100",
+      "category": "Educational authoring and assistance",
+      "name": "Structured curriculum/chapter builder",
+      "status": "Implemented",
+      "priority": "P1",
+      "finding": "Six-stage chapter planning and measured composition exist; generated frameworks require authored/reviewed teaching content.",
+      "examples": [
+        "Compose a Learn-to-Practice chapter",
+        "Reflow an edited review section"
+      ],
+      "evidence": [
+        {
+          "file": "src/features/curriculum/SmartChapterBuilder.tsx",
+          "line": 14,
+          "kind": "implementation"
+        },
+        {
+          "file": "src/editor/curriculum/chapterEngine.ts",
+          "line": 21,
+          "kind": "implementation"
+        }
+      ]
+    },
+    {
+      "id": "F101",
+      "category": "Educational authoring and assistance",
+      "name": "Educational block library",
+      "status": "Implemented",
+      "priority": "P1",
+      "finding": "Categorized learning blocks, variants, searchable templates and insertion exist.",
+      "examples": [
+        "Add a worked example",
+        "Add a matching activity"
+      ],
+      "evidence": [
+        {
+          "file": "src/features/educational/EducationalBlocksPanel.tsx",
+          "line": 65,
+          "kind": "implementation"
+        }
+      ]
+    },
+    {
+      "id": "F102",
+      "category": "Educational authoring and assistance",
+      "name": "Edit block text, images and semantic slots",
+      "status": "Implemented",
+      "priority": "P1",
+      "finding": "Block-content editing preserves semantic slots and supports subobject changes.",
+      "examples": [
+        "Edit a learning objective inside a card",
+        "Replace the image in an activity block"
+      ],
+      "evidence": [
+        {
+          "file": "src/editor/educational/blockContentEditing.ts",
+          "line": 7,
+          "kind": "implementation"
+        }
+      ]
+    },
+    {
+      "id": "F103",
+      "category": "Educational authoring and assistance",
+      "name": "Detach blocks into independently editable objects",
+      "status": "Implemented",
+      "priority": "P2",
+      "finding": "Scene detach produces native movable text/image/vector objects.",
+      "examples": [
+        "Detach a ribbon into layers",
+        "Move one extracted illustration independently"
+      ],
+      "evidence": [
+        {
+          "file": "src/editor/educational/detachScene.ts",
+          "line": 11,
+          "kind": "implementation"
+        }
+      ]
+    },
+    {
+      "id": "F104",
+      "category": "Educational authoring and assistance",
+      "name": "Block resizing and content fit",
+      "status": "Implemented",
+      "priority": "P1",
+      "finding": "Corner scaling and side trimming distinguish content scale from frame whitespace changes.",
+      "examples": [
+        "Scale a complete activity card",
+        "Trim empty space without shrinking text"
+      ],
+      "evidence": [
+        {
+          "file": "src/features/canvas/TransformOverlay.tsx",
+          "line": 42,
+          "kind": "implementation"
+        },
+        {
+          "file": "src/editor/educational/blockContentEditing.ts",
+          "line": 7,
+          "kind": "implementation"
+        }
+      ]
+    },
+    {
+      "id": "F105",
+      "category": "Educational authoring and assistance",
+      "name": "Learning outcomes and study-skill structures",
+      "status": "Implemented",
+      "priority": "P1",
+      "finding": "Semantic learning outcomes and study-skill components have dedicated editing controls.",
+      "examples": [
+        "Add an observable learning outcome",
+        "Build a study-skills recap card"
+      ],
+      "evidence": [
+        {
+          "file": "src/features/curriculum/LearningOutcomesTopicEditor.tsx",
+          "line": 88,
+          "kind": "implementation"
+        },
+        {
+          "file": "src/features/educational/EducationalBlocksPanel.tsx",
+          "line": 65,
+          "kind": "implementation"
+        }
+      ]
+    },
+    {
+      "id": "F106",
+      "category": "Educational authoring and assistance",
+      "name": "Teacher answers and student-facing export",
+      "status": "Partial",
+      "priority": "P1",
+      "finding": "Student print paths suppress answer keys; a complete distinct teacher-edition export workflow was not found.",
+      "examples": [
+        "Export exercises without answers",
+        "Produce a teacher edition containing all answer guidance"
+      ],
+      "evidence": [
+        {
+          "file": "src/editor/publishing/publicationPrint.ts",
+          "line": 15,
+          "kind": "implementation"
+        },
+        {
+          "file": "src/features/publishing/ExportModal.tsx",
+          "line": 25,
+          "kind": "implementation"
+        }
+      ]
+    },
+    {
+      "id": "F107",
+      "category": "Educational authoring and assistance",
+      "name": "Question-bank links and reuse",
+      "status": "Unverified",
+      "priority": "P2",
+      "finding": "Semantic snapshots model question references and central workflows; authenticated cross-book bank behavior was not exercised.",
+      "examples": [
+        "Reuse an approved question",
+        "Pin an exercise to an exact reviewed revision"
+      ],
+      "evidence": [
+        {
+          "file": "src/editor/persistence/bookSnapshots.ts",
+          "line": 6,
+          "kind": "implementation"
+        },
+        {
+          "file": "src/features/curriculum/CentralReviewPanel.tsx",
+          "line": 9,
+          "kind": "implementation"
+        }
+      ]
+    },
+    {
+      "id": "F108",
+      "category": "Educational authoring and assistance",
+      "name": "Smart QR linked learning resources",
+      "status": "Unverified",
+      "priority": "P1",
+      "finding": "Resource selection and decoder-verified artifacts are implemented; current authenticated service/resource availability is unverified.",
+      "examples": [
+        "Print a valid audio-resource QR",
+        "Block an unlinked QR before export"
+      ],
+      "evidence": [
+        {
+          "file": "src/features/media/SmartQrPanel.tsx",
+          "line": 18,
+          "kind": "implementation"
+        }
+      ]
+    },
+    {
+      "id": "F109",
+      "category": "Educational authoring and assistance",
+      "name": "AI curriculum drafting",
+      "status": "Unverified",
+      "priority": "P2",
+      "finding": "A real server-side OpenAI call and structured schema exist; successful configured API execution was not checked.",
+      "examples": [
+        "Draft age-appropriate practice questions",
+        "Review an AI draft before applying it"
+      ],
+      "evidence": [
+        {
+          "file": "src/app/api/curriculum-assist/route.ts",
+          "line": 11,
+          "kind": "implementation"
+        }
+      ]
+    },
+    {
+      "id": "F110",
+      "category": "Educational authoring and assistance",
+      "name": "Quick AI rewriting",
+      "status": "Stub",
+      "priority": "P0",
+      "finding": "Rewrite for Grade 5 appends a fixed parenthetical rather than rewriting content.",
+      "examples": [
+        "Simplify a complex science paragraph",
+        "Preserve facts while adapting reading level"
+      ],
+      "evidence": [
+        {
+          "file": "src/features/canvas/SmartQuickActionBar.tsx",
+          "line": 730,
+          "kind": "implementation"
+        }
+      ]
+    },
+    {
+      "id": "F111",
+      "category": "Educational authoring and assistance",
+      "name": "Quick AI vocabulary simplification",
+      "status": "Stub",
+      "priority": "P0",
+      "finding": "Action replaces every word of eight or more ASCII word characters with simple, regardless of meaning.",
+      "examples": [
+        "Simplify difficult vocabulary in context",
+        "Preserve names and scientific terms"
+      ],
+      "evidence": [
+        {
+          "file": "src/features/canvas/SmartQuickActionBar.tsx",
+          "line": 730,
+          "kind": "implementation"
+        }
+      ]
+    },
+    {
+      "id": "F112",
+      "category": "Educational authoring and assistance",
+      "name": "Automated academic fact/curriculum validation",
+      "status": "Missing",
+      "priority": "P2",
+      "finding": "Structured templates and AI drafts do not provide fact-checking or standards-compliance certification.",
+      "examples": [
+        "Check a science claim against a source",
+        "Verify chapter coverage against a syllabus"
+      ],
+      "evidence": [
+        {
+          "file": "src/app/api/curriculum-assist/route.ts",
+          "line": 11,
+          "kind": "inspected boundary"
+        },
+        {
+          "file": "src/editor/curriculum/chapterEngine.ts",
+          "line": 21,
+          "kind": "inspected boundary"
+        }
+      ]
+    },
+    {
+      "id": "F113",
+      "category": "Educational authoring and assistance",
+      "name": "Batch personalization and data merge",
+      "status": "Partial",
+      "priority": "P2",
+      "finding": "Current-page text replacement from manually entered fixed-field records exists; no CSV/XLSX mapping or rich semantic slot merge was found.",
+      "examples": [
+        "Create a named certificate per student",
+        "Import 500 rows and map columns to worksheet fields"
+      ],
+      "evidence": [
+        {
+          "file": "src/features/publishing/DataMergeModal.tsx",
+          "line": 8,
+          "kind": "implementation"
+        },
+        {
+          "file": "src/editor/stores/editorStore.ts",
+          "line": 284,
+          "kind": "implementation"
+        }
+      ]
+    },
+    {
+      "id": "F114",
+      "category": "Review, collaboration and persistence",
+      "name": "Local editorial comments and resolve/delete",
+      "status": "Implemented",
+      "priority": "P1",
+      "finding": "Page/element comments are stored locally and exposed in Review/Inspector; they are not tracked changes.",
+      "examples": [
+        "Comment on a figure",
+        "Resolve an editorial correction"
+      ],
+      "evidence": [
+        {
+          "file": "src/editor/stores/editorStore.ts",
+          "line": 2019,
+          "kind": "implementation"
+        },
+        {
+          "file": "src/features/panels/LeftSidebar.tsx",
+          "line": 45,
+          "kind": "implementation"
+        }
+      ]
+    },
+    {
+      "id": "F115",
+      "category": "Review, collaboration and persistence",
+      "name": "Comment threads, mentions and notifications",
+      "status": "Missing",
+      "priority": "P2",
+      "finding": "Flat comments lack a complete reply-thread, mention and notification workflow.",
+      "examples": [
+        "Reply within a specific review thread",
+        "Notify an assigned author using a mention"
+      ],
+      "evidence": [
+        {
+          "file": "src/editor/stores/editorStore.ts",
+          "line": 2019,
+          "kind": "inspected boundary"
+        }
+      ]
+    },
+    {
+      "id": "F116",
+      "category": "Review, collaboration and persistence",
+      "name": "Central review, assignments and release approvals",
+      "status": "Unverified",
+      "priority": "P1",
+      "finding": "Central submit/reviewer/comment/approve/publish calls exist; server enforcement and live workflow completion were not exercised.",
+      "examples": [
+        "Assign an academic reviewer",
+        "Require approval before releasing a central version"
+      ],
+      "evidence": [
+        {
+          "file": "src/features/curriculum/CentralReviewPanel.tsx",
+          "line": 9,
+          "kind": "implementation"
+        }
+      ]
+    },
+    {
+      "id": "F117",
+      "category": "Review, collaboration and persistence",
+      "name": "Revision history and restore",
+      "status": "Unverified",
+      "priority": "P1",
+      "finding": "Central saved revision/history/restore calls exist; successful authenticated restore remains unverified.",
+      "examples": [
+        "Restore a prior saved chapter",
+        "Inspect who authored a central revision"
+      ],
+      "evidence": [
+        {
+          "file": "src/features/curriculum/CentralReviewPanel.tsx",
+          "line": 9,
+          "kind": "implementation"
+        },
+        {
+          "file": "src/editor/persistence/bookSnapshots.ts",
+          "line": 6,
+          "kind": "implementation"
+        }
+      ]
+    },
+    {
+      "id": "F118",
+      "category": "Review, collaboration and persistence",
+      "name": "Real-time simultaneous co-editing",
+      "status": "Missing",
+      "priority": "P2",
+      "finding": "Presence heartbeats and optimistic save conflicts exist; no live text/object operation replication or CRDT/OT editing was found.",
+      "examples": [
+        "Let two authors edit the same paragraph",
+        "Show another designer moving an object in real time"
+      ],
+      "evidence": [
+        {
+          "file": "src/features/curriculum/ChapterPresence.tsx",
+          "line": 4,
+          "kind": "inspected boundary"
+        },
+        {
+          "file": "src/editor/persistence/cloudSaveController.ts",
+          "line": 4,
+          "kind": "inspected boundary"
+        }
+      ]
+    },
+    {
+      "id": "F119",
+      "category": "Review, collaboration and persistence",
+      "name": "Presence indicators",
+      "status": "Unverified",
+      "priority": "P2",
+      "finding": "Heartbeat editor lists and presence release calls exist; live backend behavior was not exercised and these calls do not establish exclusive chapter locking.",
+      "examples": [
+        "See another chapter editor online",
+        "See who last edited the chapter"
+      ],
+      "evidence": [
+        {
+          "file": "src/features/curriculum/ChapterPresence.tsx",
+          "line": 4,
+          "kind": "implementation"
+        }
+      ]
+    },
+    {
+      "id": "F120",
+      "category": "Review, collaboration and persistence",
+      "name": "Local autosave and crash recovery",
+      "status": "Implemented",
+      "priority": "P1",
+      "finding": "IndexedDB persistence, durable status and recovery snapshots exist with regression tests.",
+      "examples": [
+        "Recover a durably saved edit after reload",
+        "Report an IndexedDB transaction failure"
+      ],
+      "evidence": [
+        {
+          "file": "src/editor/persistence/indexedDbStorage.ts",
+          "line": 16,
+          "kind": "implementation"
+        },
+        {
+          "file": "src/editor/persistence/offlineShell.ts",
+          "line": 6,
+          "kind": "implementation"
+        }
+      ]
+    },
+    {
+      "id": "F121",
+      "category": "Review, collaboration and persistence",
+      "name": "Offline editing after initial cache warm-up",
+      "status": "Partial",
+      "priority": "P1",
+      "finding": "Production shell/font/media caching exists; first-ever offline load and uncached remote resources cannot work.",
+      "examples": [
+        "Reload a previously cached book offline",
+        "Continue editing an uncached central chapter offline"
+      ],
+      "evidence": [
+        {
+          "file": "src/editor/persistence/offlineShell.ts",
+          "line": 6,
+          "kind": "implementation"
+        },
+        {
+          "file": "docs/production-engine-audit.md",
+          "line": 67,
+          "kind": "implementation"
+        }
+      ]
+    },
+    {
+      "id": "F122",
+      "category": "Review, collaboration and persistence",
+      "name": "Cloud save, retries and conflict handling",
+      "status": "Unverified",
+      "priority": "P1",
+      "finding": "Retry/receipt/base-token/conflict paths exist and local tests pass; live account/backend end-to-end behavior was not checked.",
+      "examples": [
+        "Retry a pending save after reconnection",
+        "Protect a local edit when the server revision changed"
+      ],
+      "evidence": [
+        {
+          "file": "src/editor/persistence/cloudSaveController.ts",
+          "line": 4,
+          "kind": "implementation"
+        }
+      ]
+    },
+    {
+      "id": "F123",
+      "category": "Review, collaboration and persistence",
+      "name": "Portable complete-book project backup",
+      "status": "Partial",
+      "priority": "P1",
+      "finding": "Local recovery and chapter recovery JSON paths exist; no clear complete standalone book-project file round-trip UI was found.",
+      "examples": [
+        "Download a full book with assets as one project",
+        "Restore that project on another machine"
+      ],
+      "evidence": [
+        {
+          "file": "src/editor/persistence/bookSnapshots.ts",
+          "line": 6,
+          "kind": "implementation"
+        },
+        {
+          "file": "src/features/curriculum/CentralReviewPanel.tsx",
+          "line": 9,
+          "kind": "implementation"
+        }
+      ]
+    },
+    {
+      "id": "F124",
+      "category": "Review, collaboration and persistence",
+      "name": "Large-book responsiveness and stability",
+      "status": "Partial",
+      "priority": "P1",
+      "finding": "Bounded page previews, incremental flow and worker preflight exist; current 420-test pass does not certify very large image-heavy books or 60 FPS.",
+      "examples": [
+        "Edit page 180 of a 220-page book",
+        "Sustain smooth editing in a 1000-page image-heavy book"
+      ],
+      "evidence": [
+        {
+          "file": "src/editor/performance/largeBookEngine.ts",
+          "line": 12,
+          "kind": "implementation"
+        },
+        {
+          "file": "docs/production-engine-audit.md",
+          "line": 67,
+          "kind": "implementation"
+        }
+      ]
+    },
+    {
+      "id": "F125",
+      "category": "Import, export and interoperability",
+      "name": "DOCX manuscript import and continuation",
+      "status": "Partial",
+      "priority": "P1",
+      "finding": "Local Word conversion retains editable content but reflows it and simplifies layout, merged tables, comments and revisions.",
+      "examples": [
+        "Continue an unfinished Word chapter",
+        "Import a heavily formatted Word file with layout fidelity"
+      ],
+      "evidence": [
+        {
+          "file": "src/editor/importing/readManuscript.ts",
+          "line": 3,
+          "kind": "implementation"
+        },
+        {
+          "file": "docs/manuscript-import.md",
+          "line": 13,
+          "kind": "implementation"
+        }
+      ]
+    },
+    {
+      "id": "F126",
+      "category": "Import, export and interoperability",
+      "name": "PDF artwork preservation import",
+      "status": "Partial",
+      "priority": "P1",
+      "finding": "PDF pages become locked raster artwork with documented resolution caps; native vector objects stay unavailable.",
+      "examples": [
+        "Preserve ten completed PDF pages",
+        "Independently edit their text and illustration paths"
+      ],
+      "evidence": [
+        {
+          "file": "src/editor/importing/readPdf.ts",
+          "line": 3,
+          "kind": "implementation"
+        },
+        {
+          "file": "docs/manuscript-import.md",
+          "line": 13,
+          "kind": "implementation"
+        }
+      ]
+    },
+    {
+      "id": "F127",
+      "category": "Import, export and interoperability",
+      "name": "PDF editable text extraction",
+      "status": "Partial",
+      "priority": "P1",
+      "finding": "Extractable text is imported; reading order and rich layout are not reconstructed, and OCR is absent.",
+      "examples": [
+        "Extract searchable PDF text",
+        "Reconstruct a three-column scanned textbook page"
+      ],
+      "evidence": [
+        {
+          "file": "src/editor/importing/readPdf.ts",
+          "line": 3,
+          "kind": "implementation"
+        },
+        {
+          "file": "docs/manuscript-import.md",
+          "line": 13,
+          "kind": "implementation"
+        }
+      ]
+    },
+    {
+      "id": "F128",
+      "category": "Import, export and interoperability",
+      "name": "Text and Markdown import",
+      "status": "Partial",
+      "priority": "P1",
+      "finding": "Body paragraphs and hash headings work; Markdown inline markup stays literal.",
+      "examples": [
+        "Import a plain-text manuscript",
+        "Convert bold Markdown and a Markdown table into rich objects"
+      ],
+      "evidence": [
+        {
+          "file": "src/editor/importing/readManuscript.ts",
+          "line": 3,
+          "kind": "implementation"
+        },
+        {
+          "file": "docs/manuscript-import.md",
+          "line": 13,
+          "kind": "implementation"
+        }
+      ]
+    },
+    {
+      "id": "F129",
+      "category": "Import, export and interoperability",
+      "name": "Google Docs integration",
+      "status": "Partial",
+      "priority": "P2",
+      "finding": "Document must be downloaded as Word/PDF first; no live Google Docs connector exists in the application.",
+      "examples": [
+        "Import a downloaded Google Doc",
+        "Sync manuscript edits directly from Google Docs"
+      ],
+      "evidence": [
+        {
+          "file": "docs/manuscript-import.md",
+          "line": 13,
+          "kind": "implementation"
+        }
+      ]
+    },
+    {
+      "id": "F130",
+      "category": "Import, export and interoperability",
+      "name": "OCR for scanned pages",
+      "status": "Missing",
+      "priority": "P2",
+      "finding": "No OCR engine or scanned-text reconstruction path was found.",
+      "examples": [
+        "Recognize a photographed printed page",
+        "Extract Hindi text from a scanned PDF"
+      ],
+      "evidence": [
+        {
+          "file": "src/editor/importing/readPdf.ts",
+          "line": 3,
+          "kind": "inspected boundary"
+        }
+      ]
+    },
+    {
+      "id": "F131",
+      "category": "Import, export and interoperability",
+      "name": "Editable DOCX export and round trip",
+      "status": "Missing",
+      "priority": "P1",
+      "finding": "Export UI/handlers generate PDF proofs; no DOCX writer exists.",
+      "examples": [
+        "Send an editable manuscript to a copyeditor",
+        "Round-trip tables and styles through Word"
+      ],
+      "evidence": [
+        {
+          "file": "src/features/publishing/ExportModal.tsx",
+          "line": 25,
+          "kind": "inspected boundary"
+        }
+      ]
+    },
+    {
+      "id": "F132",
+      "category": "Import, export and interoperability",
+      "name": "Editable PDF object reconstruction",
+      "status": "Missing",
+      "priority": "P2",
+      "finding": "Artwork/text import modes do not reconstruct an editable PDF design scene.",
+      "examples": [
+        "Change one word in an imported PDF layout",
+        "Edit its original vector diagram independently"
+      ],
+      "evidence": [
+        {
+          "file": "src/editor/importing/readPdf.ts",
+          "line": 3,
+          "kind": "inspected boundary"
+        },
+        {
+          "file": "docs/manuscript-import.md",
+          "line": 13,
+          "kind": "inspected boundary"
+        }
+      ]
+    },
+    {
+      "id": "F133",
+      "category": "Import, export and interoperability",
+      "name": "Font-embedded print PDF proof",
+      "status": "Implemented",
+      "priority": "P1",
+      "finding": "Bundled-font browser print proof supports scope and preflight; output is RGB and printer certification is separate.",
+      "examples": [
+        "Export a Telugu worksheet",
+        "Export exactly physical pages 180 through 182"
+      ],
+      "evidence": [
+        {
+          "file": "src/features/publishing/ExportModal.tsx",
+          "line": 25,
+          "kind": "implementation"
+        },
+        {
+          "file": "src/editor/publishing/publicationPrint.ts",
+          "line": 15,
+          "kind": "implementation"
+        }
+      ]
+    },
+    {
+      "id": "F134",
+      "category": "Import, export and interoperability",
+      "name": "Legacy Latin vector PDF",
+      "status": "Partial",
+      "priority": "P2",
+      "finding": "jsPDF path exists; Indic scripts are blocked and some legacy graphics are simplified.",
+      "examples": [
+        "Export supported Latin text as vectors",
+        "Preserve every legacy filter and graphic effect"
+      ],
+      "evidence": [
+        {
+          "file": "src/features/publishing/ExportModal.tsx",
+          "line": 25,
+          "kind": "implementation"
+        }
+      ]
+    },
+    {
+      "id": "F135",
+      "category": "Import, export and interoperability",
+      "name": "Student digital PDF export",
+      "status": "Partial",
+      "priority": "P1",
+      "finding": "RGB PDF and student answer suppression exist; clickable navigation and tagged accessibility are missing.",
+      "examples": [
+        "Export a student workbook",
+        "Provide accessible clickable digital-book navigation"
+      ],
+      "evidence": [
+        {
+          "file": "src/features/publishing/ExportModal.tsx",
+          "line": 25,
+          "kind": "implementation"
+        },
+        {
+          "file": "src/editor/publishing/publicationPrint.ts",
+          "line": 15,
+          "kind": "implementation"
+        }
+      ]
+    },
+    {
+      "id": "F136",
+      "category": "Import, export and interoperability",
+      "name": "Chapter, selected-pages and whole-book scope",
+      "status": "Implemented",
+      "priority": "P1",
+      "finding": "Strict scopes and range validation exist; full linked books load local receipts first.",
+      "examples": [
+        "Export a single chapter",
+        "Reject an inverted page range instead of exporting everything"
+      ],
+      "evidence": [
+        {
+          "file": "src/editor/publishing/exportScope.ts",
+          "line": 4,
+          "kind": "implementation"
+        },
+        {
+          "file": "src/features/publishing/ExportModal.tsx",
+          "line": 25,
+          "kind": "implementation"
+        }
+      ]
+    },
+    {
+      "id": "F137",
+      "category": "Import, export and interoperability",
+      "name": "PNG/JPEG/SVG page and selection export",
+      "status": "Missing",
+      "priority": "P2",
+      "finding": "Types mention image outputs, but no user-facing page/selection image or SVG export path was found.",
+      "examples": [
+        "Export a worksheet as PNG",
+        "Export a selected vector illustration as SVG"
+      ],
+      "evidence": [
+        {
+          "file": "src/features/publishing/ExportModal.tsx",
+          "line": 25,
+          "kind": "inspected boundary"
+        }
+      ]
+    },
+    {
+      "id": "F138",
+      "category": "Import, export and interoperability",
+      "name": "EPUB/reflowable and fixed-layout ebook export",
+      "status": "Missing",
+      "priority": "P2",
+      "finding": "No EPUB package/navigation/export implementation was found.",
+      "examples": [
+        "Export a reflowable story ebook",
+        "Export an illustrated fixed-layout ebook"
+      ],
+      "evidence": [
+        {
+          "file": "src/features/publishing/ExportModal.tsx",
+          "line": 25,
+          "kind": "inspected boundary"
+        }
+      ]
+    },
+    {
+      "id": "F139",
+      "category": "Import, export and interoperability",
+      "name": "Accessible tagged PDF and reading order",
+      "status": "Missing",
+      "priority": "P1",
+      "finding": "Existing proofs are explicitly untagged; no PDF structure tree/reading-order/alt-text certification exists.",
+      "examples": [
+        "Read a multi-column PDF with a screen reader",
+        "Expose meaningful image descriptions in tagged PDF"
+      ],
+      "evidence": [
+        {
+          "file": "docs/production-engine-audit.md",
+          "line": 67,
+          "kind": "inspected boundary"
+        },
+        {
+          "file": "src/editor/publishing/publicationPrint.ts",
+          "line": 15,
+          "kind": "inspected boundary"
+        }
+      ]
+    },
+    {
+      "id": "F140",
+      "category": "Import, export and interoperability",
+      "name": "Printer-specific PDF/X and ICC CMYK export",
+      "status": "Missing",
+      "priority": "P1",
+      "finding": "RGB print proof is explicitly not PDF/X or colour-managed CMYK.",
+      "examples": [
+        "Deliver a printer-required PDF/X file",
+        "Convert colour using a supplied output profile"
+      ],
+      "evidence": [
+        {
+          "file": "docs/production-engine-audit.md",
+          "line": 67,
+          "kind": "inspected boundary"
+        },
+        {
+          "file": "src/features/publishing/ExportModal.tsx",
+          "line": 25,
+          "kind": "inspected boundary"
+        }
+      ]
+    },
+    {
+      "id": "F141",
+      "category": "PowerPoint and classroom presentations",
+      "name": "Dedicated slide document and aspect ratios",
+      "status": "Missing",
+      "priority": "P2",
+      "finding": "Book pages can be landscape, but no slide document/mode with 16:9/4:3 semantics was found.",
+      "examples": [
+        "Create a 16:9 classroom deck",
+        "Maintain a separate 4:3 deck"
+      ],
+      "evidence": [
+        {
+          "file": "src/domain/book/types.ts",
+          "line": 195,
+          "kind": "inspected boundary"
+        },
+        {
+          "file": "src/features/editor/BookEditorWorkspace.tsx",
+          "line": 152,
+          "kind": "inspected boundary"
+        }
+      ]
+    },
+    {
+      "id": "F142",
+      "category": "PowerPoint and classroom presentations",
+      "name": "Slide sorter, sections and hide-slide controls",
+      "status": "Missing",
+      "priority": "P2",
+      "finding": "Book page thumbnails exist; presentation-specific sections, hidden slides and deck navigation are absent.",
+      "examples": [
+        "Reorder slides in a deck sorter",
+        "Hide the answer slide during a lesson"
+      ],
+      "evidence": [
+        {
+          "file": "src/features/panels/LeftSidebar.tsx",
+          "line": 45,
+          "kind": "inspected boundary"
+        }
+      ]
+    },
+    {
+      "id": "F143",
+      "category": "PowerPoint and classroom presentations",
+      "name": "Slide masters and slide layout placeholders",
+      "status": "Partial",
+      "priority": "P2",
+      "finding": "Book masters/custom layouts provide reusable foundations; actual slide masters/title/body/media placeholders are absent.",
+      "examples": [
+        "Change the title position on all slides",
+        "Reuse a title-and-content slide layout"
+      ],
+      "evidence": [
+        {
+          "file": "src/editor/layout/masterPageEngine.ts",
+          "line": 20,
+          "kind": "implementation"
+        },
+        {
+          "file": "src/features/panels/CreateLayoutModal.tsx",
+          "line": 17,
+          "kind": "implementation"
+        }
+      ]
+    },
+    {
+      "id": "F144",
+      "category": "PowerPoint and classroom presentations",
+      "name": "PPTX import as editable slides",
+      "status": "Missing",
+      "priority": "P2",
+      "finding": "Manuscript reader dispatch supports Word/PDF/text/Markdown, not PPTX.",
+      "examples": [
+        "Import a teacher PowerPoint",
+        "Keep slide shapes and text editable"
+      ],
+      "evidence": [
+        {
+          "file": "src/editor/importing/readManuscript.ts",
+          "line": 3,
+          "kind": "inspected boundary"
+        }
+      ]
+    },
+    {
+      "id": "F145",
+      "category": "PowerPoint and classroom presentations",
+      "name": "PPTX export with editable objects",
+      "status": "Missing",
+      "priority": "P2",
+      "finding": "No PPTX writer or PowerPoint export handler was found.",
+      "examples": [
+        "Export a book lesson as editable slides",
+        "Edit exported diagrams inside PowerPoint"
+      ],
+      "evidence": [
+        {
+          "file": "src/features/publishing/ExportModal.tsx",
+          "line": 25,
+          "kind": "inspected boundary"
+        }
+      ]
+    },
+    {
+      "id": "F146",
+      "category": "PowerPoint and classroom presentations",
+      "name": "Book chapter to slide-deck conversion",
+      "status": "Missing",
+      "priority": "P2",
+      "finding": "No conversion pipeline selects lesson summaries and builds slide-sized layouts.",
+      "examples": [
+        "Create a deck from a 12-page chapter",
+        "Split a long lesson into readable slides"
+      ],
+      "evidence": [
+        {
+          "file": "src/editor/curriculum/chapterEngine.ts",
+          "line": 21,
+          "kind": "inspected boundary"
+        },
+        {
+          "file": "src/features/publishing/ExportModal.tsx",
+          "line": 25,
+          "kind": "inspected boundary"
+        }
+      ]
+    },
+    {
+      "id": "F147",
+      "category": "PowerPoint and classroom presentations",
+      "name": "Speaker notes and presenter view",
+      "status": "Missing",
+      "priority": "P3",
+      "finding": "No slide note records or audience/presenter display workflow was found.",
+      "examples": [
+        "Show teaching notes privately",
+        "Show the next slide and lesson timer to the teacher"
+      ],
+      "evidence": [
+        {
+          "file": "src/features/editor/BookEditorWorkspace.tsx",
+          "line": 152,
+          "kind": "inspected boundary"
+        },
+        {
+          "file": "src/domain/book/types.ts",
+          "line": 195,
+          "kind": "inspected boundary"
+        }
+      ]
+    },
+    {
+      "id": "F148",
+      "category": "PowerPoint and classroom presentations",
+      "name": "Fullscreen slideshow and navigation",
+      "status": "Missing",
+      "priority": "P2",
+      "finding": "Browser fullscreen expands the editor; it is not an audience-only slideshow.",
+      "examples": [
+        "Present from the current slide",
+        "Advance slides without showing editor controls"
+      ],
+      "evidence": [
+        {
+          "file": "src/features/editor/BookEditorWorkspace.tsx",
+          "line": 152,
+          "kind": "inspected boundary"
+        }
+      ]
+    },
+    {
+      "id": "F149",
+      "category": "PowerPoint and classroom presentations",
+      "name": "Animations, transitions and object timing",
+      "status": "Missing",
+      "priority": "P3",
+      "finding": "No presentation timeline/transition/object-animation model was found.",
+      "examples": [
+        "Reveal answers one at a time",
+        "Animate a diagram explanation in order"
+      ],
+      "evidence": [
+        {
+          "file": "src/domain/book/types.ts",
+          "line": 195,
+          "kind": "inspected boundary"
+        },
+        {
+          "file": "src/editor/renderer/ElementRenderer.tsx",
+          "line": 226,
+          "kind": "inspected boundary"
+        }
+      ]
+    },
+    {
+      "id": "F150",
+      "category": "PowerPoint and classroom presentations",
+      "name": "Audio/video embedding, narration and slide recording",
+      "status": "Missing",
+      "priority": "P3",
+      "finding": "QR-linked media is separate from embedded presentation playback and recording.",
+      "examples": [
+        "Play an embedded pronunciation clip",
+        "Record a narrated lesson deck"
+      ],
+      "evidence": [
+        {
+          "file": "src/features/media/SmartQrPanel.tsx",
+          "line": 18,
+          "kind": "inspected boundary"
+        },
+        {
+          "file": "src/features/publishing/ExportModal.tsx",
+          "line": 25,
+          "kind": "inspected boundary"
+        }
+      ]
+    },
+    {
+      "id": "F151",
+      "category": "PowerPoint and classroom presentations",
+      "name": "Handouts and notes-page export",
+      "status": "Missing",
+      "priority": "P3",
+      "finding": "No two/six-slides-per-page handout or slide-notes export exists.",
+      "examples": [
+        "Print six slides per page",
+        "Print one slide with its speaker notes"
+      ],
+      "evidence": [
+        {
+          "file": "src/features/publishing/ExportModal.tsx",
+          "line": 25,
+          "kind": "inspected boundary"
+        }
+      ]
+    },
+    {
+      "id": "F152",
+      "category": "PowerPoint and classroom presentations",
+      "name": "Interactive slide links and lesson navigation",
+      "status": "Missing",
+      "priority": "P3",
+      "finding": "No slide-to-slide interaction graph or presentation hyperlink controls were found.",
+      "examples": [
+        "Jump from a quiz answer to feedback",
+        "Return to the lesson menu using a button"
+      ],
+      "evidence": [
+        {
+          "file": "src/editor/renderer/ElementRenderer.tsx",
+          "line": 226,
+          "kind": "inspected boundary"
+        },
+        {
+          "file": "src/features/publishing/ExportModal.tsx",
+          "line": 25,
+          "kind": "inspected boundary"
+        }
+      ]
+    }
+  ]
+}

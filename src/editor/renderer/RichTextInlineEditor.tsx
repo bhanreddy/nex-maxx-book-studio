@@ -169,6 +169,25 @@ export const RichTextInlineEditor: React.FC<RichTextInlineEditorProps> = ({
     "font" | "color" | "highlight" | "math" | "case" | null
   >(null);
 
+  // Saved selection range when clicking toolbar popovers
+  const savedRangeRef = useRef<Range | null>(null);
+
+  const saveCurrentSelection = useCallback(() => {
+    if (typeof window === "undefined") return;
+    const sel = window.getSelection();
+    if (sel && sel.rangeCount > 0 && !sel.isCollapsed && editorRef.current) {
+      try {
+        const range = sel.getRangeAt(0);
+        if (
+          editorRef.current.contains(range.commonAncestorContainer) ||
+          editorRef.current === range.commonAncestorContainer
+        ) {
+          savedRangeRef.current = range.cloneRange();
+        }
+      } catch {}
+    }
+  }, []);
+
   // Populate initial DOM once on mount
   useEffect(() => {
     if (editorRef.current) {
@@ -189,6 +208,7 @@ export const RichTextInlineEditor: React.FC<RichTextInlineEditorProps> = ({
 
   // Check active formatting states (bold, italic, etc.)
   const updateActiveFormats = useCallback(() => {
+    saveCurrentSelection();
     if (typeof document !== "undefined") {
       setActiveFormats({
         bold: document.queryCommandState("bold"),
@@ -235,9 +255,29 @@ export const RichTextInlineEditor: React.FC<RichTextInlineEditorProps> = ({
     editorRef.current.focus();
 
     const sel = window.getSelection();
-    if (!sel || sel.rangeCount === 0 || sel.isCollapsed) return;
+    let range: Range | null = null;
+    if (sel && sel.rangeCount > 0 && !sel.isCollapsed && editorRef.current) {
+      try {
+        const r = sel.getRangeAt(0);
+        if (
+          editorRef.current.contains(r.commonAncestorContainer) ||
+          editorRef.current === r.commonAncestorContainer
+        ) {
+          range = r;
+        }
+      } catch {}
+    }
 
-    const range = sel.getRangeAt(0);
+    if (!range && savedRangeRef.current) {
+      range = savedRangeRef.current;
+      try {
+        sel?.removeAllRanges();
+        sel?.addRange(range);
+      } catch {}
+    }
+
+    if (!range || range.collapsed) return;
+
     const selectedContent = range.extractContents();
     const span = document.createElement("span");
 
@@ -249,9 +289,12 @@ export const RichTextInlineEditor: React.FC<RichTextInlineEditorProps> = ({
     range.insertNode(span);
 
     // Re-select inserted span
-    range.selectNode(span);
-    sel.removeAllRanges();
-    sel.addRange(range);
+    try {
+      range.selectNode(span);
+      sel?.removeAllRanges();
+      sel?.addRange(range);
+      savedRangeRef.current = range.cloneRange();
+    } catch {}
 
     updateActiveFormats();
     handleInput();
@@ -305,17 +348,30 @@ export const RichTextInlineEditor: React.FC<RichTextInlineEditorProps> = ({
   const transformSelectionCase = (type: "upper" | "lower" | "title" | "sentence" | "capitalize") => {
     if (!editorRef.current) return;
     const sel = window.getSelection();
-    if (!sel || sel.rangeCount === 0) return;
-
-    const range = sel.getRangeAt(0);
-    let original = range.toString();
+    let range: Range | null = null;
+    if (sel && sel.rangeCount > 0 && !sel.isCollapsed && editorRef.current) {
+      try {
+        const r = sel.getRangeAt(0);
+        if (
+          editorRef.current.contains(r.commonAncestorContainer) ||
+          editorRef.current === r.commonAncestorContainer
+        ) {
+          range = r;
+        }
+      } catch {}
+    }
+    if (!range && savedRangeRef.current) {
+      range = savedRangeRef.current;
+    }
+    let original = range ? range.toString() : "";
 
     // If nothing selected, select entire text
     if (!original && editorRef.current) {
       original = editorRef.current.innerText || "";
+      range = document.createRange();
       range.selectNodeContents(editorRef.current);
     }
-    if (!original) return;
+    if (!original || !range) return;
 
     let converted = original;
     if (type === "upper") converted = original.toUpperCase();
@@ -329,9 +385,12 @@ export const RichTextInlineEditor: React.FC<RichTextInlineEditorProps> = ({
     range.insertNode(textNode);
 
     // Reselect
-    range.selectNode(textNode);
-    sel.removeAllRanges();
-    sel.addRange(range);
+    try {
+      range.selectNode(textNode);
+      sel?.removeAllRanges();
+      sel?.addRange(range);
+      savedRangeRef.current = range.cloneRange();
+    } catch {}
 
     setActivePopover(null);
     handleInput();
@@ -451,9 +510,10 @@ export const RichTextInlineEditor: React.FC<RichTextInlineEditorProps> = ({
         <div className="relative">
           <button
             type="button"
-            onClick={() =>
-              setActivePopover(activePopover === "font" ? null : "font")
-            }
+            onClick={() => {
+              saveCurrentSelection();
+              setActivePopover(activePopover === "font" ? null : "font");
+            }}
             className="flex items-center gap-1 px-2 py-1 rounded-lg bg-white/10 hover:bg-white/15 text-slate-200 transition-colors text-[11px] max-w-[110px]"
             title="Font Family"
           >
@@ -465,7 +525,7 @@ export const RichTextInlineEditor: React.FC<RichTextInlineEditorProps> = ({
           </button>
 
           {activePopover === "font" && (
-            <div className="absolute left-0 top-full mt-1 z-[120]">
+            <div className="absolute left-0 top-full mt-1 z-[200]">
               <FontSelectorPopover
                 currentFont={currentFontFamily}
                 onSelect={(font) => {
@@ -582,9 +642,10 @@ export const RichTextInlineEditor: React.FC<RichTextInlineEditorProps> = ({
         <div className="relative">
           <button
             type="button"
-            onClick={() =>
-              setActivePopover(activePopover === "color" ? null : "color")
-            }
+            onClick={() => {
+              saveCurrentSelection();
+              setActivePopover(activePopover === "color" ? null : "color");
+            }}
             className="p-1 rounded-lg hover:bg-white/20 text-slate-300 hover:text-white transition-colors flex items-center gap-1"
             title="Text Color"
           >
@@ -596,7 +657,7 @@ export const RichTextInlineEditor: React.FC<RichTextInlineEditorProps> = ({
           </button>
 
           {activePopover === "color" && (
-            <div className="absolute left-0 top-full mt-1 z-[120]">
+            <div className="absolute left-0 top-full mt-1 z-[200]">
               <ColorPickerPopover
                 color={element.style.color || "#0f172a"}
                 onChange={(c) => {
@@ -613,9 +674,10 @@ export const RichTextInlineEditor: React.FC<RichTextInlineEditorProps> = ({
         <div className="relative">
           <button
             type="button"
-            onClick={() =>
-              setActivePopover(activePopover === "highlight" ? null : "highlight")
-            }
+            onClick={() => {
+              saveCurrentSelection();
+              setActivePopover(activePopover === "highlight" ? null : "highlight");
+            }}
             className="p-1 rounded-lg hover:bg-white/20 text-slate-300 hover:text-white transition-colors"
             title="Highlight Text"
           >
@@ -623,7 +685,7 @@ export const RichTextInlineEditor: React.FC<RichTextInlineEditorProps> = ({
           </button>
 
           {activePopover === "highlight" && (
-            <div className="absolute left-0 top-full mt-1 z-[120] bg-[#10141d] border border-white/15 rounded-xl shadow-2xl p-2 flex items-center gap-1.5">
+            <div className="absolute left-0 top-full mt-1 z-[200] bg-[#10141d] border border-white/15 rounded-xl shadow-2xl p-2 flex items-center gap-1.5">
               {[
                 { label: "Yellow", color: "#fef08a" },
                 { label: "Amber", color: "#fed7aa" },
@@ -670,9 +732,10 @@ export const RichTextInlineEditor: React.FC<RichTextInlineEditorProps> = ({
         <div className="relative">
           <button
             type="button"
-            onClick={() =>
-              setActivePopover(activePopover === "math" ? null : "math")
-            }
+            onClick={() => {
+              saveCurrentSelection();
+              setActivePopover(activePopover === "math" ? null : "math");
+            }}
             className="p-1 rounded-lg hover:bg-white/20 text-slate-300 hover:text-white transition-colors"
             title="Insert Mathematical & Greek Symbols"
           >
@@ -680,7 +743,7 @@ export const RichTextInlineEditor: React.FC<RichTextInlineEditorProps> = ({
           </button>
 
           {activePopover === "math" && (
-            <div className="absolute left-0 top-full mt-1 z-[120]">
+            <div className="absolute left-0 top-full mt-1 z-[200]">
               <MathSymbolsPopover
                 onInsertSymbol={insertMathSymbol}
                 onClose={() => setActivePopover(null)}
@@ -693,9 +756,10 @@ export const RichTextInlineEditor: React.FC<RichTextInlineEditorProps> = ({
         <div className="relative">
           <button
             type="button"
-            onClick={() =>
-              setActivePopover(activePopover === "case" ? null : "case")
-            }
+            onClick={() => {
+              saveCurrentSelection();
+              setActivePopover(activePopover === "case" ? null : "case");
+            }}
             className="p-1 rounded-lg hover:bg-white/20 text-slate-300 hover:text-white transition-colors flex items-center gap-0.5"
             title="Text Case Transformations"
           >
@@ -704,7 +768,7 @@ export const RichTextInlineEditor: React.FC<RichTextInlineEditorProps> = ({
           </button>
 
           {activePopover === "case" && (
-            <div className="absolute left-0 top-full mt-1 z-[120] w-36 bg-[#10141d] border border-white/15 rounded-xl shadow-2xl p-1.5 text-[11px] space-y-0.5">
+            <div className="absolute left-0 top-full mt-1 z-[200] w-36 bg-[#10141d] border border-white/15 rounded-xl shadow-2xl p-1.5 text-[11px] space-y-0.5">
               <button
                 type="button"
                 onClick={() => transformSelectionCase("upper")}

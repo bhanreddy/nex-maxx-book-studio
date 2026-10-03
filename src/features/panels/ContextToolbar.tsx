@@ -21,7 +21,6 @@ import {
   Plus,
   Trash2,
   LayoutTemplate,
-  Layers,
   Group,
   Ungroup,
 } from "lucide-react";
@@ -29,6 +28,7 @@ import { setFrameworkMode } from "../../editor/curriculum/actions";
 import { effectiveTextWrap } from "../../editor/layoutPartner/textWrapLayout";
 import type { TextWrapMode } from "../../domain/creative/types";
 import { beginBlockContentEditing } from "../../editor/educational/blockContentEditing";
+import { SelectionClipboardControls } from "./SelectionClipboardControls";
 
 export const ContextToolbar: React.FC = () => {
   const {
@@ -41,6 +41,7 @@ export const ContextToolbar: React.FC = () => {
     applyTextStyle,
     getActiveBook,
     smartStack,
+    clipboardElements,
   } = useEditorStore();
 
   const {
@@ -61,8 +62,9 @@ export const ContextToolbar: React.FC = () => {
 
   return (
     <div className="h-12 shrink-0 w-full bg-white dark:bg-[#0e131f] border-b border-slate-200/90 dark:border-white/[0.08] px-3.5 flex items-center text-[13px] text-slate-700 dark:text-slate-300 z-20 select-none overflow-x-auto scrollbar-none font-sans">
-      {selectedElements.length === 0 && <span className="text-slate-500 dark:text-slate-400 text-xs">Select an object to edit its appearance. Double-click text to write. Shift-click to select multiple elements.</span>}
+      {selectedElements.length === 0 && clipboardElements.length === 0 && <span className="text-slate-500 dark:text-slate-400 text-xs">Select an object to edit its appearance. Double-click text to write. Shift-click to select multiple elements.</span>}
       <div className="flex items-center gap-2.5 flex-shrink-0">
+        {(selectedElements.length > 0 || clipboardElements.length > 0) && <SelectionClipboardControls/>}
         {selectedElements.length > 0 && <div className="flex items-center gap-2 border-r border-slate-200 dark:border-white/10 pr-3">
           {selectedElements.length > 1 && <button type="button" disabled={selectedElements.some(el => el.locked)} className="min-h-9 px-2 rounded-lg flex items-center gap-1.5 hover:bg-slate-100 dark:hover:bg-white/10 disabled:opacity-40" title="Group without changing positions (⌘/Ctrl+G)" onClick={() => useEditorStore.getState().groupSelectedElements()}><Group size={15}/>Group</button>}
           {selectedElements.length > 1 && <button type="button" disabled={selectedElements.some(el => el.locked)} className="min-h-9 px-2 rounded-lg flex items-center gap-1.5 hover:bg-amber-500/15 text-amber-600 dark:text-amber-400 hover:text-amber-700 dark:hover:text-amber-300 disabled:opacity-40 font-medium" title="Group and lock elements in one step (⌘/Ctrl+Shift+L)" onClick={() => useEditorStore.getState().groupAndLockSelectedElements()}><Lock size={15}/>Group & Lock</button>}

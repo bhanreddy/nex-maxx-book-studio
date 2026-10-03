@@ -79,6 +79,7 @@ export const PageCanvas: React.FC<PageCanvasProps> = ({ book, activePage }) => {
     columnGrid,
     baselineGrid,
     formatPainterStyle,
+    editingTextElementId,
   } = useUiStore();
 
   const containerRef = useRef<HTMLDivElement>(null);
@@ -144,6 +145,7 @@ export const PageCanvas: React.FC<PageCanvasProps> = ({ book, activePage }) => {
         const target = e.target as HTMLElement | null;
         if (!target?.closest('[role="dialog"][aria-modal="true"]')) {
           clearSelection();
+          if (useEditorStore.getState().clipboardMode === "cut") useEditorStore.getState().cancelCutSelection();
           const uiState = useUiStore.getState();
           if (uiState.selectedNodeIds.length > 0) uiState.setSelectedNodeIds([]);
           if (uiState.cropElementId) uiState.setCropElementId(null);
@@ -203,6 +205,40 @@ export const PageCanvas: React.FC<PageCanvasProps> = ({ book, activePage }) => {
   };
 
   // Canvas Pointer Down Handler (Supports Marquee Selection, Panning, and Creation Tools)
+  const openCanvasContextMenu = (e: React.MouseEvent<HTMLDivElement>, page: PageDefinition) => {
+    if ((e.target as HTMLElement).closest('[contenteditable="true"], input, textarea')) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const editor = useEditorStore.getState();
+    if (editor.getActivePage()?.id !== page.id) editor.setActivePageIndex(book.pages.findIndex(p => p.id === page.id));
+    const onSelectionOverlay = Boolean((e.target as HTMLElement).closest('[id^="page-controls-"]'));
+    const targetId = (e.target as HTMLElement).closest('[data-element-id]')?.getAttribute('data-element-id')
+      || (onSelectionOverlay ? editor.selectedElementIds[0] : undefined);
+    if (targetId && elements[targetId]) {
+      const rootId = selectionRoot(targetId, elements);
+      if (!useEditorStore.getState().selectedElementIds.includes(rootId)) editor.selectElement(rootId);
+    } else editor.clearSelection();
+    const rect = (document.getElementById(page.id === activePage.id ? "page-artboard" : page.id === leftPage.id ? "page-artboard-left" : "page-artboard-right") || e.currentTarget).getBoundingClientRect();
+    setContextMenuState({ isOpen: true, x: e.clientX, y: e.clientY, pageId: page.id,
+      targetElementId: targetId || undefined,
+      position: { x: (e.clientX - rect.left) * .75 / zoom, y: (e.clientY - rect.top) * .75 / zoom } });
+  };
+
+  // The transform box lives outside the artboard. Capture its context menu at the
+  // window so right-clicking a selected group opens the same object menu.
+  useEffect(() => {
+    const handleOverlayContextMenu = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      if (!target.closest('[id^="page-controls-"]')) return;
+      const editor = useEditorStore.getState();
+      const selectedId = editor.selectedElementIds[0];
+      const selectedPage = book.pages.find(p => p.id === editor.elements[selectedId]?.pageId) || activePage;
+      openCanvasContextMenu(event as unknown as React.MouseEvent<HTMLDivElement>, selectedPage);
+    };
+    window.addEventListener('contextmenu', handleOverlayContextMenu, true);
+    return () => window.removeEventListener('contextmenu', handleOverlayContextMenu, true);
+  });
+
   const handleCanvasPointerDown = (e: React.PointerEvent<HTMLDivElement> | React.MouseEvent<HTMLDivElement>) => {
     // 0. Ignore if right click or not primary button
     if (e.button !== 0 && e.button !== 1) return;
@@ -689,19 +725,14 @@ export const PageCanvas: React.FC<PageCanvasProps> = ({ book, activePage }) => {
           {/* Left Page (or Single Page) */}
           <div
             id={activePage.id === leftPage.id ? "page-artboard" : "page-artboard-left"}
-            className="relative isolate z-0 bg-white page-paper-shadow rounded-[2px] transition-shadow overflow-hidden ring-1 ring-black/5"
+            className={`relative isolate z-0 bg-white page-paper-shadow rounded-[2px] transition-shadow ring-1 ring-black/5 ${
+              editingTextElementId ? "overflow-visible" : "overflow-hidden"
+            }`}
             style={{
               width: `${dimensions.widthPt}pt`,
               height: `${dimensions.heightPt}pt`,
             }}
-            onContextMenu={(e) => {
-              e.preventDefault();
-              setContextMenuState({
-                isOpen: true,
-                x: e.clientX,
-                y: e.clientY,
-              });
-            }}
+            onContextMenu={e => openCanvasContextMenu(e, leftPage)}
             onDragOver={(e) => {
               e.preventDefault();
               e.dataTransfer.dropEffect = "copy";
@@ -985,10 +1016,12 @@ export const PageCanvas: React.FC<PageCanvasProps> = ({ book, activePage }) => {
             {/* Elements Layer */}
             {leftElements.map((el) => {
               const isSelected = selectedElementIds.includes(el.id);
+              const isEditingThis = editingTextElementId === el.id;
               return (
                 <div
                   key={el.id}
                   data-element-id={el.id}
+                  style={isEditingThis ? { position: "relative", zIndex: 50000 } : undefined}
                   onPointerDown={(e) => {
                     if (e.button === 0 && !["hand", "zoom", "measure", "brush", "eraser"].includes(activeTool)) {
                       e.stopPropagation();
@@ -1123,7 +1156,10 @@ export const PageCanvas: React.FC<PageCanvasProps> = ({ book, activePage }) => {
           {isSpread && rightPage && (
             <div
               id={activePage.id === rightPage.id ? "page-artboard" : "page-artboard-right"}
-              className="relative isolate z-0 bg-white shadow-[0_24px_70px_rgba(0,0,0,0.6),0_2px_8px_rgba(0,0,0,0.4)] rounded-[2px] transition-shadow overflow-hidden ring-1 ring-black/5"
+              onContextMenu={e => openCanvasContextMenu(e, rightPage)}
+              className={`relative isolate z-0 bg-white shadow-[0_24px_70px_rgba(0,0,0,0.6),0_2px_8px_rgba(0,0,0,0.4)] rounded-[2px] transition-shadow ring-1 ring-black/5 ${
+                editingTextElementId ? "overflow-visible" : "overflow-hidden"
+              }`}
               style={{
                 width: `${dimensions.widthPt}pt`,
                 height: `${dimensions.heightPt}pt`,
@@ -1182,10 +1218,12 @@ export const PageCanvas: React.FC<PageCanvasProps> = ({ book, activePage }) => {
 
               {rightElements.map((el) => {
                 const isSelected = selectedElementIds.includes(el.id);
+                const isEditingThis = editingTextElementId === el.id;
                 return (
                   <div
                     key={el.id}
                     data-element-id={el.id}
+                    style={isEditingThis ? { position: "relative", zIndex: 50000 } : undefined}
                     onPointerDown={(e) => {
                       if (e.button === 0 && !["hand", "zoom", "measure", "brush", "eraser"].includes(activeTool)) {
                         e.stopPropagation();

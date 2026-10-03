@@ -1,0 +1,11 @@
+{
+  "nestedGroupCopy": true,
+  "destinationPicker": true,
+  "keyboardCutPaste": true,
+  "sourceCleanup": true,
+  "atomicUndoRedo": true,
+  "escapeCancelsCut": true,
+  "pasteHere": true,
+  "durableReload": true,
+  "browserErrors": []
+}

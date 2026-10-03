@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useMemo, useRef } from "react";
-import { Pipette, Check, Plus, Trash2 } from "lucide-react";
+import { Pipette, Check, Plus, X } from "lucide-react";
 import { useEditorStore } from "../../editor/stores/editorStore";
 
 interface ColorPickerPopoverProps {
@@ -156,8 +156,13 @@ export const ColorPickerPopover: React.FC<ColorPickerPopoverProps> = ({
   return (
     <div
       ref={popoverRef}
-      className="w-64 bg-[#10141d] border border-white/15 rounded-xl shadow-2xl p-3 text-slate-200 z-[100] animate-in fade-in zoom-in-95 duration-120 select-none font-sans"
-      onMouseDown={(e) => e.stopPropagation()}
+      className="w-64 bg-[#10141d] border border-white/15 rounded-xl shadow-2xl p-3 text-slate-200 z-[200] animate-in fade-in zoom-in-95 duration-120 select-none font-sans"
+      onMouseDown={(e) => {
+        e.stopPropagation();
+        if ((e.target as HTMLElement).tagName !== "INPUT") {
+          e.preventDefault();
+        }
+      }}
       onClick={(e) => e.stopPropagation()}
     >
       {/* Header */}
@@ -196,6 +201,16 @@ export const ColorPickerPopover: React.FC<ColorPickerPopoverProps> = ({
               Picker
             </button>
           </div>
+          {onClose && (
+            <button
+              type="button"
+              onClick={onClose}
+              className="p-0.5 rounded hover:bg-white/10 text-slate-400 hover:text-white transition-colors"
+              title="Close"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          )}
         </div>
       </div>
 
