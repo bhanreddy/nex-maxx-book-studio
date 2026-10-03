@@ -436,9 +436,11 @@ export const ElementRenderer: React.FC<ElementRendererProps> = memo(function Ele
             ) : (
               <div
                 className="font-[inherit] leading-[inherit] break-words [&>p]:mb-[var(--p-spacing)]"
-                style={{
-                  ["--p-spacing" as any]: `${style.paragraphSpacing ?? 8}pt`,
-                }}
+                style={
+                  {
+                    "--p-spacing": `${style.paragraphSpacing ?? 8}pt`,
+                  } as React.CSSProperties
+                }
                 dangerouslySetInnerHTML={{ __html: content.text || "" }}
               />
             )}

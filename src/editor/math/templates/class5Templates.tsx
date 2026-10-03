@@ -83,7 +83,7 @@ export const BodmasStepsTemplate: MathTemplate = {
   grade: 5,
   grades: [5],
   chapterTag: "Chapter 2: Operations on Numbers",
-  category: "operations" as any,
+  category: "operations",
   type: "worked-example",
   tags: ["bodmas", "order of operations", "brackets", "class 5"],
   defaultWidth: 320,

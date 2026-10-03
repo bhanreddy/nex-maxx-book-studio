@@ -128,7 +128,7 @@ export function registerMathTemplate(template: MathTemplate) {
         ? "number"
         : typeof template.defaultData[k] === "boolean"
         ? "boolean"
-        : "text") as any,
+        : "text") as "number" | "boolean" | "text",
       defaultValue: template.defaultData[k],
     }));
     if (template.propSchema.length === 0) {

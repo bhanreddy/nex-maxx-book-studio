@@ -13,6 +13,7 @@ export type MathTopic =
   | "subtraction"
   | "multiplication"
   | "division"
+  | "operations"
   | "fractions"
   | "decimals"
   | "geometry"

@@ -246,6 +246,7 @@ export const MathTemplatesPanel: React.FC = () => {
             { id: "subtraction", label: "Subtraction" },
             { id: "multiplication", label: "Multiplication" },
             { id: "division", label: "Division" },
+            { id: "operations", label: "Operations" },
             { id: "fractions", label: "Fractions" },
             { id: "decimals", label: "Decimals" },
             { id: "geometry", label: "Geometry" },
