@@ -97,7 +97,7 @@ export const FontSelectorPopover: React.FC<FontSelectorPopoverProps> = ({
     <div
       ref={popoverRef}
       onMouseLeave={() => onPreview?.(null)}
-      className="w-80 bg-[#10141d] border border-white/15 rounded-xl shadow-2xl p-2.5 text-slate-200 z-[100] animate-in fade-in zoom-in-95 duration-120 select-none font-sans flex flex-col max-h-[440px]"
+      className="w-80 bg-white dark:bg-[#10141d] border border-slate-200 dark:border-white/15 rounded-xl shadow-2xl p-2.5 text-slate-800 dark:text-slate-200 z-[100] animate-in fade-in zoom-in-95 duration-120 select-none font-sans flex flex-col max-h-[440px]"
       onClick={(e) => e.stopPropagation()}
     >
       {/* Search Header */}
@@ -109,12 +109,12 @@ export const FontSelectorPopover: React.FC<FontSelectorPopoverProps> = ({
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           autoFocus
-          className="w-full bg-white/5 border border-white/10 rounded-lg pl-8 pr-3 py-1.5 text-xs text-white placeholder-slate-400 outline-none focus:border-indigo-500 transition-colors"
+          className="w-full bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-lg pl-8 pr-3 py-1.5 text-xs text-slate-900 dark:text-white placeholder-slate-400 outline-none focus:border-indigo-500 transition-colors"
         />
       </div>
 
       {/* Category Pills */}
-      <div className="flex items-center gap-1 overflow-x-auto pb-1.5 mb-1.5 border-b border-white/10 scrollbar-none text-[10px]">
+      <div className="flex items-center gap-1 overflow-x-auto pb-1.5 mb-1.5 border-b border-slate-200 dark:border-white/10 scrollbar-none text-[10px]">
         {["All", "Favorites", "Recent", "Document", ...FONT_CATEGORIES].map((cat) => {
           const isActive = activeCategory === cat;
           return (
@@ -125,7 +125,7 @@ export const FontSelectorPopover: React.FC<FontSelectorPopoverProps> = ({
               className={`px-2 py-0.5 rounded-full whitespace-nowrap transition-all flex items-center gap-1 ${
                 isActive
                   ? "bg-indigo-600 text-white font-medium shadow-xs"
-                  : "bg-white/5 text-slate-400 hover:text-white hover:bg-white/10"
+                  : "bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-white/10"
               }`}
             >
               {cat === "Favorites" && <Star className="w-2.5 h-2.5 fill-amber-400 text-amber-400" />}
@@ -156,7 +156,7 @@ export const FontSelectorPopover: React.FC<FontSelectorPopoverProps> = ({
                 className={`group flex items-center justify-between px-2.5 py-1.5 rounded-lg cursor-pointer transition-all ${
                   isSelected
                     ? "bg-indigo-600 text-white"
-                    : "hover:bg-white/10 text-slate-200"
+                    : "hover:bg-slate-100 dark:hover:bg-white/10 text-slate-800 dark:text-slate-200"
                 }`}
               >
                 {/* Font Name with Real Typography Preview */}
@@ -169,7 +169,7 @@ export const FontSelectorPopover: React.FC<FontSelectorPopoverProps> = ({
                       {font.family}
                     </span>
                     {font.isBundled && (
-                      <span className="text-[8px] bg-white/10 px-1 py-0.2 rounded font-mono opacity-60">
+                      <span className="text-[8px] bg-slate-200/80 dark:bg-white/10 text-slate-700 dark:text-slate-300 px-1 py-0.2 rounded font-mono font-medium">
                         Print Ready
                       </span>
                     )}
@@ -177,7 +177,7 @@ export const FontSelectorPopover: React.FC<FontSelectorPopoverProps> = ({
                   {font.sampleText && (
                     <div
                       className={`text-[10px] truncate opacity-70 mt-0.5 ${
-                        isSelected ? "text-indigo-100" : "text-slate-400"
+                        isSelected ? "text-indigo-100" : "text-slate-500 dark:text-slate-400"
                       }`}
                       style={{ fontFamily: font.family }}
                     >

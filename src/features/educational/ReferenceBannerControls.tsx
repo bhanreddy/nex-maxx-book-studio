@@ -51,12 +51,12 @@ export function ReferenceBannerInspector({ element }: { element: PageElement }) 
   const change = (id: string) => useEditorStore.getState().updateSmartBlockStyle(element.id, { referenceBannerColour: id });
   return <section className="reference-artwork-inspector">
     <span className="studio-eyebrow">THE IMAGE COLLECTION</span>
-    <h3>{banner.title}</h3>
+    <h3>{'label' in banner ? banner.label || banner.title : banner.title}</h3>
     <p>Reference artwork · {worksheet ? `${worksheet.width} × ${worksheet.height}` : '2172 × 724'}</p>
     <ReferenceBannerVersionControls value={version} onChange={referenceBannerVersion => useEditorStore.getState().updateSmartBlockStyle(element.id, { referenceBannerVersion })} disabled={element.locked || block.isLockedDesign} />
     {version === 'editable' && <>
       <ReferenceArtworkTextField element={element} path="title" label={worksheet ? 'Worksheet heading' : 'Banner heading'} hint="Click the heading on the page to edit. Shift + Enter adds a line." />
-      {worksheet && (worksheet.rows ? worksheet.rows.map((_, index) => <ReferenceArtworkTextField key={index} element={element} path={`items.${index}`} label={`${banner.slug === 'learning-objectives' ? 'Objective' : 'Writing line'} ${index + 1}`} />) : <ReferenceArtworkTextField element={element} path="calloutText" label="Worksheet content" hint="Click the writing area to edit. Text wraps inside the illustrated frame." />)}
+      {worksheet && (worksheet.cells ? worksheet.cells.map((_, index) => <React.Fragment key={index}><ReferenceArtworkTextField element={element} path={`steps.${index}.title`} label={`Step ${index + 1} label`} /><ReferenceArtworkTextField element={element} path={`steps.${index}.body`} label={`Step ${index + 1} content`} /></React.Fragment>) : worksheet.rows ? worksheet.rows.map((_, index) => <ReferenceArtworkTextField key={index} element={element} path={`items.${index}`} label={`${worksheet.rowLabel || (banner.category === 'learning-outcomes' ? 'Objective' : 'Writing line')} ${index + 1}`} />) : <ReferenceArtworkTextField element={element} path="calloutText" label="Worksheet content" hint="Click the writing area to edit. Text wraps inside the illustrated frame." />)}
     </>}
     <ReferenceBannerColourControls value={block.styleOverrides.referenceBannerColour} onChange={change} disabled={element.locked || block.isLockedDesign} />
     <p>{version === 'original' ? 'Exact original image with its printed heading. Choose Editable text to change the heading and content.' : version === 'blank' ? 'Text-free artwork. Your custom text is kept for when you switch to Editable text.' : 'Your text stays editable when you save, duplicate or export.'}</p>

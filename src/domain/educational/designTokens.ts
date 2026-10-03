@@ -506,7 +506,7 @@ export const REFERENCE_BANNER_COLOURS = [
   { id: 'teal', name: 'Teal & rose', hueRotate: 285, ink: '#005346', accent: '#f09bb9' },
 ] as const;
 
-/** Heading inks sampled from the six supplied worksheet references. */
+/** Heading inks sampled from the supplied worksheet references. */
 export const REFERENCE_WORKSHEET_TEXT = {
   'playful-activity': { primary: '#ed001b', secondary: '#b60013', stroke: '#ffffff', strokePx: 3, shadow: '#ba643133', body: '#193c55' },
   'pastel-did-you-know': { primary: '#145389', secondary: '#ffb800', stroke: '#fffaee', strokePx: 1, shadow: '#a2814133', body: '#193c55' },
@@ -514,4 +514,7 @@ export const REFERENCE_WORKSHEET_TEXT = {
   'fun-fact': { primary: '#064678', secondary: '#ff243d', stroke: '#fff9e8', strokePx: 1, shadow: '#a2814133', body: '#193c55' },
   'skill-builder': { primary: '#ffffff', secondary: '#ffffff', stroke: '#075b37', strokePx: 8, shadow: '#69813d33', body: '#193c55' },
   'quick-review': { primary: '#133770', secondary: '#133770', stroke: '#ffffff', strokePx: 7, shadow: '#b9813e33', body: '#193c55' },
+  'lesson-map': { primary: '#101e23', secondary: '#ef001b', stroke: '#fff9ef', strokePx: 2, shadow: '#b9813e22', body: '#193c55' },
+  'learning-objectives-six': { primary: '#101e23', secondary: '#ef001b', stroke: '#fff8f5', strokePx: 2, shadow: '#ba643122', body: '#193c55' },
+  'fun-fact-reader': { primary: '#ee001c', secondary: '#15191b', stroke: '#fff9ef', strokePx: 2, shadow: '#b9813e22', body: '#193c55' },
 } as const;

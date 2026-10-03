@@ -465,7 +465,7 @@ export const TransformOverlay: React.FC<TransformOverlayProps> = ({
             {/* Dedicated Top Move & Unlock Header Bar */}
             {singleElement?.type !== "math-component" && !singleElement?.smartBlockData?.presetId.startsWith("edu-") && <div
               className="block-edit-bar absolute left-0 pointer-events-auto select-none z-50"
-              style={{ top: boundingBox.y * zoom < 45 ? 20 / zoom : -60 / zoom, transform: `scale(${1 / zoom})`, transformOrigin: "top left" }}
+              style={{ top: boundingBox.y * zoom < 45 && !referenceBannerFor(singleElement?.smartBlockData?.presetId || "") ? 20 / zoom : -60 / zoom, transform: `scale(${1 / zoom})`, transformOrigin: "top left" }}
               onPointerDown={e => e.stopPropagation()}
               onMouseDown={e => e.stopPropagation()}
             >

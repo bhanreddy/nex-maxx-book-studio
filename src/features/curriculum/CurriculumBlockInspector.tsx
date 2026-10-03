@@ -253,7 +253,7 @@ export function CurriculumBlockInspector({ element }: { element: PageElement }) 
                     setConvertOpen(false);
                   }}
                 >
-                  <span className="font-medium text-slate-100">{b.name}</span>
+                  <span className="font-medium text-slate-800 dark:text-slate-100">{b.name}</span>
                   <span className="text-[9px] text-amber-300/80">{stageName(b.stage)}</span>
                 </button>
               ))}

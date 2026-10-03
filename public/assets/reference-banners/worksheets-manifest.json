@@ -3,7 +3,10 @@
   "promptSet": {
     "initial": "Remove only the printed heading letters. Preserve the original canvas size, artwork, icons, borders, writing guides, colours and transparency. Fill the removed letters with the surrounding header material. Do not redraw the layout.",
     "didYouKnowRepair": "Remove only Did You Know? inside the heading region. Preserve the yellow lightbulb and green leaf, all body illustrations and writing guides.",
-    "iconRepairs": "Restore only the Fun Fact lightbulb / Quick Review green check medallion from the original reference onto the blank edit at their exact original position, size and rotation. Keep heading letters absent and preserve every other feature."
+    "iconRepairs": "Restore only the Fun Fact lightbulb / Quick Review green check medallion from the original reference onto the blank edit at their exact original position, size and rotation. Keep heading letters absent and preserve every other feature.",
+    "lesson-map": "Edit target: the one supplied ORIGINAL image. Remove ONLY the printed heading letters 'Lesson Map' at native pixels x350..817 y53..144 and ONLY the white digits 1,2,3,4,5,6 inside the six red/orange circular badges. Fill the heading with the same softly shaded peach header material and each digit with its underlying coloured badge surface. Preserve all six circles and their shading. Preserve the illustrated folded map and red location pin in the top-left exactly, the orange accent marks, all six outlined empty step boxes, orange connecting arrows, dashed winding connector, thin frame outline, top rule and three endpoint dots. Surgical text removal only. CRITICAL OUTPUT: exactly 2400 \u00d7 787 pixels, same aspect ratio and pixel placement as the original. Do not resize to 2172\u00d7724 or 2134\u00d7737. Preserve the original completely OPAQUE white background at all canvas edges: NO transparency, no alpha cutout, no halo, no pink wash outside the frame, no torn or ragged edges. The original PNG has a fully opaque alpha channel. Keep all illustration colours, panel fill, box positions, numbered badge circles (with digits removed), outlines, guide lines and connecting arrows otherwise unchanged. Do not change the layout, framing or proportions.",
+    "learning-objectives-six": "Edit target: the one supplied ORIGINAL image. Remove ONLY the printed heading letters 'Learning Objectives' within native pixels x315..1111 y49..151. Fill that lettering region with the surrounding softly shaded blush-pink header material. Preserve the illustrated target and its dart at the upper-left exactly, the red accent marks, six outlined round bullets, six dotted writing guides, large pale panel, thin red frame, top rule and three endpoint dots. Surgical text removal only. CRITICAL OUTPUT: exactly 2400 \u00d7 828 pixels, same aspect ratio and pixel placement as the original. Do not resize to 2172\u00d7724 or 2134\u00d7737. Preserve the original completely OPAQUE white background at all canvas edges: NO transparency, no alpha cutout, no halo, no pink wash outside the frame, no torn or ragged edges. The original PNG has a fully opaque alpha channel. Keep all illustration colours, panel fill, box positions, numbered badge circles (with digits removed), outlines, guide lines and connecting arrows otherwise unchanged. Do not change the layout, framing or proportions.",
+    "fun-fact-reader": "Edit target: the one supplied image. Remove ONLY the printed heading letters 'Fun Fact' within native pixels x345..875 y106..241. Fill the lettering region with the surrounding softly shaded peach header material. Preserve the boy at the upper-left exactly: hair, face, raised index finger, hands on the panel, orange shirt and expression. Preserve the orange accent marks, the exact asymmetric header shape, the large empty cream panel, orange double border, shading and transparent outer background. This is surgical text removal for a text-free template, not a redesign. Keep every untargeted pixel and visual feature as close to the original as possible. Keep the same native canvas dimensions and original layout proportions. Preserve the input transparency/alpha outside the artwork; retain any original white paper or white background inside the artwork. Do not crop, resize, shift, rotate, simplify, add lettering, alter colours, or remove illustrations."
   },
   "assets": [
     {
@@ -136,6 +139,72 @@
         ],
         "pngColourType": 2,
         "sha256": "630389db4b728bbeedfb8ecae7fd0bf6ab581c02f6a92955db0266e80bf1d9d4"
+      }
+    },
+    {
+      "slug": "lesson-map",
+      "source": "Lesson_Map_Large.png",
+      "original": {
+        "file": "lesson-map.png",
+        "dimensions": [
+          2400,
+          787
+        ],
+        "pngColourType": 6,
+        "sha256": "e6fd1d9185bbf3f21aef3ade5de1e49452d744a7852d5b77942ad98e0c8e1739"
+      },
+      "textFree": {
+        "file": "lesson-map-blank.png",
+        "dimensions": [
+          2188,
+          718
+        ],
+        "pngColourType": 2,
+        "sha256": "71fa3e7c70b10528688fe462147cbcd84a99dd99cbb49aff5cfc7ee326325011"
+      }
+    },
+    {
+      "slug": "learning-objectives-six",
+      "source": "Learning_Objectives_Large.png",
+      "original": {
+        "file": "learning-objectives-six.png",
+        "dimensions": [
+          2400,
+          828
+        ],
+        "pngColourType": 6,
+        "sha256": "1c9c97d7296a2bfca0331788a06dccf18b9b93c904577b10f96a40d75f6438fb"
+      },
+      "textFree": {
+        "file": "learning-objectives-six-blank.png",
+        "dimensions": [
+          2135,
+          737
+        ],
+        "pngColourType": 2,
+        "sha256": "0fb8728a3ddb5ce6c12afa888e508013ff85503691ac92a732fd657385bcfd48"
+      }
+    },
+    {
+      "slug": "fun-fact-reader",
+      "source": "codex-clipboard-dac860fd-7926-486f-adc5-cbb1c4760cee.png",
+      "original": {
+        "file": "fun-fact-reader.png",
+        "dimensions": [
+          2172,
+          724
+        ],
+        "pngColourType": 6,
+        "sha256": "aeef7fd18fd7fba442881879bd9928e440ddc948cc5041d68ff67a50416063c7"
+      },
+      "textFree": {
+        "file": "fun-fact-reader-blank.png",
+        "dimensions": [
+          2172,
+          724
+        ],
+        "pngColourType": 6,
+        "sha256": "52a4017d4447212b3298cce80edaf56f85f20313d9c15414705590b22445e29b"
       }
     }
   ]

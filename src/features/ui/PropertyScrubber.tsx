@@ -92,8 +92,8 @@ export const PropertyScrubber: React.FC<PropertyScrubberProps> = ({
 
   return (
     <div
-      className={`flex items-center justify-between text-xs py-1 px-1.5 rounded-lg bg-white/5 border border-white/10 hover:border-white/20 transition-all ${
-        isDragging ? "ring-1 ring-indigo-500 bg-indigo-500/10 cursor-ew-resize" : ""
+      className={`flex items-center justify-between text-xs py-1 px-1.5 rounded-lg bg-slate-100 hover:bg-slate-200/80 dark:bg-white/5 border border-slate-200 hover:border-slate-300 dark:border-white/10 dark:hover:border-white/20 transition-all ${
+        isDragging ? "ring-1 ring-indigo-500 bg-indigo-50 dark:bg-indigo-500/10 cursor-ew-resize" : ""
       } ${className}`}
       title={title || `Drag horizontally to scrub ${label}, or click number to type`}
     >
@@ -103,10 +103,10 @@ export const PropertyScrubber: React.FC<PropertyScrubberProps> = ({
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
         onPointerCancel={handlePointerUp}
-        className="flex items-center gap-1.5 cursor-ew-resize select-none text-slate-400 hover:text-slate-200 transition-colors flex-1 overflow-hidden pr-1"
+        className="flex items-center gap-1.5 cursor-ew-resize select-none text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 transition-colors flex-1 overflow-hidden pr-1"
       >
         {icon && <span className="opacity-70 flex-shrink-0">{icon}</span>}
-        <span className="font-mono text-[10px] uppercase tracking-wider truncate">
+        <span className="font-mono text-[10px] uppercase tracking-wider truncate font-medium">
           {label}
         </span>
       </div>
@@ -127,15 +127,15 @@ export const PropertyScrubber: React.FC<PropertyScrubberProps> = ({
                 setTextValue(String(value));
               }
             }}
-            className="w-12 bg-black/60 border border-indigo-500 rounded px-1 py-0.5 text-right font-mono text-[11px] text-white outline-none"
+            className="w-12 bg-white dark:bg-black/60 border border-indigo-500 rounded px-1 py-0.5 text-right font-mono text-[11px] text-slate-900 dark:text-white outline-none shadow-xs"
           />
         ) : (
           <span
             onClick={() => setIsEditing(true)}
-            className="font-mono text-[11px] text-slate-200 hover:text-white cursor-text px-1 py-0.5 rounded hover:bg-white/10 transition-colors font-medium min-w-[28px] text-right"
+            className="font-mono text-[11px] text-slate-800 dark:text-slate-200 hover:text-slate-950 dark:hover:text-white cursor-text px-1 py-0.5 rounded hover:bg-slate-200/60 dark:hover:bg-white/10 transition-colors font-medium min-w-[28px] text-right"
           >
             {value}
-            {unit && <span className="text-slate-500 ml-0.5 text-[9px]">{unit}</span>}
+            {unit && <span className="text-slate-500 dark:text-slate-400 ml-0.5 text-[9px]">{unit}</span>}
           </span>
         )}
       </div>

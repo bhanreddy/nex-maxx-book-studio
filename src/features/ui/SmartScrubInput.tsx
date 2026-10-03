@@ -119,8 +119,8 @@ export const SmartScrubInput: React.FC<SmartScrubInputProps> = ({
 
   return (
     <div
-      className={`group/scrub flex items-center bg-[#070b13]/80 hover:bg-[#070b13] border border-white/10 hover:border-white/20 focus-within:border-indigo-500/70 focus-within:ring-1 focus-within:ring-indigo-500/40 rounded-lg px-2 py-1 text-xs font-mono transition-all ${
-        isScrubbing ? "border-indigo-400 bg-indigo-950/30 ring-1 ring-indigo-500/50" : ""
+      className={`group/scrub flex items-center bg-slate-100 hover:bg-slate-200/80 dark:bg-[#070b13]/80 dark:hover:bg-[#070b13] border border-slate-200 hover:border-slate-300 dark:border-white/10 dark:hover:border-white/20 focus-within:border-indigo-500/70 focus-within:ring-1 focus-within:ring-indigo-500/40 rounded-lg px-2 py-1 text-xs font-mono transition-all ${
+        isScrubbing ? "border-indigo-400 bg-indigo-50 dark:bg-indigo-950/30 ring-1 ring-indigo-500/50" : ""
       } ${className}`}
       title={title || `Drag ${label} horizontally to scrub value. Shift for 10x.`}
     >
@@ -128,8 +128,8 @@ export const SmartScrubInput: React.FC<SmartScrubInputProps> = ({
         onMouseDown={handleMouseDown}
         className={`scrub-label text-[10px] font-bold tracking-wider select-none pr-1.5 transition-colors ${
           isScrubbing
-            ? "text-indigo-400"
-            : "text-slate-400 group-hover/scrub:text-slate-200"
+            ? "text-indigo-600 dark:text-indigo-400"
+            : "text-slate-600 dark:text-slate-400 group-hover/scrub:text-slate-900 dark:group-hover/scrub:text-slate-200"
         }`}
       >
         {label}
@@ -142,11 +142,11 @@ export const SmartScrubInput: React.FC<SmartScrubInputProps> = ({
         onFocus={() => setIsFocused(true)}
         onBlur={handleBlur}
         onKeyDown={handleKeyDown}
-        className="w-full bg-transparent text-slate-100 text-[11px] font-mono outline-none text-right placeholder-slate-600"
+        className="w-full bg-transparent text-slate-900 dark:text-slate-100 text-[11px] font-mono outline-none text-right placeholder-slate-400 dark:placeholder-slate-600"
       />
 
       {unit && (
-        <span className="text-[9px] text-slate-500 select-none pl-0.5">
+        <span className="text-[9px] text-slate-500 dark:text-slate-400 select-none pl-0.5">
           {unit}
         </span>
       )}

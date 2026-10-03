@@ -759,7 +759,7 @@ export const InspectorPanel: React.FC = () => {
           {/* Transform & Precise Geometry (Points) */}
           {singleElement && (
             <div>
-              <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block mb-1.5 font-mono">
+              <span className="text-[10px] font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider block mb-1.5 font-mono">
                 {complexityMode === "quick" ? "Element Dimensions (pt)" : "Transform & Bounds (pt)"}
               </span>
               <div className="grid grid-cols-2 gap-1.5 font-mono">
@@ -840,7 +840,7 @@ export const InspectorPanel: React.FC = () => {
           {/* Pixel Adjustments & DPI Inspector (For Images) */}
           {singleElement && singleElement.type === "image" && (
             <div className="space-y-3 pt-2 border-t border-white/5">
-              <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider font-mono flex items-center gap-1.5">
+              <span className="text-[10px] font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider font-mono flex items-center gap-1.5">
                 <ImageIcon className="w-3.5 h-3.5 text-rose-500 dark:text-rose-400" /> Image Print DPI & Adjustments
               </span>
 

@@ -214,11 +214,11 @@ export const TypographyInspector: React.FC<TypographyInspectorProps> = ({
   };
 
   return (
-    <div className="space-y-2 select-none text-slate-300 font-sans text-xs">
+    <div className="space-y-2 select-none text-slate-700 dark:text-slate-300 font-sans text-xs">
       {/* Header with Title & Quick Action Buttons */}
-      <div className="flex items-center justify-between pb-2 border-b border-white/10">
-        <div className="flex items-center gap-1.5 font-semibold text-slate-100">
-          <Type className="w-4 h-4 text-indigo-400" />
+      <div className="flex items-center justify-between pb-2 border-b border-slate-200 dark:border-white/10">
+        <div className="flex items-center gap-1.5 font-semibold text-slate-800 dark:text-slate-100">
+          <Type className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
           <span className="font-mono text-[11px] uppercase tracking-wider">
             {isMulti ? `Typography (${selectedElements.length} Selected)` : "Typography Engine"}
           </span>
@@ -233,7 +233,7 @@ export const TypographyInspector: React.FC<TypographyInspectorProps> = ({
             className={`p-1 rounded-md transition-colors ${
               formatPainterStyle
                 ? "bg-indigo-600 text-white shadow-xs"
-                : "hover:bg-white/10 text-slate-400 hover:text-white"
+                : "hover:bg-slate-100 dark:hover:bg-white/10 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
             }`}
             title="Format Painter (Click once for single apply, double-click for persistent)"
           >
@@ -243,7 +243,7 @@ export const TypographyInspector: React.FC<TypographyInspectorProps> = ({
           <button
             type="button"
             onClick={() => copyTextStyle()}
-            className="p-1 rounded-md hover:bg-white/10 text-slate-400 hover:text-white transition-colors"
+            className="p-1 rounded-md hover:bg-slate-100 dark:hover:bg-white/10 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"
             title="Copy Text Style (Cmd+Opt+C)"
           >
             <Copy className="w-3.5 h-3.5" />
@@ -252,7 +252,7 @@ export const TypographyInspector: React.FC<TypographyInspectorProps> = ({
           <button
             type="button"
             onClick={() => pasteTextStyle()}
-            className="p-1 rounded-md hover:bg-white/10 text-slate-400 hover:text-white transition-colors"
+            className="p-1 rounded-md hover:bg-slate-100 dark:hover:bg-white/10 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"
             title="Paste Text Style (Cmd+Opt+V)"
           >
             <ClipboardPaste className="w-3.5 h-3.5" />
@@ -261,7 +261,7 @@ export const TypographyInspector: React.FC<TypographyInspectorProps> = ({
           <button
             type="button"
             onClick={() => clearTextFormatting()}
-            className="p-1 rounded-md hover:bg-white/10 text-slate-400 hover:text-rose-400 transition-colors"
+            className="p-1 rounded-md hover:bg-rose-50 dark:hover:bg-white/10 text-slate-500 dark:text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 transition-colors"
             title="Clear All Custom Formatting"
           >
             <Eraser className="w-3.5 h-3.5" />
@@ -271,13 +271,13 @@ export const TypographyInspector: React.FC<TypographyInspectorProps> = ({
 
       {/* Minimum Print Readability Warning (Requirement 39) */}
       {readabilityWarning && (
-        <div className="flex items-center gap-1.5 p-2 rounded-lg bg-amber-500/15 border border-amber-500/30 text-amber-200 text-[10px] animate-in fade-in">
-          <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0 text-amber-400" />
-          <span className="flex-1">{readabilityWarning}</span>
+        <div className="flex items-center gap-1.5 p-2 rounded-lg bg-amber-500/15 border border-amber-500/30 text-amber-800 dark:text-amber-200 text-[10px] animate-in fade-in">
+          <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0 text-amber-600 dark:text-amber-400" />
+          <span className="flex-1 font-medium">{readabilityWarning}</span>
           <button
             type="button"
             onClick={() => handleApplyStyle({ fontSize: 8.5 })}
-            className="px-1.5 py-0.5 rounded bg-amber-600 hover:bg-amber-500 text-white font-medium text-[9px] flex-shrink-0"
+            className="px-1.5 py-0.5 rounded bg-amber-600 hover:bg-amber-500 text-white font-medium text-[9px] flex-shrink-0 shadow-xs"
           >
             Fix to 8.5pt
           </button>
@@ -287,19 +287,19 @@ export const TypographyInspector: React.FC<TypographyInspectorProps> = ({
       {/* ======================================================== */}
       {/* 1. TYPOGRAPHY CORE */}
       {/* ======================================================== */}
-      <div className="bg-white/5 border border-white/10 rounded-xl overflow-hidden">
+      <div className="bg-slate-50/70 dark:bg-white/5 border border-slate-200/90 dark:border-white/10 rounded-xl overflow-hidden">
         <button
           type="button"
           onClick={() => toggleSection("typography")}
-          className="w-full flex items-center justify-between px-3 py-2 bg-white/5 hover:bg-white/10 transition-colors text-left font-medium text-slate-200 text-[11px]"
+          className="w-full flex items-center justify-between px-3 py-2 bg-slate-100/70 hover:bg-slate-200/60 dark:bg-white/5 dark:hover:bg-white/10 transition-colors text-left font-medium text-slate-800 dark:text-slate-200 text-[11px]"
         >
           <span className="flex items-center gap-1.5 font-mono uppercase tracking-wider text-[10px]">
-            <Type className="w-3 h-3 text-indigo-400" /> Typography
+            <Type className="w-3 h-3 text-indigo-600 dark:text-indigo-400" /> Typography
           </span>
           {openSections.typography ? (
-            <ChevronDown className="w-3.5 h-3.5 opacity-60" />
+            <ChevronDown className="w-3.5 h-3.5 opacity-60 text-slate-600 dark:text-slate-400" />
           ) : (
-            <ChevronRight className="w-3.5 h-3.5 opacity-60" />
+            <ChevronRight className="w-3.5 h-3.5 opacity-60 text-slate-600 dark:text-slate-400" />
           )}
         </button>
 
@@ -307,9 +307,9 @@ export const TypographyInspector: React.FC<TypographyInspectorProps> = ({
           <div className="p-3 space-y-3">
             {/* Font Family Selector */}
             <div>
-              <div className="flex items-center justify-between mb-1 text-[10px] text-slate-400 font-mono">
+              <div className="flex items-center justify-between mb-1 text-[10px] text-slate-600 dark:text-slate-400 font-mono font-medium">
                 <span>Font Family</span>
-                {fontFamily.isMixed && <span className="text-amber-400 italic">Mixed</span>}
+                {fontFamily.isMixed && <span className="text-amber-600 dark:text-amber-400 italic">Mixed</span>}
               </div>
               <div className="relative">
                 <button
@@ -317,15 +317,15 @@ export const TypographyInspector: React.FC<TypographyInspectorProps> = ({
                   onClick={() =>
                     setActivePopover(activePopover === "font" ? null : "font")
                   }
-                  className="w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg bg-black/40 border border-white/15 hover:border-indigo-500 text-left text-xs transition-colors"
+                  className="w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg bg-white dark:bg-black/40 border border-slate-300 dark:border-white/15 hover:border-indigo-500 text-left text-xs transition-colors shadow-xs"
                 >
                   <span
-                    className="truncate font-medium text-white"
+                    className="truncate font-medium text-slate-900 dark:text-white"
                     style={{ fontFamily: String(fontFamily.value) }}
                   >
                     {fontFamily.isMixed ? "Mixed Fonts" : String(fontFamily.value)}
                   </span>
-                  <ChevronDown className="w-3 h-3 opacity-60 flex-shrink-0 ml-1" />
+                  <ChevronDown className="w-3 h-3 opacity-60 flex-shrink-0 ml-1 text-slate-600 dark:text-slate-400" />
                 </button>
 
                 {activePopover === "font" && (
@@ -353,7 +353,7 @@ export const TypographyInspector: React.FC<TypographyInspectorProps> = ({
             {/* Font Weight & Style */}
             <div className="grid grid-cols-2 gap-2">
               <div>
-                <label className="text-[10px] text-slate-400 font-mono block mb-1">
+                <label className="text-[10px] text-slate-600 dark:text-slate-400 font-mono font-medium block mb-1">
                   Font Weight
                 </label>
                 <select
@@ -361,7 +361,7 @@ export const TypographyInspector: React.FC<TypographyInspectorProps> = ({
                   onChange={(e) =>
                     handleApplyStyle({ fontWeight: Number(e.target.value) })
                   }
-                  className="w-full bg-black/40 border border-white/15 rounded-lg px-2 py-1.5 text-xs text-white outline-none focus:border-indigo-500"
+                  className="w-full bg-white dark:bg-black/40 border border-slate-300 dark:border-white/15 rounded-lg px-2 py-1.5 text-xs text-slate-900 dark:text-white outline-none focus:border-indigo-500 shadow-xs"
                 >
                   {fontWeight.isMixed && <option value="">Mixed</option>}
                   {FONT_WEIGHTS.map((w) => (
@@ -373,7 +373,7 @@ export const TypographyInspector: React.FC<TypographyInspectorProps> = ({
               </div>
 
               <div>
-                <label className="text-[10px] text-slate-400 font-mono block mb-1">
+                <label className="text-[10px] text-slate-600 dark:text-slate-400 font-mono font-medium block mb-1">
                   Font Style
                 </label>
                 <select
@@ -383,7 +383,7 @@ export const TypographyInspector: React.FC<TypographyInspectorProps> = ({
                       fontStyle: e.target.value as "normal" | "italic" | "oblique",
                     })
                   }
-                  className="w-full bg-black/40 border border-white/15 rounded-lg px-2 py-1.5 text-xs text-white outline-none focus:border-indigo-500"
+                  className="w-full bg-white dark:bg-black/40 border border-slate-300 dark:border-white/15 rounded-lg px-2 py-1.5 text-xs text-slate-900 dark:text-white outline-none focus:border-indigo-500 shadow-xs"
                 >
                   {fontStyle.isMixed && <option value="">Mixed</option>}
                   <option value="normal">Regular</option>
@@ -396,25 +396,25 @@ export const TypographyInspector: React.FC<TypographyInspectorProps> = ({
             {/* Font Size with Horizontal Scrub & Preset Dropdown & Quick - A + */}
             <div>
               <div className="flex items-center justify-between mb-1">
-                <span className="text-[10px] text-slate-400 font-mono">
+                <span className="text-[10px] text-slate-600 dark:text-slate-400 font-mono font-medium">
                   Font Size (pt)
                 </span>
                 <div className="flex items-center gap-0.5">
                   <button
                     type="button"
                     onClick={(e) => handleQuickSizeDelta(-1, e)}
-                    className="px-1 py-0.2 rounded hover:bg-white/10 text-slate-300 hover:text-white font-mono text-[9px]"
+                    className="px-1.5 py-0.5 rounded hover:bg-slate-200 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 hover:text-slate-950 dark:hover:text-white font-mono text-[10px] font-bold transition-colors"
                     title="Quick Decrease (Shift for ±4pt)"
                   >
                     −
                   </button>
-                  <span className="font-mono text-[9px] text-indigo-400 font-bold px-0.5">
+                  <span className="font-mono text-[9px] text-indigo-600 dark:text-indigo-400 font-bold px-0.5">
                     A
                   </span>
                   <button
                     type="button"
                     onClick={(e) => handleQuickSizeDelta(1, e)}
-                    className="px-1 py-0.2 rounded hover:bg-white/10 text-slate-300 hover:text-white font-mono text-[9px]"
+                    className="px-1.5 py-0.5 rounded hover:bg-slate-200 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 hover:text-slate-950 dark:hover:text-white font-mono text-[10px] font-bold transition-colors"
                     title="Quick Increase (Shift for ±4pt)"
                   >
                     +
@@ -442,7 +442,7 @@ export const TypographyInspector: React.FC<TypographyInspectorProps> = ({
                   onChange={(e) =>
                     handleApplyStyle({ fontSize: Number(e.target.value) })
                   }
-                  className="bg-black/40 border border-white/15 rounded-lg px-1.5 py-1 text-xs text-white outline-none font-mono"
+                  className="bg-white dark:bg-black/40 border border-slate-300 dark:border-white/15 rounded-lg px-1.5 py-1 text-xs text-slate-900 dark:text-white outline-none font-mono shadow-xs"
                 >
                   {FONT_PRESET_SIZES.map((sz) => (
                     <option key={sz} value={sz}>
@@ -455,8 +455,8 @@ export const TypographyInspector: React.FC<TypographyInspectorProps> = ({
 
             {/* Quick B / I / U / S Toolbar */}
             <div className="flex items-center justify-between pt-1">
-              <span className="text-[10px] text-slate-400 font-mono">Format</span>
-              <div className="flex items-center gap-1 bg-black/40 p-0.5 rounded-lg border border-white/10">
+              <span className="text-[10px] text-slate-600 dark:text-slate-400 font-mono font-medium">Format</span>
+              <div className="flex items-center gap-1 bg-slate-200/70 dark:bg-black/40 p-0.5 rounded-lg border border-slate-300/80 dark:border-white/10">
                 <button
                   type="button"
                   onClick={() =>
@@ -466,8 +466,8 @@ export const TypographyInspector: React.FC<TypographyInspectorProps> = ({
                   }
                   className={`p-1.5 rounded transition-colors ${
                     Number(fontWeight.value) >= 600
-                      ? "bg-indigo-600 text-white"
-                      : "text-slate-400 hover:text-white"
+                      ? "bg-indigo-600 text-white font-semibold shadow-xs"
+                      : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white dark:hover:bg-white/10"
                   }`}
                   title="Bold (Cmd+B)"
                 >
@@ -482,8 +482,8 @@ export const TypographyInspector: React.FC<TypographyInspectorProps> = ({
                   }
                   className={`p-1.5 rounded transition-colors ${
                     fontStyle.value === "italic"
-                      ? "bg-indigo-600 text-white"
-                      : "text-slate-400 hover:text-white"
+                      ? "bg-indigo-600 text-white font-semibold shadow-xs"
+                      : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white dark:hover:bg-white/10"
                   }`}
                   title="Italic (Cmd+I)"
                 >
@@ -501,8 +501,8 @@ export const TypographyInspector: React.FC<TypographyInspectorProps> = ({
                   }
                   className={`p-1.5 rounded transition-colors ${
                     primaryEl?.style.textDecoration === "underline"
-                      ? "bg-indigo-600 text-white"
-                      : "text-slate-400 hover:text-white"
+                      ? "bg-indigo-600 text-white font-semibold shadow-xs"
+                      : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white dark:hover:bg-white/10"
                   }`}
                   title="Underline (Cmd+U)"
                 >
@@ -520,8 +520,8 @@ export const TypographyInspector: React.FC<TypographyInspectorProps> = ({
                   }
                   className={`p-1.5 rounded transition-colors ${
                     primaryEl?.style.textDecoration === "line-through"
-                      ? "bg-indigo-600 text-white"
-                      : "text-slate-400 hover:text-white"
+                      ? "bg-indigo-600 text-white font-semibold shadow-xs"
+                      : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white dark:hover:bg-white/10"
                   }`}
                   title="Strikethrough"
                 >
@@ -536,19 +536,19 @@ export const TypographyInspector: React.FC<TypographyInspectorProps> = ({
       {/* ======================================================== */}
       {/* 2. CHARACTER SPACING & CASE */}
       {/* ======================================================== */}
-      <div className="bg-white/5 border border-white/10 rounded-xl overflow-hidden">
+      <div className="bg-slate-50/70 dark:bg-white/5 border border-slate-200/90 dark:border-white/10 rounded-xl overflow-hidden">
         <button
           type="button"
           onClick={() => toggleSection("character")}
-          className="w-full flex items-center justify-between px-3 py-2 bg-white/5 hover:bg-white/10 transition-colors text-left font-medium text-slate-200 text-[11px]"
+          className="w-full flex items-center justify-between px-3 py-2 bg-slate-100/70 hover:bg-slate-200/60 dark:bg-white/5 dark:hover:bg-white/10 transition-colors text-left font-medium text-slate-800 dark:text-slate-200 text-[11px]"
         >
           <span className="flex items-center gap-1.5 font-mono uppercase tracking-wider text-[10px]">
-            <Sliders className="w-3 h-3 text-cyan-400" /> Character & Spacing
+            <Sliders className="w-3 h-3 text-cyan-600 dark:text-cyan-400" /> Character & Spacing
           </span>
           {openSections.character ? (
-            <ChevronDown className="w-3.5 h-3.5 opacity-60" />
+            <ChevronDown className="w-3.5 h-3.5 opacity-60 text-slate-600 dark:text-slate-400" />
           ) : (
-            <ChevronRight className="w-3.5 h-3.5 opacity-60" />
+            <ChevronRight className="w-3.5 h-3.5 opacity-60 text-slate-600 dark:text-slate-400" />
           )}
         </button>
 
@@ -584,7 +584,7 @@ export const TypographyInspector: React.FC<TypographyInspectorProps> = ({
 
             {/* Tracking Quick Presets */}
             <div className="flex items-center justify-between text-[10px]">
-              <span className="text-slate-400 font-mono">Tracking Presets</span>
+              <span className="text-slate-600 dark:text-slate-400 font-mono font-medium">Tracking Presets</span>
               <div className="flex gap-1">
                 {[-1, 0, 1, 2, 4].map((v) => (
                   <button
@@ -593,8 +593,8 @@ export const TypographyInspector: React.FC<TypographyInspectorProps> = ({
                     onClick={() => handleApplyStyle({ letterSpacing: v })}
                     className={`px-1.5 py-0.5 rounded font-mono ${
                       letterSpacing.value === v
-                        ? "bg-indigo-600 text-white"
-                        : "bg-black/30 hover:bg-white/10 text-slate-400 hover:text-white"
+                        ? "bg-indigo-600 text-white font-semibold shadow-xs"
+                        : "bg-slate-200/80 hover:bg-slate-300/80 dark:bg-black/30 dark:hover:bg-white/10 text-slate-700 dark:text-slate-400 hover:text-slate-950 dark:hover:text-white transition-colors"
                     }`}
                   >
                     {v > 0 ? `+${v}` : v}
@@ -605,17 +605,17 @@ export const TypographyInspector: React.FC<TypographyInspectorProps> = ({
 
             {/* Text Case Transformation Buttons */}
             <div>
-              <span className="text-[10px] text-slate-400 font-mono block mb-1">
+              <span className="text-[10px] text-slate-600 dark:text-slate-400 font-mono font-medium block mb-1">
                 Text Case
               </span>
               <div className="grid grid-cols-3 gap-1 text-[10px]">
                 <button
                   type="button"
                   onClick={() => handleApplyStyle({ textTransform: "uppercase" })}
-                  className={`py-1 rounded bg-black/40 hover:bg-white/10 transition-colors ${
+                  className={`py-1 rounded transition-colors ${
                     primaryEl?.style.textTransform === "uppercase"
-                      ? "border border-indigo-500 text-white"
-                      : "text-slate-400 hover:text-white"
+                      ? "border border-indigo-500 bg-white dark:bg-black/60 text-indigo-700 dark:text-white font-semibold shadow-xs"
+                      : "bg-slate-100 hover:bg-slate-200/80 dark:bg-black/40 dark:hover:bg-white/10 border border-slate-200 dark:border-white/5 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
                   }`}
                 >
                   UPPERCASE
@@ -623,10 +623,10 @@ export const TypographyInspector: React.FC<TypographyInspectorProps> = ({
                 <button
                   type="button"
                   onClick={() => handleApplyStyle({ textTransform: "lowercase" })}
-                  className={`py-1 rounded bg-black/40 hover:bg-white/10 transition-colors ${
+                  className={`py-1 rounded transition-colors ${
                     primaryEl?.style.textTransform === "lowercase"
-                      ? "border border-indigo-500 text-white"
-                      : "text-slate-400 hover:text-white"
+                      ? "border border-indigo-500 bg-white dark:bg-black/60 text-indigo-700 dark:text-white font-semibold shadow-xs"
+                      : "bg-slate-100 hover:bg-slate-200/80 dark:bg-black/40 dark:hover:bg-white/10 border border-slate-200 dark:border-white/5 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
                   }`}
                 >
                   lowercase
@@ -634,10 +634,10 @@ export const TypographyInspector: React.FC<TypographyInspectorProps> = ({
                 <button
                   type="button"
                   onClick={() => handleApplyStyle({ textTransform: "capitalize" })}
-                  className={`py-1 rounded bg-black/40 hover:bg-white/10 transition-colors ${
+                  className={`py-1 rounded transition-colors ${
                     primaryEl?.style.textTransform === "capitalize"
-                      ? "border border-indigo-500 text-white"
-                      : "text-slate-400 hover:text-white"
+                      ? "border border-indigo-500 bg-white dark:bg-black/60 text-indigo-700 dark:text-white font-semibold shadow-xs"
+                      : "bg-slate-100 hover:bg-slate-200/80 dark:bg-black/40 dark:hover:bg-white/10 border border-slate-200 dark:border-white/5 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
                   }`}
                 >
                   Capitalize
@@ -651,19 +651,19 @@ export const TypographyInspector: React.FC<TypographyInspectorProps> = ({
       {/* ======================================================== */}
       {/* 3. PARAGRAPH & ALIGNMENT */}
       {/* ======================================================== */}
-      <div className="bg-white/5 border border-white/10 rounded-xl overflow-hidden">
+      <div className="bg-slate-50/70 dark:bg-white/5 border border-slate-200/90 dark:border-white/10 rounded-xl overflow-hidden">
         <button
           type="button"
           onClick={() => toggleSection("paragraph")}
-          className="w-full flex items-center justify-between px-3 py-2 bg-white/5 hover:bg-white/10 transition-colors text-left font-medium text-slate-200 text-[11px]"
+          className="w-full flex items-center justify-between px-3 py-2 bg-slate-100/70 hover:bg-slate-200/60 dark:bg-white/5 dark:hover:bg-white/10 transition-colors text-left font-medium text-slate-800 dark:text-slate-200 text-[11px]"
         >
           <span className="flex items-center gap-1.5 font-mono uppercase tracking-wider text-[10px]">
-            <AlignLeft className="w-3 h-3 text-emerald-400" /> Paragraph & Alignment
+            <AlignLeft className="w-3 h-3 text-emerald-600 dark:text-emerald-400" /> Paragraph & Alignment
           </span>
           {openSections.paragraph ? (
-            <ChevronDown className="w-3.5 h-3.5 opacity-60" />
+            <ChevronDown className="w-3.5 h-3.5 opacity-60 text-slate-600 dark:text-slate-400" />
           ) : (
-            <ChevronRight className="w-3.5 h-3.5 opacity-60" />
+            <ChevronRight className="w-3.5 h-3.5 opacity-60 text-slate-600 dark:text-slate-400" />
           )}
         </button>
 
@@ -671,8 +671,8 @@ export const TypographyInspector: React.FC<TypographyInspectorProps> = ({
           <div className="p-3 space-y-3">
             {/* Horizontal Alignment */}
             <div className="flex items-center justify-between">
-              <span className="text-[10px] text-slate-400 font-mono">Horizontal</span>
-              <div className="flex bg-black/40 rounded-lg p-0.5 border border-white/10">
+              <span className="text-[10px] text-slate-600 dark:text-slate-400 font-mono font-medium">Horizontal</span>
+              <div className="flex bg-slate-200/70 dark:bg-black/40 rounded-lg p-0.5 border border-slate-300/80 dark:border-white/10">
                 {(["left", "center", "right", "justify"] as const).map((al) => (
                   <button
                     key={al}
@@ -680,8 +680,8 @@ export const TypographyInspector: React.FC<TypographyInspectorProps> = ({
                     onClick={() => handleApplyStyle({ textAlign: al })}
                     className={`p-1.5 rounded transition-colors ${
                       textAlign.value === al
-                        ? "bg-indigo-600 text-white"
-                        : "text-slate-400 hover:text-white"
+                        ? "bg-indigo-600 text-white shadow-xs"
+                        : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white dark:hover:bg-white/10"
                     }`}
                     title={`Align ${al}`}
                   >
@@ -696,8 +696,8 @@ export const TypographyInspector: React.FC<TypographyInspectorProps> = ({
 
             {/* Vertical Alignment inside Box */}
             <div className="flex items-center justify-between">
-              <span className="text-[10px] text-slate-400 font-mono">Vertical</span>
-              <div className="flex bg-black/40 rounded-lg p-0.5 border border-white/10 text-[10px]">
+              <span className="text-[10px] text-slate-600 dark:text-slate-400 font-mono font-medium">Vertical</span>
+              <div className="flex bg-slate-200/70 dark:bg-black/40 rounded-lg p-0.5 border border-slate-300/80 dark:border-white/10 text-[10px]">
                 {(["top", "middle", "bottom"] as const).map((va) => (
                   <button
                     key={va}
@@ -705,8 +705,8 @@ export const TypographyInspector: React.FC<TypographyInspectorProps> = ({
                     onClick={() => handleApplyStyle({ verticalAlign: va })}
                     className={`px-2 py-1 rounded transition-colors capitalize ${
                       verticalAlign.value === va
-                        ? "bg-indigo-600 text-white font-medium"
-                        : "text-slate-400 hover:text-white"
+                        ? "bg-indigo-600 text-white font-medium shadow-xs"
+                        : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white dark:hover:bg-white/10"
                     }`}
                   >
                     {va}
@@ -718,12 +718,12 @@ export const TypographyInspector: React.FC<TypographyInspectorProps> = ({
             {/* Line Height Scrubber + Presets */}
             <div>
               <div className="flex items-center justify-between mb-1">
-                <span className="text-[10px] text-slate-400 font-mono">Line Height</span>
+                <span className="text-[10px] text-slate-600 dark:text-slate-400 font-mono font-medium">Line Height</span>
                 {recommendedLH !== lineHeight.value && (
                   <button
                     type="button"
                     onClick={() => handleApplyStyle({ lineHeight: recommendedLH })}
-                    className="text-[9px] text-indigo-400 hover:text-indigo-300 font-mono flex items-center gap-0.5"
+                    className="text-[9px] text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-300 font-mono flex items-center gap-0.5 font-medium"
                     title={`Optimize line height for ${fontSize.value}pt typography`}
                   >
                     <Sparkles className="w-2.5 h-2.5" /> Auto ({recommendedLH})
@@ -750,7 +750,7 @@ export const TypographyInspector: React.FC<TypographyInspectorProps> = ({
                   onChange={(e) =>
                     handleApplyStyle({ lineHeight: Number(e.target.value) })
                   }
-                  className="bg-black/40 border border-white/15 rounded-lg px-1 py-1 text-xs text-white outline-none font-mono"
+                  className="bg-white dark:bg-black/40 border border-slate-300 dark:border-white/15 rounded-lg px-1 py-1 text-xs text-slate-900 dark:text-white outline-none font-mono shadow-xs"
                 >
                   {LINE_HEIGHT_PRESETS.map((lh) => (
                     <option key={lh.value} value={lh.value}>
@@ -835,19 +835,19 @@ export const TypographyInspector: React.FC<TypographyInspectorProps> = ({
       {/* ======================================================== */}
       {/* 4. APPEARANCE & COLORS */}
       {/* ======================================================== */}
-      <div className="bg-white/5 border border-white/10 rounded-xl overflow-hidden">
+      <div className="bg-slate-50/70 dark:bg-white/5 border border-slate-200/90 dark:border-white/10 rounded-xl overflow-hidden">
         <button
           type="button"
           onClick={() => toggleSection("appearance")}
-          className="w-full flex items-center justify-between px-3 py-2 bg-white/5 hover:bg-white/10 transition-colors text-left font-medium text-slate-200 text-[11px]"
+          className="w-full flex items-center justify-between px-3 py-2 bg-slate-100/70 hover:bg-slate-200/60 dark:bg-white/5 dark:hover:bg-white/10 transition-colors text-left font-medium text-slate-800 dark:text-slate-200 text-[11px]"
         >
           <span className="flex items-center gap-1.5 font-mono uppercase tracking-wider text-[10px]">
-            <Palette className="w-3 h-3 text-rose-400" /> Color, Fill & Outline
+            <Palette className="w-3 h-3 text-rose-600 dark:text-rose-400" /> Color, Fill & Outline
           </span>
           {openSections.appearance ? (
-            <ChevronDown className="w-3.5 h-3.5 opacity-60" />
+            <ChevronDown className="w-3.5 h-3.5 opacity-60 text-slate-600 dark:text-slate-400" />
           ) : (
-            <ChevronRight className="w-3.5 h-3.5 opacity-60" />
+            <ChevronRight className="w-3.5 h-3.5 opacity-60 text-slate-600 dark:text-slate-400" />
           )}
         </button>
 
@@ -855,9 +855,9 @@ export const TypographyInspector: React.FC<TypographyInspectorProps> = ({
           <div className="p-3 space-y-3">
             {/* Solid Text Fill Color */}
             <div>
-              <div className="flex items-center justify-between mb-1 text-[10px] text-slate-400 font-mono">
+              <div className="flex items-center justify-between mb-1 text-[10px] text-slate-600 dark:text-slate-400 font-mono font-medium">
                 <span>Text Fill</span>
-                <span className="text-white font-mono">{String(color.value)}</span>
+                <span className="text-slate-800 dark:text-white font-mono">{String(color.value)}</span>
               </div>
               <div className="relative">
                 <button
@@ -865,14 +865,14 @@ export const TypographyInspector: React.FC<TypographyInspectorProps> = ({
                   onClick={() =>
                     setActivePopover(activePopover === "color" ? null : "color")
                   }
-                  className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-black/40 border border-white/15 hover:border-indigo-500 text-left text-xs transition-colors"
+                  className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-white dark:bg-black/40 border border-slate-300 dark:border-white/15 hover:border-indigo-500 text-left text-xs transition-colors shadow-xs"
                 >
                   <div
-                    className="w-5 h-5 rounded-md border border-white/30 shadow-xs flex-shrink-0"
+                    className="w-5 h-5 rounded-md border border-slate-300 dark:border-white/30 shadow-xs flex-shrink-0"
                     style={{ backgroundColor: String(color.value) }}
                   />
-                  <span className="font-mono text-white flex-1">{String(color.value)}</span>
-                  <ChevronDown className="w-3 h-3 opacity-60" />
+                  <span className="font-mono text-slate-800 dark:text-white flex-1">{String(color.value)}</span>
+                  <ChevronDown className="w-3 h-3 opacity-60 text-slate-600 dark:text-slate-400" />
                 </button>
 
                 {activePopover === "color" && (
@@ -889,9 +889,9 @@ export const TypographyInspector: React.FC<TypographyInspectorProps> = ({
             </div>
 
             {/* Text Stroke / Outline */}
-            <div className="pt-2 border-t border-white/10">
+            <div className="pt-2 border-t border-slate-200 dark:border-white/10">
               <div className="flex items-center justify-between mb-1.5">
-                <span className="text-[10px] text-slate-400 font-mono">
+                <span className="text-[10px] text-slate-600 dark:text-slate-400 font-mono font-medium">
                   Text Outline / Stroke
                 </span>
                 <button
@@ -905,8 +905,8 @@ export const TypographyInspector: React.FC<TypographyInspectorProps> = ({
                   }
                   className={`text-[9px] font-mono px-1.5 py-0.5 rounded transition-colors ${
                     primaryEl?.style.textStroke
-                      ? "bg-rose-600 text-white font-medium"
-                      : "bg-white/10 text-slate-400 hover:text-white"
+                      ? "bg-rose-600 text-white font-medium shadow-xs"
+                      : "bg-slate-200/80 dark:bg-white/10 text-slate-700 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
                   }`}
                 >
                   {primaryEl?.style.textStroke ? "Enabled" : "+ Add Stroke"}
@@ -923,13 +923,13 @@ export const TypographyInspector: React.FC<TypographyInspectorProps> = ({
                           activePopover === "strokeColor" ? null : "strokeColor"
                         )
                       }
-                      className="w-full flex items-center gap-1.5 px-2 py-1 rounded-lg bg-black/40 border border-white/15 text-xs text-left"
+                      className="w-full flex items-center gap-1.5 px-2 py-1 rounded-lg bg-white dark:bg-black/40 border border-slate-300 dark:border-white/15 text-xs text-left shadow-xs"
                     >
                       <div
-                        className="w-3.5 h-3.5 rounded border border-white/30"
+                        className="w-3.5 h-3.5 rounded border border-slate-300 dark:border-white/30"
                         style={{ backgroundColor: primaryEl.style.textStroke.color }}
                       />
-                      <span className="font-mono text-[10px] truncate text-white">
+                      <span className="font-mono text-[10px] truncate text-slate-800 dark:text-white">
                         {primaryEl.style.textStroke.color}
                       </span>
                     </button>
@@ -978,9 +978,9 @@ export const TypographyInspector: React.FC<TypographyInspectorProps> = ({
             </div>
 
             {/* Gradient Fill Toggle & Editor */}
-            <div className="pt-2 border-t border-white/10">
+            <div className="pt-2 border-t border-slate-200 dark:border-white/10">
               <div className="flex items-center justify-between mb-1.5">
-                <span className="text-[10px] text-slate-400 font-mono">
+                <span className="text-[10px] text-slate-600 dark:text-slate-400 font-mono font-medium">
                   Text Gradient
                 </span>
                 <button
@@ -1002,8 +1002,8 @@ export const TypographyInspector: React.FC<TypographyInspectorProps> = ({
                   }
                   className={`text-[9px] font-mono px-1.5 py-0.5 rounded transition-colors ${
                     primaryEl?.style.textGradient?.enabled
-                      ? "bg-indigo-600 text-white font-medium"
-                      : "bg-white/10 text-slate-400 hover:text-white"
+                      ? "bg-indigo-600 text-white font-medium shadow-xs"
+                      : "bg-slate-200/80 dark:bg-white/10 text-slate-700 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
                   }`}
                 >
                   {primaryEl?.style.textGradient?.enabled ? "Active" : "+ Add Gradient"}
@@ -1011,9 +1011,9 @@ export const TypographyInspector: React.FC<TypographyInspectorProps> = ({
               </div>
 
               {primaryEl?.style.textGradient?.enabled && (
-                <div className="space-y-2 mt-2 bg-black/30 p-2 rounded-lg border border-white/10">
+                <div className="space-y-2 mt-2 bg-slate-100 dark:bg-black/30 p-2 rounded-lg border border-slate-200 dark:border-white/10">
                   <div className="flex items-center justify-between text-[10px]">
-                    <span className="text-slate-400 font-mono">Angle</span>
+                    <span className="text-slate-600 dark:text-slate-400 font-mono font-medium">Angle</span>
                     <div className="w-24">
                       <PropertyScrubber
                         label="Deg"
@@ -1056,7 +1056,7 @@ export const TypographyInspector: React.FC<TypographyInspectorProps> = ({
                             },
                           })
                         }
-                        className="h-5 rounded border border-white/20 transition-transform hover:scale-105"
+                        className="h-5 rounded border border-slate-300 dark:border-white/20 transition-transform hover:scale-105 shadow-xs"
                         style={{
                           backgroundImage: `linear-gradient(90deg, ${gp.stops[0].color}, ${gp.stops[1].color})`,
                         }}
@@ -1089,19 +1089,19 @@ export const TypographyInspector: React.FC<TypographyInspectorProps> = ({
       {/* ======================================================== */}
       {/* 5. EFFECTS & SHADOWS */}
       {/* ======================================================== */}
-      <div className="bg-white/5 border border-white/10 rounded-xl overflow-hidden">
+      <div className="bg-slate-50/70 dark:bg-white/5 border border-slate-200/90 dark:border-white/10 rounded-xl overflow-hidden">
         <button
           type="button"
           onClick={() => toggleSection("effects")}
-          className="w-full flex items-center justify-between px-3 py-2 bg-white/5 hover:bg-white/10 transition-colors text-left font-medium text-slate-200 text-[11px]"
+          className="w-full flex items-center justify-between px-3 py-2 bg-slate-100/70 hover:bg-slate-200/60 dark:bg-white/5 dark:hover:bg-white/10 transition-colors text-left font-medium text-slate-800 dark:text-slate-200 text-[11px]"
         >
           <span className="flex items-center gap-1.5 font-mono uppercase tracking-wider text-[10px]">
-            <Sparkles className="w-3 h-3 text-amber-400" /> Effects & Shadows
+            <Sparkles className="w-3 h-3 text-amber-600 dark:text-amber-400" /> Effects & Shadows
           </span>
           {openSections.effects ? (
-            <ChevronDown className="w-3.5 h-3.5 opacity-60" />
+            <ChevronDown className="w-3.5 h-3.5 opacity-60 text-slate-600 dark:text-slate-400" />
           ) : (
-            <ChevronRight className="w-3.5 h-3.5 opacity-60" />
+            <ChevronRight className="w-3.5 h-3.5 opacity-60 text-slate-600 dark:text-slate-400" />
           )}
         </button>
 
@@ -1109,7 +1109,7 @@ export const TypographyInspector: React.FC<TypographyInspectorProps> = ({
           <div className="p-3 space-y-3">
             {/* Shadow Presets */}
             <div>
-              <span className="text-[10px] text-slate-400 font-mono block mb-1.5">
+              <span className="text-[10px] text-slate-600 dark:text-slate-400 font-mono font-medium block mb-1.5">
                 Shadow Presets
               </span>
               <div className="grid grid-cols-4 gap-1 text-[9px]">
@@ -1130,7 +1130,7 @@ export const TypographyInspector: React.FC<TypographyInspectorProps> = ({
                         ],
                       })
                     }
-                    className="py-1 rounded bg-black/40 hover:bg-white/10 text-slate-300 hover:text-white transition-colors text-center font-medium border border-white/5"
+                    className="py-1 rounded bg-white hover:bg-slate-100 dark:bg-black/40 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 hover:text-slate-950 dark:hover:text-white transition-colors text-center font-medium border border-slate-200 dark:border-white/5 shadow-xs"
                   >
                     {sp.name}
                   </button>
@@ -1140,15 +1140,15 @@ export const TypographyInspector: React.FC<TypographyInspectorProps> = ({
 
             {/* Custom Shadow Controls */}
             {primaryEl?.style.textShadows && primaryEl.style.textShadows.length > 0 && (
-              <div className="space-y-2 bg-black/30 p-2 rounded-lg border border-white/10">
+              <div className="space-y-2 bg-slate-100 dark:bg-black/30 p-2 rounded-lg border border-slate-200 dark:border-white/10">
                 <div className="flex items-center justify-between">
-                  <span className="text-[10px] text-slate-400 font-mono">
+                  <span className="text-[10px] text-slate-600 dark:text-slate-400 font-mono font-medium">
                     Custom Shadow
                   </span>
                   <button
                     type="button"
                     onClick={() => handleApplyStyle({ textShadows: undefined })}
-                    className="text-[9px] text-rose-400 hover:text-rose-300 font-mono"
+                    className="text-[9px] text-rose-500 hover:text-rose-600 dark:text-rose-400 dark:hover:text-rose-300 font-mono font-medium"
                   >
                     Clear
                   </button>
@@ -1223,9 +1223,9 @@ export const TypographyInspector: React.FC<TypographyInspectorProps> = ({
             )}
 
             {/* Text Highlight / Background Box */}
-            <div className="pt-2 border-t border-white/10">
+            <div className="pt-2 border-t border-slate-200 dark:border-white/10">
               <div className="flex items-center justify-between mb-1.5">
-                <span className="text-[10px] text-slate-400 font-mono">
+                <span className="text-[10px] text-slate-600 dark:text-slate-400 font-mono font-medium">
                   Text Highlight Box
                 </span>
                 <button
@@ -1239,8 +1239,8 @@ export const TypographyInspector: React.FC<TypographyInspectorProps> = ({
                   }
                   className={`text-[9px] font-mono px-1.5 py-0.5 rounded transition-colors ${
                     primaryEl?.style.textHighlight?.color
-                      ? "bg-amber-600 text-white font-medium"
-                      : "bg-white/10 text-slate-400 hover:text-white"
+                      ? "bg-amber-600 text-white font-medium shadow-xs"
+                      : "bg-slate-200/80 dark:bg-white/10 text-slate-700 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
                   }`}
                 >
                   {primaryEl?.style.textHighlight?.color ? "Active" : "+ Highlight"}
@@ -1268,7 +1268,7 @@ export const TypographyInspector: React.FC<TypographyInspectorProps> = ({
                           },
                         })
                       }
-                      className="h-5 rounded border border-white/20 transition-transform hover:scale-115"
+                      className="h-5 rounded border border-slate-300 dark:border-white/20 transition-transform hover:scale-115 shadow-xs"
                       style={{ backgroundColor: hl }}
                     />
                   ))}
@@ -1282,19 +1282,19 @@ export const TypographyInspector: React.FC<TypographyInspectorProps> = ({
       {/* ======================================================== */}
       {/* 6. LAYOUT & BOX APPEARANCE */}
       {/* ======================================================== */}
-      <div className="bg-white/5 border border-white/10 rounded-xl overflow-hidden">
+      <div className="bg-slate-50/70 dark:bg-white/5 border border-slate-200/90 dark:border-white/10 rounded-xl overflow-hidden">
         <button
           type="button"
           onClick={() => toggleSection("layout")}
-          className="w-full flex items-center justify-between px-3 py-2 bg-white/5 hover:bg-white/10 transition-colors text-left font-medium text-slate-200 text-[11px]"
+          className="w-full flex items-center justify-between px-3 py-2 bg-slate-100/70 hover:bg-slate-200/60 dark:bg-white/5 dark:hover:bg-white/10 transition-colors text-left font-medium text-slate-800 dark:text-slate-200 text-[11px]"
         >
           <span className="flex items-center gap-1.5 font-mono uppercase tracking-wider text-[10px]">
-            <Maximize2 className="w-3 h-3 text-violet-400" /> Layout & Auto-Fit
+            <Maximize2 className="w-3 h-3 text-violet-600 dark:text-violet-400" /> Layout & Auto-Fit
           </span>
           {openSections.layout ? (
-            <ChevronDown className="w-3.5 h-3.5 opacity-60" />
+            <ChevronDown className="w-3.5 h-3.5 opacity-60 text-slate-600 dark:text-slate-400" />
           ) : (
-            <ChevronRight className="w-3.5 h-3.5 opacity-60" />
+            <ChevronRight className="w-3.5 h-3.5 opacity-60 text-slate-600 dark:text-slate-400" />
           )}
         </button>
 
@@ -1328,9 +1328,9 @@ export const TypographyInspector: React.FC<TypographyInspectorProps> = ({
 
             {/* Rotation Controls */}
             <div>
-              <div className="flex items-center justify-between mb-1 text-[10px] text-slate-400 font-mono">
+              <div className="flex items-center justify-between mb-1 text-[10px] text-slate-600 dark:text-slate-400 font-mono font-medium">
                 <span>Rotation</span>
-                <span>{primaryEl.transform.rotation || 0}°</span>
+                <span className="text-slate-800 dark:text-slate-200 font-mono">{primaryEl.transform.rotation || 0}°</span>
               </div>
               <div className="grid grid-cols-5 gap-1 text-[9px] font-mono">
                 {[0, 45, 90, 180, 270].map((deg) => (
@@ -1340,10 +1340,10 @@ export const TypographyInspector: React.FC<TypographyInspectorProps> = ({
                     onClick={() =>
                       updateElementTransform(primaryEl.id, { rotation: deg }, true)
                     }
-                    className={`py-1 rounded ${
+                    className={`py-1 rounded transition-colors ${
                       (primaryEl.transform.rotation || 0) === deg
-                        ? "bg-indigo-600 text-white font-bold"
-                        : "bg-black/40 hover:bg-white/10 text-slate-400 hover:text-white"
+                        ? "bg-indigo-600 text-white font-bold shadow-xs"
+                        : "bg-white hover:bg-slate-100 dark:bg-black/40 dark:hover:bg-white/10 text-slate-700 dark:text-slate-400 hover:text-slate-950 dark:hover:text-white border border-slate-200 dark:border-transparent"
                     }`}
                   >
                     {deg}°
@@ -1391,19 +1391,19 @@ export const TypographyInspector: React.FC<TypographyInspectorProps> = ({
       {/* ======================================================== */}
       {/* 7. STYLES & PRESETS */}
       {/* ======================================================== */}
-      <div className="bg-white/5 border border-white/10 rounded-xl overflow-hidden">
+      <div className="bg-slate-50/70 dark:bg-white/5 border border-slate-200/90 dark:border-white/10 rounded-xl overflow-hidden">
         <button
           type="button"
           onClick={() => toggleSection("styles")}
-          className="w-full flex items-center justify-between px-3 py-2 bg-white/5 hover:bg-white/10 transition-colors text-left font-medium text-slate-200 text-[11px]"
+          className="w-full flex items-center justify-between px-3 py-2 bg-slate-100/70 hover:bg-slate-200/60 dark:bg-white/5 dark:hover:bg-white/10 transition-colors text-left font-medium text-slate-800 dark:text-slate-200 text-[11px]"
         >
           <span className="flex items-center gap-1.5 font-mono uppercase tracking-wider text-[10px]">
-            <Sparkles className="w-3 h-3 text-rose-400" /> Presets & Linked Styles
+            <Sparkles className="w-3 h-3 text-rose-600 dark:text-rose-400" /> Presets & Linked Styles
           </span>
           {openSections.styles ? (
-            <ChevronDown className="w-3.5 h-3.5 opacity-60" />
+            <ChevronDown className="w-3.5 h-3.5 opacity-60 text-slate-600 dark:text-slate-400" />
           ) : (
-            <ChevronRight className="w-3.5 h-3.5 opacity-60" />
+            <ChevronRight className="w-3.5 h-3.5 opacity-60 text-slate-600 dark:text-slate-400" />
           )}
         </button>
 
@@ -1411,7 +1411,7 @@ export const TypographyInspector: React.FC<TypographyInspectorProps> = ({
           <div className="p-3 space-y-3">
             {/* Quick Presets Grid */}
             <div>
-              <span className="text-[10px] text-slate-400 font-mono block mb-1.5">
+              <span className="text-[10px] text-slate-600 dark:text-slate-400 font-mono font-medium block mb-1.5">
                 Publication Presets
               </span>
               <div className="grid grid-cols-2 gap-1 max-h-40 overflow-y-auto pr-1">
@@ -1420,12 +1420,12 @@ export const TypographyInspector: React.FC<TypographyInspectorProps> = ({
                     key={p.id}
                     type="button"
                     onClick={() => handleApplyStyle(p.style)}
-                    className="p-1.5 rounded-lg bg-black/40 hover:bg-white/10 border border-white/5 hover:border-indigo-400 transition-colors text-left"
+                    className="p-1.5 rounded-lg bg-white dark:bg-black/40 hover:bg-slate-100/80 dark:hover:bg-white/10 border border-slate-200 dark:border-white/5 hover:border-indigo-400 transition-colors text-left shadow-xs"
                   >
-                    <div className="font-semibold text-[10px] text-white truncate">
+                    <div className="font-semibold text-[10px] text-slate-900 dark:text-white truncate">
                       {p.name}
                     </div>
-                    <div className="text-[8px] text-slate-400 truncate">
+                    <div className="text-[8px] text-slate-500 dark:text-slate-400 truncate">
                       {p.style.fontFamily} {p.style.fontSize}pt
                     </div>
                   </button>
@@ -1435,14 +1435,14 @@ export const TypographyInspector: React.FC<TypographyInspectorProps> = ({
 
             {/* Linked Document Styles */}
             {book?.textStyles && book.textStyles.length > 0 && primaryEl && (
-              <div className="pt-2 border-t border-white/10 space-y-1.5">
-                <div className="flex items-center justify-between text-[10px] font-mono text-slate-400">
+              <div className="pt-2 border-t border-slate-200 dark:border-white/10 space-y-1.5">
+                <div className="flex items-center justify-between text-[10px] font-mono text-slate-600 dark:text-slate-400 font-medium">
                   <span>Linked Document Style</span>
                   {primaryEl.style.styleId && (
                     <button
                       type="button"
                       onClick={() => detachTextStyle(primaryEl.id)}
-                      className="text-rose-400 hover:text-rose-300"
+                      className="text-rose-500 hover:text-rose-600 dark:text-rose-400 dark:hover:text-rose-300 font-medium"
                     >
                       Detach
                     </button>
@@ -1456,7 +1456,7 @@ export const TypographyInspector: React.FC<TypographyInspectorProps> = ({
                       applyTextStyle(primaryEl.id, e.target.value);
                     }
                   }}
-                  className="w-full bg-black/40 border border-white/15 rounded-lg px-2 py-1.5 text-xs text-white outline-none"
+                  className="w-full bg-white dark:bg-black/40 border border-slate-300 dark:border-white/15 rounded-lg px-2 py-1.5 text-xs text-slate-900 dark:text-white outline-none shadow-xs"
                 >
                   <option value="">None (Custom Overrides)</option>
                   {book.textStyles.map((st) => (
@@ -1471,7 +1471,7 @@ export const TypographyInspector: React.FC<TypographyInspectorProps> = ({
                     <button
                       type="button"
                       onClick={() => resetTextStyleOverrides(primaryEl.id)}
-                      className="flex-1 py-1 rounded bg-white/10 hover:bg-white/20 text-[9px] text-slate-300 hover:text-white transition-colors"
+                      className="flex-1 py-1 rounded bg-slate-200/80 hover:bg-slate-300/80 dark:bg-white/10 dark:hover:bg-white/20 text-[9px] text-slate-700 dark:text-slate-300 hover:text-slate-950 dark:hover:text-white transition-colors"
                     >
                       Reset Overrides
                     </button>
@@ -1482,7 +1482,7 @@ export const TypographyInspector: React.FC<TypographyInspectorProps> = ({
                           updateTextStyle(primaryEl.style.styleId, primaryEl.style);
                         }
                       }}
-                      className="flex-1 py-1 rounded bg-indigo-600/30 hover:bg-indigo-600/50 border border-indigo-500/40 text-[9px] text-indigo-200 transition-colors"
+                      className="flex-1 py-1 rounded bg-indigo-50 dark:bg-indigo-600/30 hover:bg-indigo-100 dark:hover:bg-indigo-600/50 border border-indigo-300 dark:border-indigo-500/40 text-[9px] text-indigo-700 dark:text-indigo-200 font-medium transition-colors"
                     >
                       Update Globally
                     </button>
@@ -1493,7 +1493,7 @@ export const TypographyInspector: React.FC<TypographyInspectorProps> = ({
 
             {/* Save Current as New Document Style */}
             {primaryEl && (
-              <div className="pt-2 border-t border-white/10">
+              <div className="pt-2 border-t border-slate-200 dark:border-white/10">
                 {showNewStyleInput ? (
                   <div className="space-y-1.5 animate-in fade-in">
                     <input
@@ -1501,7 +1501,7 @@ export const TypographyInspector: React.FC<TypographyInspectorProps> = ({
                       placeholder="e.g. Science Chapter Heading"
                       value={newStyleName}
                       onChange={(e) => setNewStyleName(e.target.value)}
-                      className="w-full bg-black/40 border border-indigo-500 rounded-lg px-2 py-1 text-xs text-white outline-none"
+                      className="w-full bg-white dark:bg-black/40 border border-indigo-500 rounded-lg px-2 py-1 text-xs text-slate-900 dark:text-white outline-none shadow-xs"
                       autoFocus
                     />
                     <div className="flex items-center gap-1">
@@ -1514,14 +1514,14 @@ export const TypographyInspector: React.FC<TypographyInspectorProps> = ({
                             setShowNewStyleInput(false);
                           }
                         }}
-                        className="flex-1 py-1 bg-indigo-600 hover:bg-indigo-500 text-white rounded text-[10px] font-semibold"
+                        className="flex-1 py-1 bg-indigo-600 hover:bg-indigo-500 text-white rounded text-[10px] font-semibold shadow-xs"
                       >
                         Save Style
                       </button>
                       <button
                         type="button"
                         onClick={() => setShowNewStyleInput(false)}
-                        className="px-2 py-1 bg-white/10 hover:bg-white/20 text-slate-400 rounded text-[10px]"
+                        className="px-2 py-1 bg-slate-200 hover:bg-slate-300 dark:bg-white/10 dark:hover:bg-white/20 text-slate-700 dark:text-slate-400 rounded text-[10px]"
                       >
                         Cancel
                       </button>
@@ -1531,7 +1531,7 @@ export const TypographyInspector: React.FC<TypographyInspectorProps> = ({
                   <button
                     type="button"
                     onClick={() => setShowNewStyleInput(true)}
-                    className="w-full py-1.5 rounded-lg bg-indigo-600/20 hover:bg-indigo-600/30 border border-indigo-500/40 text-indigo-300 font-medium text-[10px] flex items-center justify-center gap-1 transition-colors"
+                    className="w-full py-1.5 rounded-lg bg-indigo-50 dark:bg-indigo-600/20 hover:bg-indigo-100 dark:hover:bg-indigo-600/30 border border-indigo-200 dark:border-indigo-500/40 text-indigo-700 dark:text-indigo-300 font-semibold text-[10px] flex items-center justify-center gap-1 transition-colors"
                   >
                     <Plus className="w-3 h-3" /> Save Selection as Document Style
                   </button>

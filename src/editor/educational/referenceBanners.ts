@@ -27,7 +27,7 @@ export const REFERENCE_BANNER_BLOCKS: Record<string, EducationalBlockDefinition>
   REFERENCE_ARTWORKS.map(banner => {
     const id = referenceBannerId(banner.slug);
     return [id, {
-      id, name: `${banner.title} · ${'worksheet' in banner ? 'Illustrated worksheet' : 'Sculpted ribbon'}`, description: banner.description,
+      id, name: `${'label' in banner ? banner.label || banner.title : banner.title} · ${'worksheet' in banner ? 'Illustrated worksheet' : 'Sculpted ribbon'}`, description: banner.description,
       archetypeId: banner.category as EducationalBlockCategory, category: banner.category,
       lessonStage: banner.stage, version: 4, collectionVersion: 4, family: 'nex-play',
       supportedSubjects: ['general'], supportedGrades: ['early-years', 'primary-lower', 'primary-upper', 'middle-school', 'secondary-plus'],
@@ -35,7 +35,7 @@ export const REFERENCE_BANNER_BLOCKS: Record<string, EducationalBlockDefinition>
       minDimensions: { widthPt: 180, heightPt: 'worksheet' in banner ? 180 * banner.worksheet.height / banner.worksheet.width : 60 }, defaultDimensions: { widthPt: 480, heightPt: 'worksheet' in banner ? 480 * banner.worksheet.height / banner.worksheet.width : 160 },
       reflowRules: { layoutVariant: 'reference-artwork', verticalGrowthStrategy: 'expand-container' },
       defaultBackgroundStyle: { type: 'none' },
-      slots: [{ slotId: 'title', label: 'Heading', type: 'text', required: true, defaultContent: banner.title }, ...('worksheet' in banner ? banner.worksheet.rows ? [{ slotId: 'items', label: 'Writing rows', type: 'item-list' as const, required: false, defaultContent: ['', '', '', ''] }] : [{ slotId: 'calloutText', label: 'Worksheet content', type: 'rich-text' as const, required: false, defaultContent: '' }] : [])],
+      slots: [{ slotId: 'title', label: 'Heading', type: 'text', required: true, defaultContent: banner.title }, ...('worksheet' in banner ? banner.worksheet.cells ? [{ slotId: 'steps', label: 'Lesson steps', type: 'steps-list' as const, required: false, defaultContent: banner.worksheet.cells.map((_, index) => ({ stepNumber: index + 1, title: String(index + 1), body: '' })) }] : banner.worksheet.rows ? [{ slotId: 'items', label: 'Writing rows', type: 'item-list' as const, required: false, defaultContent: banner.worksheet.rows.map(() => '') }] : [{ slotId: 'calloutText', label: 'Worksheet content', type: 'rich-text' as const, required: false, defaultContent: '' }] : [])],
     } satisfies EducationalBlockDefinition];
   }),
 );

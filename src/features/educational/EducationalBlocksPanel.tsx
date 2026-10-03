@@ -422,7 +422,7 @@ export const EducationalBlocksPanel: React.FC = () => {
           </div>
 
           {category !== 'saved' && <details className="reference-artwork-shelf" open={category === 'recommended' || Boolean(search) || undefined}>
-            <summary>Your image templates <span>10 sculpted ribbons · 6 illustrated worksheets</span></summary>
+            <summary>Your image templates <span>10 sculpted ribbons · {REFERENCE_ARTWORKS.filter(artwork => 'worksheet' in artwork).length} illustrated worksheets</span></summary>
             <ReferenceBannerLibrary search={search} />
           </details>}
 
