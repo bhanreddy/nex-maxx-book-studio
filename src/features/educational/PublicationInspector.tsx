@@ -63,7 +63,7 @@ export function PublicationInspector({element}:{element:PageElement}) {
           return currentLayout ? <p className="text-[11px] text-slate-400 mt-1 leading-snug">{currentLayout.description}</p> : null;
         })()}
       </Field>}
-      <Field label="Reading size"><input type="range" min="1" max="1.5" step=".05" value={o.fontSizeScale || 1} onChange={e => design({fontSizeScale:Number(e.target.value)})}/></Field>
+      <p className="text-xs text-slate-500 dark:text-slate-400">Use Text appearance above to change reading size and colour.</p>
       {/* Detach Block into Canvas Elements */}
       <button
         type="button"

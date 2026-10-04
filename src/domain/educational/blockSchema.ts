@@ -214,6 +214,14 @@ export interface EducationalImage extends ImageTreatment {
   rawWidthPx?: number; rawHeightPx?: number; originalSrc?: string; maskDataUrl?: string;
 }
 
+export interface BlockTextStyle {
+  /** Points in the authored scene; independent of the illustrated frame. */
+  fontSize?: number;
+  color?: string;
+  bold?: boolean;
+  italic?: boolean;
+}
+
 export interface SmartBlockInstance {
   id: string;                     // Unique instance UUID
   curriculum?: import("./curriculum").CurriculumMetadata;
@@ -280,6 +288,8 @@ export interface SmartBlockInstance {
 
   // Visual Overrides & Adaptive Sizing
   styleOverrides: {
+    /** Shared roles (heading/body/all) and individual field: or node: targets. */
+    textFormatting?: Record<string, BlockTextStyle>;
     /** Saved colour treatment for an original reference-artwork banner. */
     referenceBannerColour?: string;
     referenceBannerVersion?: "original" | "editable" | "blank";

@@ -180,6 +180,8 @@ interface UiState {
   mathEditingTarget: { elementId: string; partId: string } | null;
   setMathEditingTarget: (target: { elementId: string; partId: string } | null) => void;
   editingTextElementId: string | null;
+  blockTextTarget: { elementId: string; target: string } | null;
+  setBlockTextTarget: (target: { elementId: string; target: string } | null) => void;
   setEditingTextElementId: (id: string | null) => void;
 
   // Typography Format Painter & Style Clipboard
@@ -365,6 +367,8 @@ export const useUiStore = create<UiState>((set, get) => ({
   mathEditingTarget: null,
   setMathEditingTarget: (target) => set({ mathEditingTarget: target }),
   editingTextElementId: null,
+  blockTextTarget: null,
+  setBlockTextTarget: (blockTextTarget) => set({ blockTextTarget }),
   setEditingTextElementId: (id) => set({ editingTextElementId: id }),
   formatPainterStyle: null,
   isPersistentPainter: false,

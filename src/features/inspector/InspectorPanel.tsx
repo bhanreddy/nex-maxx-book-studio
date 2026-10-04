@@ -42,6 +42,7 @@ import {
 } from "../../domain/element/types";
 import { ArrangeControls } from "../panels/ArrangeControls";
 import { PublicationInspector, ArtworkInspector } from "../educational/PublicationInspector";
+import { BlockTextInspector } from "../educational/BlockTextInspector";
 import { CurriculumBlockInspector } from "../curriculum/CurriculumBlockInspector";
 import { SmartScrubInput } from "../ui/SmartScrubInput";
 import { MathTemplateInspector } from "../../editor/math/MathTemplateInspector";
@@ -460,6 +461,7 @@ export const InspectorPanel: React.FC = () => {
             </div>
           </div>
 
+          {singleElement?.smartBlockData && <BlockTextInspector element={singleElement} />}
           {singleElement?.type === "math-component" && <MathTemplateInspector element={singleElement} />}
           {singleElement?.type === "smart-media-qr" && <SmartQrInspector element={singleElement}/>}
           {singleElement?.smartBlockData && (singleElement.smartBlockData.curriculum ? <CurriculumBlockInspector key={singleElement.smartBlockData.curriculum.sourceBlockId || singleElement.id} element={singleElement} /> : <PublicationInspector element={singleElement} />)}

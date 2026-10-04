@@ -16,6 +16,7 @@ import { schedulePersistence } from "../core/debouncedPersistence";
 import { detachedSceneForElement } from "../educational/detachScene";
 import { arrangeElements, type ArrangeMode } from "../core/arrangement";
 import { buildPublicationScene, ArtworkKind } from "../educational/publicationScene";
+import { sanitizeBlockTextStyle } from "../educational/textFormatting";
 import { referenceBannerFor, shuffledReferenceBannerColour } from '../educational/referenceBanners';
 import { makePublicationDemo, makePublicationPages } from "../educational/publicationPages";
 import { create } from "zustand";
@@ -272,6 +273,7 @@ interface EditorState {
   reSkinEducationalBlock: (elementId: string, subject: SubjectDomain) => void;
   updateSmartBlockContent: (elementId: string, partialContent: Partial<SmartBlockInstance["semanticContent"]>) => void;
   updateSmartBlockStyle: (elementId: string, partialStyle: Partial<SmartBlockInstance["styleOverrides"]>) => void;
+  updateSmartBlockTextStyle: (elementId: string, target: string, style: import("../../domain/educational/blockSchema").BlockTextStyle | null) => void;
   updateBlockContentLayout: (elementId: string, layout: NonNullable<SmartBlockInstance["styleOverrides"]["contentLayout"]>) => void;
   setBlockMotifs: (elementId: string, motifs: NonNullable<SmartBlockInstance["styleOverrides"]["motifs"]>) => void;
   commitBlockMotifs: (elementId: string, before: PageElement) => void;
@@ -4380,6 +4382,34 @@ export const useEditorStore = create<EditorState>((set, get) => {
       };
       apply(after, booksAfter);
       useHistoryStore.getState().pushAction({ description: "Edit block contents", undo: () => apply(before, booksBefore), redo: () => apply(after, booksAfter) });
+    },
+    updateSmartBlockTextStyle: (elementId, target, style) => {
+      const state = get(), el = state.elements[elementId], block = el?.smartBlockData;
+      if (!block || isElementLocked(elementId, state.elements) || block.isLockedDesign || !/^(all|heading|body|field:.+|node:text-\d+)$/.test(target)) return;
+      const patch = style === null ? null : sanitizeBlockTextStyle(style);
+      if (patch && !Object.keys(patch).length) return;
+      const previousStyle = block.styleOverrides.textFormatting?.[target];
+      if (patch === null ? !previousStyle : JSON.stringify({ ...previousStyle, ...patch }) === JSON.stringify(previousStyle)) return;
+      const meta = block.curriculum, sourceId = meta?.sourceBlockId || block.id;
+      const change = (current: SmartBlockInstance) => {
+        const textFormatting = { ...current.styleOverrides.textFormatting };
+        if (patch === null) delete textFormatting[target];
+        else textFormatting[target] = { ...textFormatting[target], ...patch };
+        return { ...current, styleOverrides: { ...current.styleOverrides, textFormatting } };
+      };
+      const before = Object.values(state.elements).filter(item => item.id === elementId || (meta?.chapterId && item.smartBlockData?.curriculum?.chapterId === meta.chapterId && (item.smartBlockData.curriculum.sourceBlockId || item.smartBlockData.id) === sourceId));
+      const after = before.map(item => ({ ...item, smartBlockData: change(item.smartBlockData!) }));
+      const booksBefore = state.books;
+      const booksAfter = state.books.map(book => ({ ...book, chapters: book.chapters.map(chapter => {
+        const source = chapter.id === meta?.chapterId ? chapter.framework?.blocks[sourceId] : undefined;
+        return source && chapter.framework ? { ...chapter, framework: { ...chapter.framework, blocks: { ...chapter.framework.blocks, [sourceId]: change(source) } } } : chapter;
+      }) }));
+      const apply = (items: PageElement[], books: Book[]) => {
+        set(current => ({ books, elements: { ...current.elements, ...Object.fromEntries(items.map(item => [item.id, item])) } }));
+        get().saveToStorage();
+      };
+      apply(after, booksAfter);
+      useHistoryStore.getState().pushAction({ description: "Format block text", undo: () => apply(before, booksBefore), redo: () => apply(after, booksAfter) });
     },
     updateSmartBlockContent: (elementId, partialContent) => {
       const el=get().elements[elementId];if(!el?.smartBlockData || isElementLocked(elementId, get().elements) || el.smartBlockData.isLockedContent)return;

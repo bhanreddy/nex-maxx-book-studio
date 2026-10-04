@@ -10,8 +10,9 @@ import { renderReferenceElement } from "../curriculum/renderReferenceElement";
 import { renderCurriculum } from "../curriculum/render";
 import { sliceScene } from "../curriculum/pagination";
 import { transformSceneNode } from "./sceneGeometry";
+import { applyBlockTextFormatting, blockTextRole, blockTextTarget } from "./textFormatting";
 
-type SceneMark = { editBounds?: { x: number; y: number; w: number; h: number }; appearanceTarget?: "accent"; fieldPath?: string; imageSlot?: number; opacity?: number; motifId?: string; clipId?: string; contentId?: string };
+type SceneMark = { editBounds?: { x: number; y: number; w: number; h: number }; appearanceTarget?: "accent"; fieldPath?: string; textRole?: "heading" | "body"; textStyleTarget?: string; imageSlot?: number; opacity?: number; motifId?: string; clipId?: string; contentId?: string };
 export type SceneNode =
   | ({ kind: "rect"; x: number; y: number; w: number; h: number; fill: string; stroke?: string; radius?: number; strokeWidth?: number; gradientId?: string } & SceneMark)
   | ({ kind: "ellipse"; x: number; y: number; rx: number; ry: number; fill: string; stroke?: string; strokeWidth?: number } & SceneMark)
@@ -200,8 +201,14 @@ export function buildPublicationScene(block: SmartBlockInstance, options: { teac
     next.clipId = undefined;
     return next;
   }) };
+  const marked = { ...result, nodes: result.nodes.map(node => {
+    if (node.kind !== 'text') return node;
+    const textRole = blockTextRole(node, result, block);
+    return { ...node, textRole, textStyleTarget: textRole === 'heading' ? 'field:title' : blockTextTarget(node) };
+  }) };
+  const formatted = applyBlockTextFormatting(marked, block);
   return block.styleOverrides.sceneSlice && (block.curriculum || block.styleOverrides.referenceElement)
-    ? sliceScene(result, block.styleOverrides.sceneSlice) : result;
+    ? sliceScene(formatted, block.styleOverrides.sceneSlice) : formatted;
 }
 function buildScene(block: SmartBlockInstance, options: { teacher?: boolean } = {}): PublicationScene {
   const referenceBanner = renderReferenceBanner(block, { textWidth, wrapText });

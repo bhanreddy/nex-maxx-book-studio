@@ -6,6 +6,7 @@ import { ImagePlus, Pencil, RotateCcw, Move } from "lucide-react";
 import type { PageElement } from "../../domain/element/types";
 import type { SceneNode } from "../educational/publicationScene";
 import { buildPublicationScene } from "../educational/publicationScene";
+import { blockTextTarget } from "../educational/textFormatting";
 import { useEditorStore } from "../stores/editorStore";
 import { useUiStore } from "../stores/uiStore";
 import { PublicationSceneView } from "./PublicationSceneView";
@@ -66,6 +67,8 @@ export function BlockContentEditor({ element, selected = false, zoom = 1 }: { el
     const matrix = group.ownerSVGElement?.getScreenCTM();
     if (!matrix) return;
     setActiveId(id);
+    const node = scene.nodes.find(n => 'contentId' in n && n.contentId === id);
+    if (node?.kind === 'text') useUiStore.getState().setBlockTextTarget({ elementId: element.id, target: blockTextTarget(node) });
     group.focus();
     group.setPointerCapture(event.pointerId);
     const inverse = matrix.inverse();
@@ -103,6 +106,7 @@ export function BlockContentEditor({ element, selected = false, zoom = 1 }: { el
   function editText(node: ContentNode) {
     if (!canEdit || node.kind !== "text") return;
     setActiveId(node.contentId!);
+    useUiStore.getState().setBlockTextTarget({ elementId: element.id, target: blockTextTarget(node) });
     setDraft(node.text);
     setEditing(true);
   }
@@ -128,7 +132,7 @@ export function BlockContentEditor({ element, selected = false, zoom = 1 }: { el
       const bounds = contentNodeBounds(node);
       const chosen = id === activeId;
       return <g className={`block-content-node ${chosen ? "is-active" : ""}`} tabIndex={0} role="button" aria-label={`Move ${node.kind === "text" ? node.text || "empty text" : node.alt || "image"}`} aria-pressed={chosen}
-        onFocus={() => setActiveId(id)} onMouseDown={event => event.stopPropagation()} onClick={event => event.stopPropagation()}
+        onFocus={() => { setActiveId(id); if (node.kind === 'text') useUiStore.getState().setBlockTextTarget({ elementId: element.id, target: blockTextTarget(node) }); }} onMouseDown={event => event.stopPropagation()} onClick={event => event.stopPropagation()}
         onPointerDown={event => start(event, id)} onPointerMove={move} onPointerUp={finish} onPointerCancel={cancelDrag} onLostPointerCapture={cancelDrag}
         onDoubleClick={event => { event.stopPropagation(); editText(node); }}
         onKeyDown={event => {

@@ -887,23 +887,7 @@ export function CurriculumBlockInspector({ element }: { element: PageElement }) 
             />
           </label>
 
-          <label className="curriculum-field">
-            <div className="flex justify-between items-center text-[11px] font-semibold text-slate-700 dark:text-slate-200">
-              <span>Reading type scale</span>
-              <span className="text-amber-600 dark:text-amber-300 text-[10px] font-mono">
-                {Math.round((o.fontSizeScale || 1) * 100)}%
-              </span>
-            </div>
-            <input
-              type="range"
-              min={1}
-              max={1.5}
-              step={0.05}
-              value={o.fontSizeScale || 1}
-              onChange={e => design({ fontSizeScale: Number(e.target.value) })}
-            />
-            <span className="text-[10px] text-slate-500 dark:text-slate-400">Class base size is the guaranteed minimum for print legibility</span>
-          </label>
+          <p className="text-xs text-slate-500 dark:text-slate-400">Use Text appearance above to change reading size and colour.</p>
 
           <label className="curriculum-field">
             <span className="text-[11px] font-semibold text-slate-700 dark:text-slate-200">Heading typography</span>

@@ -963,6 +963,20 @@ fieldset { min-width: 0; }
 .reference-artwork-shelf>summary span { display:block; padding:4px 0; color:var(--text-muted); font-size:10px; font-weight:400; }
 .reference-artwork-inspector { padding:16px; background:var(--panel-bg); border:1px solid var(--border-subtle); border-radius:var(--studio-radius,12px); color:var(--foreground); }
 .reference-artwork-inspector h3 { font-size:18px; font-weight:700; margin:8px 0; }
+.block-text-inspector { padding:16px; border:1px solid var(--border-subtle); border-radius:var(--studio-radius,12px); background:var(--panel-bg); color:var(--foreground); }
+.block-text-inspector h3 { font-size:14px; font-weight:700; margin-bottom:12px; }
+.block-text-inspector fieldset { display:grid; gap:12px; min-width:0; }
+.block-text-inspector label { display:grid; gap:6px; font-size:12px; font-weight:600; min-width:0; }
+.block-text-inspector input,.block-text-inspector select { min-height:44px; width:100%; min-width:0; border:1px solid var(--border-subtle); border-radius:8px; padding:8px; background:var(--panel-bg); color:var(--foreground); }
+.block-text-inspector input[type=color] { padding:5px; cursor:pointer; }
+.block-text-inspector-row { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+.block-text-inspector-actions { display:flex; gap:8px; }
+.block-text-inspector-actions button { min-height:44px; min-width:44px; padding:8px; border:1px solid var(--border-subtle); border-radius:8px; transition:transform 100ms; }
+.block-text-inspector-actions button[aria-pressed=true] { background:var(--curriculum-accent); color:white; }
+.block-text-inspector-actions button:active { transform:scale(.98); }
+.block-text-inspector button:disabled,.block-text-inspector fieldset:disabled { opacity:.5; }
+.block-text-inspector p { margin-top:10px; font-size:11px; line-height:1.5; color:var(--text-muted); }
+.block-text-inspector :is(button,input,select):focus-visible { outline:2px solid var(--curriculum-accent); outline-offset:2px; }
 .reference-artwork-inspector .reference-artwork-colours { margin:16px 0; }
 .reference-artwork-button { width:100%; }
 .reference-artwork-save { margin-top:12px; border-top:1px solid var(--border-subtle); padding-top:12px; font-size:11px; }
