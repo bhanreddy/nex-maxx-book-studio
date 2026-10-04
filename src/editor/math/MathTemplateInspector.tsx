@@ -20,6 +20,8 @@ import {
 } from "lucide-react";
 import { MathDesignControls } from "./MathDesignControls";
 import { MathDataFields } from "./MathDataFields";
+import { WorksheetStyleControls } from "./WorksheetStyleControls";
+import { WORKSHEET_DESIGN_KEYS } from "./worksheetDesign";
 import { updateMathTemplateData } from "./mathActions";
 
 interface MathTemplateInspectorProps {
@@ -34,6 +36,7 @@ export const MathTemplateInspector: React.FC<MathTemplateInspectorProps> = ({ el
     element.content?.mathTemplateId || element.presetId || "math-place-value-indian";
   const template = getMathTemplate(mathTemplateId);
 
+  const isWorksheet = mathTemplateId.startsWith("premium-") || mathTemplateId.startsWith("worksheet-");
   const mathData = element.content?.mathData || element.content || {};
   const currentMode: MathAnswerMode = element.content?.mathMode || "teacher";
   const currentVariant: MathStyleVariant =
@@ -207,13 +210,15 @@ export const MathTemplateInspector: React.FC<MathTemplateInspectorProps> = ({ el
         </div>
       </div>
 
+      {isWorksheet && <WorksheetStyleControls template={template} data={mathData} variant={currentVariant} onUpdate={handleUpdate} />}
+
       {/* 4. Dynamic Mathematical Fields (Section 30: CONTENT & OPTIONS) */}
       <div className="space-y-2 pt-1 border-t border-slate-200/80 dark:border-white/10">
         <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wide block">
-          Mathematical Content
+          {isWorksheet ? "Exercise content" : "Mathematical Content"}
         </label>
 
-        <MathDataFields key={element.id} template={template} data={mathData} onUpdate={handleUpdate} />
+        <MathDataFields key={element.id} template={template} data={mathData} onUpdate={handleUpdate} skipKeys={isWorksheet ? [...WORKSHEET_DESIGN_KEYS, "exerciseKind", "matchOrder"] : []} />
         {Array.isArray(mathData.questions) && template.measureHeight && <p className="text-[11px] leading-relaxed text-slate-500 dark:text-slate-400">Questions and their answer keys are authored separately. Update the answer when you change a question.</p>}
       </div>
 

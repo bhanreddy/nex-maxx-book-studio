@@ -20,7 +20,9 @@ export function updateMathTemplateData(elementId: string, patch: Record<string, 
   if (!element || element.locked) return;
   const template = getMathTemplate(element.content.mathTemplateId || element.presetId || "");
   const data = { ...(element.content.mathData || element.content), ...patch };
-  const content = { ...element.content, ...patch, mathData: data };
+  const content: PageElement["content"] = { ...element.content, ...patch, mathData: data };
+  // A palette is a complete color design, including when the exercise was monochrome.
+  if (template?.measureHeight && Object.keys(patch).some(key => key === "paletteId" || key.endsWith("Color"))) content.styleVariant = "color-coded";
   if (!template?.measureHeight) { store.updateElement(elementId, { content }); return; }
   const appearance = element.content.mathAppearance || {};
   const before = mathRenderFrame(template, element.transform.width, element.transform.height, appearance, element.content.mathData || element.content);

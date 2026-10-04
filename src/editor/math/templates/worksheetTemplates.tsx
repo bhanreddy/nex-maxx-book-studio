@@ -1,34 +1,19 @@
 import React from "react";
 import type { MathConfigField, MathRendererProps, MathTemplate, MathTopic } from "../types";
 import { MATH_TOKENS } from "../tokens";
+import { worksheetLines, worksheetColors, WORKSHEET_DESIGN_FIELDS, worksheetNumberLabel } from "../worksheetDesign";
+import { PREMIUM_EXERCISE_TEMPLATES } from "./premiumExerciseTemplates";
+export { worksheetLines } from "../worksheetDesign";
 
 export interface WorksheetRow { prompt: string; answer: string; working?: string }
 const { ink, muted, line, paper, wash } = MATH_TOKENS.print;
 const bounded = (value: unknown, fallback: number, min: number, max: number) => Math.max(min, Math.min(max, Number.isFinite(Number(value)) ? Number(value) : fallback));
 const string = (value: unknown) => String(value ?? "");
 
-/** Conservative vector text wrapping, including explicit newlines and long tokens. */
-export function worksheetLines(value: unknown, width: number, size: number): string[] {
-  const capacity = Math.max(1, Math.floor(width / (size * .62)));
-  return string(value).split("\n").flatMap(paragraph => {
-    const words = paragraph.split(/\s+/).filter(Boolean), result: string[] = [];
-    let current = "";
-    for (const word of words) {
-      const chunks = word.match(new RegExp(`.{1,${capacity}}`, "gu")) || [];
-      for (const chunk of chunks) {
-        if (current && current.length + chunk.length + 1 > capacity) { result.push(current); current = ""; }
-        current = current ? `${current} ${chunk}` : chunk;
-      }
-    }
-    result.push(current);
-    return result;
-  });
-}
-
 function worksheetLayout(data: Record<string, unknown>, width: number) {
   const plain = data.presentation === "plain";
   const size = bounded(data.fontSize, 20, 14, 28), leading = size * 1.45;
-  const answerLeading = plain ? bounded(data.lineSpacing, 32, 20, 56) : leading;
+  const answerLeading = Math.max(leading, bounded(data.lineSpacing, plain ? 32 : leading, 20, 56));
   const answerLabel = plain && data.showAnswerLabel !== false && string(data.answerLabel).trim() ? worksheetLines(data.answerLabel, width - 84, size - 4) : [];
   const title = plain && !string(data.title).trim() ? [] : worksheetLines(data.title, width - 48, size + 4);
   const instructions = plain && !string(data.instructions).trim() ? [] : worksheetLines(data.instructions, width - 48, size - 3);
@@ -39,9 +24,9 @@ function worksheetLayout(data: Record<string, unknown>, width: number) {
     const answer = worksheetLines(row.answer, width - 100, size);
     const working = data.layout === "worked" ? worksheetLines(row.working, width - 84, size - 2) : [];
     const count = Math.max(Math.round(bounded(data.answerLines, 1, 1, 8)), answer.length);
-    const top = y, labelTop = top + prompt.length * leading + 16 + working.length * leading;
+    const top = y, labelTop = top + prompt.length * leading + bounded(data.answerGap, 16, 0, 96) + working.length * leading;
     const answerTop = labelTop + answerLabel.length * leading;
-    y = answerTop + count * answerLeading + (plain ? bounded(data.questionGap, 24, 12, 80) : 26);
+    y = answerTop + count * answerLeading + bounded(data.questionGap, plain ? 24 : 26, 12, 96);
     return { row, prompt, answer, working, count, top, labelTop, answerTop, bottom: y };
   });
   // A generous empty workspace remains after removing every question.
@@ -52,9 +37,9 @@ export const WorksheetRenderer: React.FC<MathRendererProps> = props => {
   const { data, mode, styleVariant, width, height } = props;
   if (data.presentation === "plain") return PlainWorksheetRenderer(props);
   const metrics = worksheetLayout(data, width);
-  const accent = styleVariant === "clean" ? ink : styleVariant === "visual" ? MATH_TOKENS.topics.geometry.main : MATH_TOKENS.primary.indigoAccent;
-  const tint = styleVariant === "clean" ? wash : styleVariant === "visual" ? MATH_TOKENS.topics.geometry.tint : MATH_TOKENS.topics.placeValue.tint;
-  const text = (value: string, x: number, y: number, size: number, fill = ink, bold = false, key = value) => <text key={key} x={x} y={y} fontSize={size} fill={fill} fontWeight={bold ? 700 : 400}>{value}</text>;
+  const colors = worksheetColors(data, styleVariant);
+  const { accent, tint } = colors;
+  const text = (value: string, x: number, y: number, size: number, fill = ink, bold: boolean | number = false, key = value) => <text key={key} x={x} y={y} fontSize={size} fill={fill} fontWeight={typeof bold === "number" ? bold : bold ? 700 : 400}>{value}</text>;
   const actualHeight = Math.max(height, metrics.height);
   return <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" viewBox={`0 0 ${width} ${actualHeight}`} aria-label={string(data.title)} fontFamily="Inter, sans-serif">
     <rect x={.5} y={.5} width={width - 1} height={actualHeight - 1} rx={16} fill={paper} stroke={line} />
@@ -64,35 +49,36 @@ export const WorksheetRenderer: React.FC<MathRendererProps> = props => {
     {metrics.rows.map((r, index) => {
       const show = mode === "teacher" || (data.showExample === true && index === 0);
       return <g key={`question-${index}`}>
-        <rect x={18} y={r.top - 10} width={width - 36} height={r.bottom - r.top - 8} rx={10} fill={index % 2 === 0 ? tint : paper} />
+        <rect x={18} y={r.top - 10} width={width - 36} height={r.bottom - r.top - 8} rx={bounded(data.cornerRadius, 10, 0, 24)} fill={data.showPanels === false ? paper : index % 2 === 0 ? tint : paper} />
         <circle cx={38} cy={r.top + 9} r={13} fill={paper} stroke={line} />
-        <text key="number" x={38} y={r.top + 14} textAnchor="middle" fontSize={14} fill={accent} fontWeight={700}>{index + bounded(data.startNumber, 1, 1, 999)}</text>
-        {r.prompt.map((value, i) => text(value, 62, r.top + metrics.size + i * metrics.leading, metrics.size, ink, true, `prompt-${i}`))}
+        <text key="number" x={38} y={r.top + 14} textAnchor="middle" fontSize={14} fill={accent} fontWeight={700}>{data.showNumbering === false ? "" : worksheetNumberLabel(index, data)}</text>
+        {r.prompt.map((value, i) => text(value, 62, r.top + metrics.size + i * metrics.leading, metrics.size, colors.ink, bounded(data.questionWeight, 600, 400, 700), `prompt-${i}`))}
         {r.working.map((value, i) => text(show ? value : "", 62, r.top + (r.prompt.length + i + 1) * metrics.leading + 10, metrics.size - 2, muted, false, `working-${i}`))}
-        {Array.from({ length: r.count }, (_, i) => <line key={`rule-${i}`} x1={62} x2={width - 30} y1={r.answerTop + (i + 1) * metrics.leading + 3} y2={r.answerTop + (i + 1) * metrics.leading + 3} stroke={line} strokeWidth={.8} />)}
-        {show && r.answer.map((value, i) => text(value, 68, r.answerTop + (i + 1) * metrics.leading - 2, metrics.size, accent, false, `answer-${i}`))}
+        {data.responseStyle !== "open" && Array.from({ length: r.count }, (_, i) => <line key={`rule-${i}`} x1={62} x2={width - 30} y1={r.answerTop + (i + 1) * metrics.answerLeading + 3} y2={r.answerTop + (i + 1) * metrics.answerLeading + 3} stroke={colors.rule} strokeWidth={.8} />)}
+        {show && r.answer.map((value, i) => text(value, 68, r.answerTop + (i + 1) * metrics.answerLeading - 2, metrics.size, colors.answer, false, `answer-${i}`))}
       </g>;
     })}
   </svg>;
 };
 
 /** Monochrome editorial Q&A, using the same editable data and measured layout. */
-export const PlainWorksheetRenderer: React.FC<MathRendererProps> = ({ data, mode, width, height }) => {
+export const PlainWorksheetRenderer: React.FC<MathRendererProps> = ({ data, mode, styleVariant, width, height }) => {
+  const colors = worksheetColors(data, styleVariant);
   const metrics = worksheetLayout(data, width), actualHeight = Math.max(height, metrics.height);
-  const text = (value: string, x: number, y: number, size: number, key: string, weight = 400, fill = ink) => <text key={key} x={x} y={y} fontSize={size} fill={fill} fontWeight={weight}>{value}</text>;
+  const text = (value: string, x: number, y: number, size: number, key: string, weight = 400, fill = colors.ink) => <text key={key} x={x} y={y} fontSize={size} fill={fill} fontWeight={weight}>{value}</text>;
   return <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" viewBox={`0 0 ${width} ${actualHeight}`} aria-label={string(data.title) || "Plain questions and answers"} fontFamily="Inter, sans-serif">
     <rect key="paper" x={0} y={0} width={width} height={actualHeight} fill={paper} />
-    {metrics.title.map((value, i) => text(value, 24, 44 + i * (metrics.size + 8), metrics.size + 4, `title-${i}`, 600))}
+    {metrics.title.map((value, i) => text(value, 24, 44 + i * (metrics.size + 8), metrics.size + 4, `title-${i}`, 600, colors.accent))}
     {metrics.instructions.map((value, i) => text(value, 24, 30 + metrics.title.length * (metrics.size + 8) + (i + .8) * metrics.leading, metrics.size - 3, `instructions-${i}`, 400, muted))}
     {metrics.rows.map((r, index) => {
       const show = mode === "teacher" || (data.showExample === true && index === 0);
       return <g key={`question-${index}`}>
-        <text key="number" x={50} y={r.top + metrics.size} textAnchor="end" fontSize={metrics.size} fill={ink} fontWeight={600}>{index + Math.round(bounded(data.startNumber, 1, 1, 999))}.</text>
-        {r.prompt.map((value, i) => text(value, 62, r.top + metrics.size + i * metrics.leading, metrics.size, `prompt-${i}`, 600))}
+        <text key="number" x={50} y={r.top + metrics.size} textAnchor="end" fontSize={metrics.size} fill={colors.accent} fontWeight={600}>{data.showNumbering === false ? "" : `${worksheetNumberLabel(index, data)}.`}</text>
+        {r.prompt.map((value, i) => text(value, 62, r.top + metrics.size + i * metrics.leading, metrics.size, `prompt-${i}`, bounded(data.questionWeight, 600, 400, 700)))}
         {r.working.map((value, i) => text(show ? value : "", 62, r.top + (r.prompt.length + i + 1) * metrics.leading + 10, metrics.size - 2, `working-${i}`, 400, muted))}
         {metrics.answerLabel.map((value, i) => text(value, 62, r.labelTop + (i + 1) * metrics.leading - 2, metrics.size - 4, `answer-label-${i}`, 400, muted))}
-        {data.responseStyle !== "open" && Array.from({ length: r.count }, (_, i) => <line key={`rule-${i}`} x1={62} x2={width - 30} y1={r.answerTop + (i + 1) * metrics.answerLeading + 3} y2={r.answerTop + (i + 1) * metrics.answerLeading + 3} stroke={line} strokeWidth={.8} />)}
-        {show && r.answer.map((value, i) => text(value, 62, r.answerTop + (i + 1) * metrics.answerLeading - 2, metrics.size, `answer-${i}`))}
+        {data.responseStyle !== "open" && Array.from({ length: r.count }, (_, i) => <line key={`rule-${i}`} x1={62} x2={width - 30} y1={r.answerTop + (i + 1) * metrics.answerLeading + 3} y2={r.answerTop + (i + 1) * metrics.answerLeading + 3} stroke={colors.rule} strokeWidth={.8} />)}
+        {show && r.answer.map((value, i) => text(value, 62, r.answerTop + (i + 1) * metrics.answerLeading - 2, metrics.size, `answer-${i}`, 400, colors.answer))}
       </g>;
     })}
   </svg>;
@@ -114,7 +100,7 @@ function worksheet(id: string, name: string, category: MathTopic, title: string,
   return { id: `worksheet-${id}`, name, category, grades: [1, 2, 3, 4, 5], subcategory: "Ready-made Q&A", chapterTag: "Question & Answer Studio", type: "practice",
     tags: ["question and answer", "q&a", "worksheet", "ready made", "editable", name.toLowerCase()], defaultData, defaultWidth: 460,
     defaultHeight: worksheetLayout(defaultData, 460).height, measureHeight: (data, width) => worksheetLayout(data, width).height,
-    styleVariants: ["clean", "color-coded", "visual"], renderer: WorksheetRenderer, configFields: commonFields(defaultData),
+    styleVariants: ["clean", "color-coded", "visual"], renderer: WorksheetRenderer, configFields: [...commonFields(defaultData), ...WORKSHEET_DESIGN_FIELDS.filter(f => !commonFields(defaultData).some(existing => existing.key === f.key))],
     a11yDescription: `${name}. Editable questions, answer key and student writing space.` };
 }
 
@@ -139,6 +125,8 @@ export const PlainQuestionAnswerTemplate: MathTemplate = {
     { key: "questionGap", label: "Space between questions (pt)", type: "number", defaultValue: 24, min: 12, max: 80 },
   ],
 };
+
+PlainQuestionAnswerTemplate.configFields.push(...WORKSHEET_DESIGN_FIELDS.filter(field => !PlainQuestionAnswerTemplate.configFields.some(existing => existing.key === field.key)));
 
 export const WORKSHEET_TEMPLATES: MathTemplate[] = [
   worksheet("short-answer", "Question & Answer · Short answers", "assessment", "Think. Solve. Answer.", "Read each question. Write your answer on the line.", [row("What is the place value of 5 in 8,750?", "5 tens = 50"), row("Write 54,012 in words.", "Fifty-four thousand twelve"), row("Find the sum of 345 and 278.", "623")], "short", 1, false),
@@ -165,11 +153,11 @@ const format = (value: number, data: Record<string, unknown>) => new Intl.Number
 export const NumberExerciseRenderer: React.FC<MathRendererProps> = ({ data, mode, styleVariant, width, height }) => {
   const numbers = numberList(data), descending = data.direction === "descending";
   const sorted = [...numbers].sort((a, b) => descending ? b - a : a - b);
-  const accent = styleVariant === "clean" ? ink : MATH_TOKENS.primary.indigoAccent;
-  const tint = styleVariant === "clean" ? wash : MATH_TOKENS.topics.placeValue.tint;
+  const colors = worksheetColors(data, styleVariant);
+  const { accent, tint } = colors;
   const kind = string(data.kind), teacher = mode === "teacher", size = 16;
   const nodes: React.ReactNode[] = [];
-  const text = (value: string, x: number, y: number, key: string, color = ink, fontSize = size, anchor: "start" | "middle" = "start") => <text key={key} x={x} y={y} fill={color} fontSize={fontSize} textAnchor={anchor}>{value}</text>;
+  const text = (value: string, x: number, y: number, key: string, color = colors.ink, fontSize = size, anchor: "start" | "middle" = "start") => <text key={key} x={x} y={y} fill={color} fontSize={fontSize} textAnchor={anchor}>{value}</text>;
   const title = worksheetLines(data.title, width - 48, 22), instructions = worksheetLines(data.instructions, width - 48, 16);
   const top = 32 + title.length * 29 + instructions.length * 23;
   if (kind === "marked-line") {
@@ -195,7 +183,7 @@ export const NumberExerciseRenderer: React.FC<MathRendererProps> = ({ data, mode
       const digits = string(number).split(""), cw = Math.min(36, (width - 70) / Math.max(1, digits.length)), x = 28, y = top + i * 56;
       digits.forEach((digit, j) => {
         const color = styleVariant === "clean" ? { bg: wash, text: ink } : Object.values(MATH_TOKENS.placeColors)[(digits.length - j - 1) % 5];
-        nodes.push(<rect key={`card-${i}-${j}`} x={x + j * cw} y={y} width={cw - 3} height={36} rx={5} fill={color.bg} stroke={line} />);
+        nodes.push(<rect key={`card-${i}-${j}`} x={x + j * cw} y={y} width={cw - 3} height={36} rx={5} fill={color.bg} stroke={colors.rule} />);
         nodes.push(text(digit, x + j * cw + (cw - 3) / 2, y + 24, `digit-${i}-${j}`, color.text, 20, "middle"));
       });
     });
@@ -216,7 +204,7 @@ export const NumberExerciseRenderer: React.FC<MathRendererProps> = ({ data, mode
     });
   }
   return <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" viewBox={`0 0 ${width} ${height}`} fontFamily="Inter, sans-serif" aria-label={string(data.title)}>
-    <rect x={.5} y={.5} width={width - 1} height={height - 1} rx={16} fill={paper} stroke={line} />
+    <rect x={.5} y={.5} width={width - 1} height={height - 1} rx={16} fill={paper} stroke={colors.rule} />
     {title.map((value, i) => text(value, 24, 34 + i * 29, `title-${i}`, accent, 22))}
     {instructions.map((value, i) => text(value, 24, 32 + title.length * 29 + i * 23, `instructions-${i}`, muted))}
     {nodes}
@@ -270,15 +258,16 @@ export const CalculationGridTemplate: MathTemplate = {
   measureHeight: (data, width) => gridLayout(data, width).height,
   renderer: ({ data, width, height, styleVariant }) => {
     const { columns, rows, cell, title, instructions, instructionY, y } = gridLayout(data, width);
+    const colors = worksheetColors(data, styleVariant);
     const x = (width - columns * cell) / 2;
     return <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" viewBox={`0 0 ${width} ${height}`} fontFamily="Inter, sans-serif" aria-label={string(data.title)}>
-      <rect x={.5} y={.5} width={width - 1} height={height - 1} rx={16} fill={paper} stroke={line} />
-      {title.map((value, i) => <text key={`title-${i}`} x={24} y={34 + i * 28} fontSize={22} fill={styleVariant === "clean" ? ink : MATH_TOKENS.primary.indigoAccent}>{value}</text>)}
+      <rect x={.5} y={.5} width={width - 1} height={height - 1} rx={16} fill={paper} stroke={colors.rule} />
+      {title.map((value, i) => <text key={`title-${i}`} x={24} y={34 + i * 28} fontSize={22} fill={colors.accent}>{value}</text>)}
       {instructions.map((value, i) => <text key={`instruction-${i}`} x={24} y={instructionY + i * 22} fontSize={16} fill={muted}>{value}</text>)}
-      {Array.from({ length: columns + 1 }, (_, i) => <line key={`column-${i}`} x1={x + i * cell} x2={x + i * cell} y1={y} y2={y + rows * cell} stroke={line} />)}
-      {Array.from({ length: rows + 1 }, (_, i) => <line key={`row-${i}`} x1={x} x2={x + columns * cell} y1={y + i * cell} y2={y + i * cell} stroke={line} />)}
+      {Array.from({ length: columns + 1 }, (_, i) => <line key={`column-${i}`} x1={x + i * cell} x2={x + i * cell} y1={y} y2={y + rows * cell} stroke={colors.rule} />)}
+      {Array.from({ length: rows + 1 }, (_, i) => <line key={`row-${i}`} x1={x} x2={x + columns * cell} y1={y + i * cell} y2={y + i * cell} stroke={colors.rule} />)}
     </svg>;
   },
 };
 
-export const READY_MADE_MATH_TEMPLATES = [...WORKSHEET_TEMPLATES, ...NUMBER_EXERCISE_TEMPLATES, CalculationGridTemplate];
+export const READY_MADE_MATH_TEMPLATES = [...PREMIUM_EXERCISE_TEMPLATES, ...WORKSHEET_TEMPLATES, ...NUMBER_EXERCISE_TEMPLATES, CalculationGridTemplate];

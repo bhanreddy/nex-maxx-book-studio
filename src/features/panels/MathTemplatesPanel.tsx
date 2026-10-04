@@ -27,13 +27,19 @@ import {
   Calculator,
 } from "lucide-react";
 
-import { READY_MADE_MATH_TEMPLATES, WORKSHEET_TEMPLATES, PlainQuestionAnswerTemplate } from "../../editor/math/templates/worksheetTemplates";
+import { READY_MADE_MATH_TEMPLATES, PlainQuestionAnswerTemplate } from "../../editor/math/templates/worksheetTemplates";
 
+import { PREMIUM_EXERCISE_TEMPLATES } from "../../editor/math/templates/premiumExerciseTemplates";
+import { WorksheetPalettePicker } from "../../editor/math/WorksheetStyleControls";
+import { worksheetPalettePatch } from "../../editor/math/worksheetDesign";
+
+const PREMIUM_IDS = new Set(PREMIUM_EXERCISE_TEMPLATES.map(t => t.id));
 const READY_MADE_IDS = new Set(READY_MADE_MATH_TEMPLATES.map(t => t.id));
 
 export const MathTemplatesPanel: React.FC = () => {
   const [topTab, setTopTab] = useState<"nex-maxx" | "favorites" | "recent" | "custom">("nex-maxx");
-  const [collection, setCollection] = useState<"all" | "ready-made">("all");
+  const [collection, setCollection] = useState<"all" | "ready-made" | "premium">("premium");
+  const [paletteId, setPaletteId] = useState<string | null>(null);
   const [answerMode, setAnswerMode] = useState<MathAnswerMode>("student");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedGrade, setSelectedGrade] = useState<number | "all">("all");
@@ -104,7 +110,7 @@ export const MathTemplatesPanel: React.FC = () => {
     }
 
     return list.filter(t =>
-      (collection === "all" || READY_MADE_IDS.has(t.id)) &&
+      (collection === "all" || (collection === "premium" ? PREMIUM_IDS : READY_MADE_IDS).has(t.id)) &&
       (selectedGrade === "all" || t.grades.includes(selectedGrade as 1 | 2 | 3 | 4 | 5)) &&
       (selectedTopic === "all" || t.category === selectedTopic) &&
       (selectedType === "all" || t.type === selectedType) &&
@@ -123,7 +129,7 @@ export const MathTemplatesPanel: React.FC = () => {
 
   // Insert template onto canvas
   const handleInsert = (template: MathTemplate, customData?: Record<string, unknown>, settings?: Partial<CustomMathTemplateEntry>) => {
-    insertMathComponent(template.id, undefined, undefined, customData, settings || (READY_MADE_IDS.has(template.id) ? { mode: answerMode } : undefined));
+    insertMathComponent(template.id, undefined, undefined, customData || (paletteId && READY_MADE_IDS.has(template.id) ? worksheetPalettePatch(paletteId) : undefined), settings || (READY_MADE_IDS.has(template.id) ? { mode: answerMode } : undefined));
     setRecents(getRecentMathIds());
   };
 
@@ -176,14 +182,17 @@ export const MathTemplatesPanel: React.FC = () => {
       {topTab === "nex-maxx" && <div className="math-ready-made">
         <div className="math-ready-made-eyebrow">QUESTION & ANSWER STUDIO</div>
         <h3>Ready to teach.<br />Yours to edit.</h3>
-        <p>Complete exercises, generous answer spaces, and a separate answer key.</p>
+        <p>Thoughtful layouts. Editable content. Student worksheets and teacher answer keys.</p>
+        <WorksheetPalettePicker paletteId={paletteId || ""} onChange={setPaletteId} />
+        {paletteId && <button type="button" className="math-quiet-button" onClick={() => setPaletteId(null)}>Use template colors</button>}
         <div className="math-answer-switch" role="group" aria-label="Insert worksheet as">
           {(["student", "teacher"] as const).map(mode => <button key={mode} aria-pressed={answerMode === mode} onClick={() => setAnswerMode(mode)}>{mode === "student" ? "Student worksheet" : "Teacher answer key"}</button>)}
         </div>
-        <button className="math-ready-made-insert" onClick={() => handleInsert(WORKSHEET_TEMPLATES[0])}><Plus size={15} />Insert Q&A template</button>
+        <button className="math-ready-made-insert" onClick={() => handleInsert(PREMIUM_EXERCISE_TEMPLATES[0])}><Plus size={15} />Insert premium Q&A</button>
         <button className="math-quiet-button w-full mt-1" onClick={() => handleInsert(PlainQuestionAnswerTemplate)}>Insert plain Q&A</button>
         <div className="math-collection-switch" role="group" aria-label="Template collection">
           <button aria-pressed={collection === "all"} onClick={() => setCollection("all")}>Full library</button>
+          <button aria-pressed={collection === "premium"} onClick={() => { setCollection("premium"); setSearchQuery(""); setSelectedTopic("all"); setSelectedType("all"); setSelectedChapter("all"); }}>Premium · {PREMIUM_EXERCISE_TEMPLATES.length}</button>
           <button aria-pressed={collection === "ready-made"} onClick={() => { setCollection("ready-made"); setSearchQuery(""); setSelectedTopic("all"); setSelectedType("all"); setSelectedChapter("all"); }}>Ready-made · {READY_MADE_MATH_TEMPLATES.length}</button>
         </div>
       </div>}
@@ -391,6 +400,7 @@ export const MathTemplatesPanel: React.FC = () => {
                 draggable
                 onDragStart={(e) => {
                   e.dataTransfer.setData("application/x-nexmaxx-math-template", template.id);
+                  if (paletteId && READY_MADE_IDS.has(template.id)) e.dataTransfer.setData("application/x-nexmaxx-math-data", JSON.stringify(worksheetPalettePatch(paletteId)));
                   if (READY_MADE_IDS.has(template.id)) e.dataTransfer.setData("application/x-nexmaxx-math-settings", JSON.stringify({ mode: answerMode }));
                   e.dataTransfer.effectAllowed = "copy";
                 }}
@@ -412,7 +422,7 @@ export const MathTemplatesPanel: React.FC = () => {
                     className="math-template-preview pointer-events-none"
                   >
                     <Renderer
-                      data={template.defaultData}
+                      data={paletteId && READY_MADE_IDS.has(template.id) ? { ...template.defaultData, ...worksheetPalettePatch(paletteId) } : template.defaultData}
                       mode={READY_MADE_IDS.has(template.id) ? answerMode : "teacher"}
                       styleVariant="color-coded"
                       width={template.defaultWidth}

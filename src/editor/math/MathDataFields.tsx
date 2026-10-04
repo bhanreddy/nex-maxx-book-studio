@@ -16,7 +16,12 @@ function ValueEditor({ label, value, sample, onChange }: { label: string; value:
   if (Array.isArray(value)) return <div className="math-collection space-y-2">
     <div className="flex items-center justify-between"><strong>{label}</strong><small>{value.length} items</small></div>
     {value.map((item, i) => <div key={i} className="math-collection-item space-y-2">
-      <div className="flex items-center justify-between"><span>Item {i + 1}</span><button type="button" aria-label={`Remove ${label} item ${i + 1}`} className="math-quiet-button" onClick={() => onChange(value.filter((_, index) => index !== i))}>Remove</button></div>
+      <div className="math-item-actions"><span>Item {i + 1}</span><div>
+        <button type="button" title="Move up" aria-label={`Move ${label} item ${i + 1} up`} disabled={i === 0} onClick={() => { const next = [...value]; [next[i - 1], next[i]] = [next[i], next[i - 1]]; onChange(next); }}>↑</button>
+        <button type="button" title="Move down" aria-label={`Move ${label} item ${i + 1} down`} disabled={i === value.length - 1} onClick={() => { const next = [...value]; [next[i + 1], next[i]] = [next[i], next[i + 1]]; onChange(next); }}>↓</button>
+        <button type="button" title="Duplicate item" aria-label={`Duplicate ${label} item ${i + 1}`} disabled={value.length >= 50} onClick={() => onChange([...value.slice(0, i + 1), structuredClone(item), ...value.slice(i + 1)])}>⧉</button>
+        <button type="button" aria-label={`Remove ${label} item ${i + 1}`} onClick={() => onChange(value.filter((_, index) => index !== i))}>Remove</button>
+      </div></div>
       <ValueEditor label={`${label} ${i + 1}`} value={item} sample={Array.isArray(sample) ? sample[i] || sample[0] : undefined} onChange={next => onChange(value.map((v, index) => index === i ? next : v))} />
     </div>)}
     <button className="math-quiet-button" type="button" disabled={value.length >= 50} onClick={() => onChange([...value, structuredClone(value[value.length - 1] ?? (Array.isArray(sample) ? sample[0] : undefined) ?? "New item")])}>Add {label.toLowerCase()} item</button>
@@ -27,8 +32,8 @@ function ValueEditor({ label, value, sample, onChange }: { label: string; value:
   return <label className="math-control"><span>{label}</span><textarea aria-label={label} rows={String(value || "").length > 70 ? 3 : 1} value={String(value ?? "")} onChange={e => onChange(e.target.value)} /></label>;
 }
 
-export function MathDataFields({ template, data, onUpdate }: { template: MathTemplate; data: Record<string, unknown>; onUpdate: (patch: Record<string, unknown>) => void }) {
-  return <div className="math-data-fields space-y-2">{editableMathFields(template, data).map(field => {
+export function MathDataFields({ template, data, onUpdate, fields, skipKeys = [] }: { template: MathTemplate; data: Record<string, unknown>; onUpdate: (patch: Record<string, unknown>) => void; fields?: MathConfigField[]; skipKeys?: string[] }) {
+  return <div className="math-data-fields space-y-2">{(fields || editableMathFields(template, data)).filter(field => !skipKeys.includes(field.key)).map(field => {
     const value = data[field.key] ?? field.defaultValue;
     const change = (next: unknown) => onUpdate({ [field.key]: next, ...(field.key === "options" && Array.isArray(next) ? { correctIndex: Math.max(0, Math.min(Number(data.correctIndex) || 0, next.length - 1)) } : {}) });
     if (field.type === "items" || field.type === "array-numbers") return <ValueEditor key={field.key} label={field.label} value={value} sample={field.defaultValue} onChange={change} />;

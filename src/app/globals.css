@@ -1067,3 +1067,25 @@ fieldset { min-width: 0; }
 .math-collection-switch button[aria-pressed="true"] { color: var(--foreground); background: var(--surface-bg); }
 .math-ready-made button:focus-visible { outline: 2px solid var(--editor-selection); outline-offset: 2px; }
 @media (prefers-reduced-motion: reduce) { .math-ready-made-insert { transition: none; } }
+
+/* Exercise studio: restrained surfaces and small, direct controls. */
+.worksheet-style-controls { padding: 12px; border: 1px solid var(--border-subtle); border-radius: var(--studio-radius); background: var(--panel-bg); color: var(--foreground); }
+.worksheet-style-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
+.worksheet-style-heading strong { font: 600 13px/1.4 var(--font-inter); }
+.worksheet-style-heading span { font-size: 10px; color: var(--text-muted); }
+.worksheet-style-controls p { margin: 8px 0 12px; font: 400 11px/1.5 var(--font-inter); color: var(--text-muted); }
+.worksheet-palette-picker { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; }
+.worksheet-palette { display: grid; place-items: center; width: 44px; height: 44px; border: 1px solid transparent; border-radius: 8px; }
+.worksheet-palette span:not(.sr-only) { width: 18px; height: 18px; border-radius: 50%; border: 1px solid var(--border-subtle); }
+.worksheet-palette[aria-pressed="true"] { border-color: var(--editor-selection); background: var(--surface-bg); }
+.worksheet-shuffle, .worksheet-action { display: flex; align-items: center; justify-content: center; gap: 6px; min-height: 44px; padding: 6px 8px; font: 500 11px/1.35 var(--font-inter); color: var(--foreground); border: 1px solid var(--border-subtle); border-radius: 8px; }
+.worksheet-shuffle { margin-left: auto; }
+.worksheet-action { width: 100%; margin-top: 10px; }
+.worksheet-style-controls details { margin-top: 10px; border-top: 1px solid var(--border-subtle); }
+.worksheet-style-controls summary { cursor: pointer; padding: 12px 0; font-weight: 600; }
+.math-item-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 4px; }
+.math-item-actions > div { display: flex; flex-wrap: wrap; align-items: center; gap: 2px; }
+.math-item-actions button { display: grid; place-items: center; min-width: 44px; min-height: 44px; padding: 4px; border-radius: 6px; color: var(--text-muted); font-size: 10px; }
+.math-item-actions button:hover:not(:disabled), .worksheet-action:hover, .worksheet-shuffle:hover { background: var(--surface-bg); color: var(--foreground); }
+.math-item-actions button:disabled { opacity: .35; cursor: default; }
+.worksheet-palette-picker button:focus-visible, .worksheet-style-controls button:focus-visible, .math-item-actions button:focus-visible { outline: 2px solid var(--editor-selection); outline-offset: 2px; }

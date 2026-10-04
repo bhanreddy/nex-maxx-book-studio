@@ -344,3 +344,14 @@ export const CHROME_VS_PRINT_TOKENS = {
   },
 };
 
+
+/** Coordinated worksheet colors, derived from the existing print-safe topic tokens. */
+export const WORKSHEET_PALETTES = [
+  { id: "indigo", name: "Royal indigo", ...MATH_TOKENS.topics.placeValue },
+  { id: "teal", name: "Quiet teal", ...MATH_TOKENS.topics.geometry },
+  { id: "rose", name: "Rose & paper", ...MATH_TOKENS.topics.operations },
+  { id: "violet", name: "Soft violet", ...MATH_TOKENS.topics.fractions },
+  { id: "copper", name: "Warm copper", ...MATH_TOKENS.topics.measurement },
+  { id: "forest", name: "Forest green", ...MATH_TOKENS.topics.money },
+  { id: "mono", name: "Editorial ink", main: MATH_TOKENS.print.ink, accent: MATH_TOKENS.print.ink, tint: MATH_TOKENS.print.wash, border: MATH_TOKENS.print.line, badgeText: MATH_TOKENS.print.ink },
+] as const;
