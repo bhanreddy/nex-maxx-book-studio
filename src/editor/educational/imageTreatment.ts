@@ -5,7 +5,7 @@ export interface ImageTreatment {
   mask?: "rectangle" | "rounded" | "circle" | "arch" | "blob" | "wave" | "organic" | "custom";
   /** SVG path in a 100 × 100 coordinate system. */
   customMaskPath?: string;
-  fit?: "cover" | "contain";
+  fit?: "cover" | "contain" | "fill";
   flipX?: boolean;
   flipY?: boolean;
   radius?: number;

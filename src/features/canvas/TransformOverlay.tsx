@@ -306,9 +306,7 @@ export const TransformOverlay: React.FC<TransformOverlayProps> = ({
         updateElementTransform(singleElement.id, { rotation: deg }, false);
       } else if (singleElement) {
         // Standard Resize
-        const corner = ["nw", "ne", "sw", "se"].includes(handle);
-        const verticalEdge = ["n", "s"].includes(handle);
-        const lockAspect = moveEvent.shiftKey || singleElement.type === "image" || (Boolean(singleElement.smartBlockData) && !verticalEdge) || (corner && singleElement.type === "group");
+        const lockAspect = moveEvent.shiftKey;
         const newRect = calculateRotatedResize(initialRect, rotation, handle, deltaX, deltaY, lockAspect, singleElement.smartBlockData ? 60 : 20, singleElement.smartBlockData ? 30 : 20);
 
         updateElementTransform(
@@ -316,17 +314,20 @@ export const TransformOverlay: React.FC<TransformOverlayProps> = ({
           {
             x: Math.round(newRect.x * 10) / 10,
             y: Math.round(newRect.y * 10) / 10,
-            width: newRect.width === initialRect.width ? initialRect.width : Math.round(newRect.width * 10) / 10,
-            height: newRect.height === initialRect.height ? initialRect.height : Math.round(newRect.height * 10) / 10,
+            ...(newRect.width !== initialRect.width ? { width: Math.round(newRect.width * 10) / 10 } : {}),
+            ...(newRect.height !== initialRect.height ? { height: Math.round(newRect.height * 10) / 10 } : {}),
           },
           false,
-          singleElement.type === "math-component" && !moveEvent.shiftKey ? (["n", "nw", "ne"].includes(handle) ? "reflow-bottom" : "auto") : verticalEdge && !moveEvent.shiftKey ? "trim-height" : "scale"
+          moveEvent.shiftKey ? "scale" : (["n", "nw", "ne"].includes(handle) ? "reflow-bottom" : "auto")
         );
       } else if (handle !== "rot") {
         const minWidth = Math.max(...movableElements.map(el => (el.smartBlockData ? 60 : 20) * initialRect.width / el.transform.width));
         const minHeight = Math.max(...movableElements.map(el => (el.smartBlockData ? 30 : 20) * initialRect.height / el.transform.height));
-        const next = calculateResize(initialRect, handle, deltaX, deltaY, true, minWidth, minHeight);
-        movableElements.forEach(el => updateElementTransform(el.id, resizeSelectionMember(el.transform, initialRect, next), false, "scale"));
+        const next = calculateResize(initialRect, handle, deltaX, deltaY, moveEvent.shiftKey, minWidth, minHeight);
+        movableElements.forEach(el => {
+          const member = resizeSelectionMember(el.transform, initialRect, next);
+          updateElementTransform(el.id, { x: member.x, y: member.y, ...(next.width !== initialRect.width ? { width: member.width } : {}), ...(next.height !== initialRect.height ? { height: member.height } : {}) }, false, moveEvent.shiftKey ? "scale" : "auto");
+        });
       }
     };
 

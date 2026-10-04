@@ -67,13 +67,15 @@ export function renderReferenceBanner(block: SmartBlockInstance, layout: {
   const banner = referenceBannerFor(block.presetId);
   if (!banner) return;
   if ('worksheet' in banner) return renderReferenceWorksheet(block, banner, referenceBannerVersion(block), referenceBannerColour(block.styleOverrides.referenceBannerColour).hueRotate, layout);
-  const width = Math.max(1, block.transform.width), height = width / 3;
+  const responsive = block.styleOverrides.responsiveResize;
+  const width = Math.max(1, block.transform.width), height = responsive ? block.transform.height || 160 : width / 3;
+  const verticalWidth = responsive ? height * 3 : width;
   const colour = referenceBannerColour(block.styleOverrides.referenceBannerColour);
   const version = referenceBannerVersion(block), gray = block.styleOverrides.printMode === 'grayscale';
   const nodes: SceneNode[] = [{
     kind: 'image', x: 0, y: 0, w: width, h: height,
     src: `/assets/reference-banners/${banner.slug}${version === 'original' ? '' : '-blank'}.png`, alt: banner.description,
-    sourceWidth: 2172, sourceHeight: 724, focalX: .5, focalY: .5, scale: 1, fit: 'contain',
+    sourceWidth: 2172, sourceHeight: 724, focalX: .5, focalY: .5, scale: 1, fit: responsive ? 'fill' : 'contain',
     hueRotate: colour.hueRotate, saturation: gray ? 0 : 100,
   }];
   if (version === 'editable') {
@@ -98,17 +100,17 @@ export function renderReferenceBanner(block: SmartBlockInstance, layout: {
       nodes.push({ kind: 'text', text, lines, x, y: baseline, size, lineHeight,
         textLength: singleLine ? Math.min(availableWidth, layout.textWidth(text, size, true, false, fontFamily)) : undefined,
         fontFamily, fontWeight: 900, bold: true, italic, align: 'middle', wrapWidth: availableWidth,
-        fill: gray ? '#303030' : colour.ink, gradientId: 'banner-heading', stroke: '#ffffff', strokeWidth: width * .0028,
-        shadow: { color: '#66574766', dx: 0, dy: width * .003, blur: width * .0015 }, fieldPath: 'title',
+        fill: gray ? '#303030' : colour.ink, gradientId: 'banner-heading', stroke: '#ffffff', strokeWidth: verticalWidth * .0028,
+        shadow: { color: '#66574766', dx: 0, dy: verticalWidth * .003, blur: verticalWidth * .0015 }, fieldPath: 'title',
       });
     };
-    nodes.push({ kind: 'gradient', id: 'banner-heading', x1: 0, y1: width * .1, x2: 0, y2: width * .2,
+    nodes.push({ kind: 'gradient', id: 'banner-heading', x1: 0, y1: verticalWidth * .1, x2: 0, y2: verticalWidth * .2,
       from: gray ? '#505050' : colour.ink, to: gray ? '#151515' : colour.id === 'original' ? '#001b46' : colour.ink });
     if (refresh && parts.length === 2) {
-      addHeading(parts[0], width * .066, width * .055, width * .065, true);
+      addHeading(parts[0], verticalWidth * .066, verticalWidth * .055, verticalWidth * .065, true);
       const prefix = nodes[nodes.length - 1]; if (prefix.kind === 'text') prefix.fieldPath = undefined;
-      addHeading(parts[1], width * .119, width * .111, width * .145, true);
-    } else addHeading(title, width * .092, width * .111, width * .145, refresh);
+      addHeading(parts[1], verticalWidth * .119, verticalWidth * .111, verticalWidth * .145, true);
+    } else addHeading(title, verticalWidth * .092, verticalWidth * .111, verticalWidth * .145, refresh);
   }
   return { width, height, variant: 'reference-artwork', warnings: [], nodes };
 }

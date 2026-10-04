@@ -67,7 +67,7 @@ test('resizing scales the authored layout, survives repeated gestures, and undoe
   store.getState().updateBlockContentLayout(element.id, layoutFor(node));
   const before = structuredClone(store.getState().elements[element.id]);
   const originalScene = buildPublicationScene(before.smartBlockData);
-  store.getState().updateElementTransform(element.id, { x: before.transform.x + 8, width: before.transform.width / 2, height: before.transform.height / 2 }, true);
+  store.getState().updateElementTransform(element.id, { x: before.transform.x + 8, width: before.transform.width / 2, height: before.transform.height / 2 }, true, 'scale');
   const after = structuredClone(store.getState().elements[element.id]);
   assert.equal(after.transform.x, before.transform.x + 8);
   assert.equal(after.transform.width, before.transform.width / 2);
@@ -78,7 +78,7 @@ test('resizing scales the authored layout, survives repeated gestures, and undoe
   history.getState().redo(); assert.deepEqual(store.getState().elements[element.id], after);
   store.getState().fitRenderedBlockHeight(element.id, 999);
   assert.deepEqual(store.getState().elements[element.id], after);
-  store.getState().updateElementTransform(element.id, { width: before.transform.width * .75 }, true);
+  store.getState().updateElementTransform(element.id, { width: before.transform.width * .75 }, true, 'scale');
   const resized = store.getState().elements[element.id];
   assert.equal(resized.transform.height, before.transform.height * .75);
   assert.deepEqual(resized.smartBlockData.styleOverrides.resizeFrame, after.smartBlockData.styleOverrides.resizeFrame);

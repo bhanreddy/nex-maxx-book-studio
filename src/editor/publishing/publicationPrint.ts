@@ -10,6 +10,7 @@ import {printFont,PRINT_FONTS} from './fontRegistry';
 import {prepareTextWrapContours} from '../layoutPartner/textWrapLayout';
 import { buildPublisherFooterScene } from '../branding/publisherFooter';
 import { imageMaskPath } from '../educational/imageTreatment';
+import { prepareResponsiveElementScenes } from '../math/mathDomScene';
 const escape=(value:unknown)=>String(value??'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#39;');
 const num=(value:number)=>{if(!Number.isFinite(value))throw new Error('Print layout contains invalid coordinates');return String(value);};
 export interface PrintScenePage{number:string;frame?:PublicationScene;footer?:PublicationScene;elements:{element:PageElement;scene:PublicationScene}[]}
@@ -74,6 +75,7 @@ export async function preparePrintHtml(book:Book,elements:Record<string,PageElem
   const printableIds=new Set(book.pages.flatMap(page=>page.elementIds));
   elements=await hydrateSmartQrs(Object.fromEntries(Object.entries(elements).filter(([id])=>printableIds.has(id))),book.dimensions.widthPt,book.dimensions.heightPt);
   await prepareTextWrapContours(Object.values(elements));
+  await prepareResponsiveElementScenes(Object.values(elements));
   const pages=collectPrintPages(book,elements),families=new Set(['Noto Sans']);
   for(const page of pages)for(const scene of [...(page.footer?[page.footer]:[]),...page.elements.map(({scene})=>scene)])for(const node of scene.nodes)if(node.kind==='text')families.add(printFont(node.text,node.fontFamily,node.font==='serif'));
   const manifest=await fetch('/fonts/manifest.json',{cache:'force-cache'}).then(r=>{if(!r.ok)throw new Error('Bundled font manifest is unavailable');return r.json();});

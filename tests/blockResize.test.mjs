@@ -44,14 +44,14 @@ test('vertical edges remove blank height without shrinking text or images and st
   element.transform = { ...block.transform, x: 40, y: 60, height: naturalHeight + 300 };
   element.smartBlockData = { ...block, transform: element.transform };
   const before = buildPublicationScene(element.smartBlockData);
-  const trimmed = withBlockTransform(element, { ...element.transform, height: naturalHeight + 100 });
+  const trimmed = withBlockTransform(element, { ...element.transform, height: naturalHeight + 100 }, 'trim-height');
   assert.equal(trimmed.transform.height, naturalHeight + 100);
   assert.equal(trimmed.transform.height / trimmed.smartBlockData.styleOverrides.resizeFrame.height, 1);
   assert.deepEqual(buildPublicationScene(trimmed.smartBlockData).nodes.filter(n => n.kind === 'text' || n.kind === 'image'), before.nodes.filter(n => n.kind === 'text' || n.kind === 'image'));
-  const limited = withBlockTransform(trimmed, { ...trimmed.transform, height: 30 });
+  const limited = withBlockTransform(trimmed, { ...trimmed.transform, height: 30 }, 'trim-height');
   assert.ok(limited.transform.height >= naturalHeight);
   assert.equal(limited.transform.height / limited.smartBlockData.styleOverrides.resizeFrame.height, 1);
-  const top = withBlockTransform(trimmed, { ...trimmed.transform, y: trimmed.transform.y + trimmed.transform.height - 30, height: 30 });
+  const top = withBlockTransform(trimmed, { ...trimmed.transform, y: trimmed.transform.y + trimmed.transform.height - 30, height: 30 }, 'trim-height');
   assert.equal(top.transform.y + top.transform.height, trimmed.transform.y + trimmed.transform.height);
 });
 
@@ -61,8 +61,8 @@ test('height trimming after corner scaling retains the scaled reading size and m
   element.smartBlockData.transform = element.transform;
   const node = buildPublicationScene(element.smartBlockData).nodes.find(n => n.kind === 'text');
   element.smartBlockData.styleOverrides.contentLayout = { enabled: true, items: { [node.contentId]: { base: node.text, dx: 5, dy: 180 } } };
-  const half = withBlockTransform(element, { ...element.transform, width: element.transform.width / 2, height: element.transform.height / 2 });
-  const trimmed = withBlockTransform(half, { ...half.transform, height: 30 });
+  const half = withBlockTransform(element, { ...element.transform, width: element.transform.width / 2, height: element.transform.height / 2 }, 'scale');
+  const trimmed = withBlockTransform(half, { ...half.transform, height: 30 }, 'trim-height');
   const frame = trimmed.smartBlockData.styleOverrides.resizeFrame;
   assert.equal(trimmed.transform.width / frame.width, .5);
   assert.equal(trimmed.transform.height / frame.height, .5);
@@ -145,8 +145,8 @@ test('text, images, decorations, and authored offsets retain one common coordina
   const base = buildPublicationScene(element.smartBlockData), text = base.nodes.find(n => n.kind === 'text');
   element.smartBlockData.styleOverrides.contentLayout = { enabled: true, items: { [text.contentId]: { base: text.text, dx: 24, dy: 12 } } };
   const before = buildPublicationScene(element.smartBlockData);
-  const half = withBlockTransform(element, { ...element.transform, width: element.transform.width / 2, height: element.transform.height / 2 });
-  const smaller = withBlockTransform(half, { ...half.transform, width: half.transform.width / 2, height: half.transform.height / 2 });
+  const half = withBlockTransform(element, { ...element.transform, width: element.transform.width / 2, height: element.transform.height / 2 }, 'scale');
+  const smaller = withBlockTransform(half, { ...half.transform, width: half.transform.width / 2, height: half.transform.height / 2 }, 'scale');
   assert.deepEqual(buildPublicationScene(half.smartBlockData), before);
   assert.deepEqual(buildPublicationScene(JSON.parse(JSON.stringify(smaller.smartBlockData))), before);
   const frame = smaller.smartBlockData.styleOverrides.resizeFrame;
@@ -159,7 +159,7 @@ test('text, images, decorations, and authored offsets retain one common coordina
 
 test('print, preflight, and selectable PDF text use the resized frame rather than rejecting the original design height', async () => {
   const { book, element } = fixture();
-  const resized = withBlockTransform(element, { ...element.transform, width: element.transform.width / 2, height: element.transform.height / 4 });
+  const resized = withBlockTransform(element, { ...element.transform, width: element.transform.width / 2, height: element.transform.height / 4 }, 'scale');
   const elements = { [resized.id]: resized };
   const pages = embedFooterFixture(collectPrintPages(book, elements));
   assert.equal(publicationPreflight(book, elements).filter(issue => issue.severity === 'error').length, 0);

@@ -2176,12 +2176,12 @@ export const useEditorStore = create<EditorState>((set, get) => {
       }
       if ((old.locked || old.smartBlockData?.isLockedDesign) && updates.transform) return;
       const next = { ...old, ...updates };
-      if ((next.smartBlockData || next.type === "math-component") && updates.transform && !updates.smartBlockData && !updates.content && !updates.style) {
+      if (updates.transform && !updates.smartBlockData && !updates.content && !updates.style) {
         const resized = withBlockTransform({ ...next, transform: old.transform }, next.transform);
-        next.transform = resized.transform; next.smartBlockData = resized.smartBlockData; next.content = resized.content;
+        Object.assign(next, resized);
       }
       if (updates.content && old.metadata?.tags?.some(tag => ['master-header','master-footer','master-folio'].includes(tag))) next.metadata = { ...next.metadata, styleOverride: true };
-      if (next.type === "body" && next.content.publicationPrimitive && (updates.content || updates.style || updates.transform)) {
+      if (next.type === "body" && next.content.publicationPrimitive && !next.responsiveLayout && (updates.content || updates.style || updates.transform)) {
         const height = detachedSceneForElement(next)?.height;
         if (height) next.transform = { ...next.transform, height };
       }
@@ -2209,7 +2209,7 @@ export const useEditorStore = create<EditorState>((set, get) => {
         return;
       }
       const before = elementTree([id], get().elements);
-      const after = [next, ...Object.values(transformGroupChildren(old, next.transform, get().elements))];
+      const after = [next, ...Object.values(transformGroupChildren(old, next.transform, get().elements, "auto"))];
       const apply = (items: PageElement[]) => {
         set(state => ({ elements: { ...state.elements, ...Object.fromEntries(items.map(el => [el.id, el])) } }));
         get().saveToStorage();
@@ -2230,7 +2230,7 @@ export const useEditorStore = create<EditorState>((set, get) => {
         updatedTransform.width = Math.max(60, updatedTransform.width);
         if (newTransform.height !== undefined) {
           updatedTransform.height = Math.max(30, updatedTransform.height);
-        } else {
+        } else if (resizeMode === "scale") {
           updatedTransform.width = Math.max(updatedTransform.width, 30 * current.transform.width / current.transform.height);
           updatedTransform.height = current.transform.height * updatedTransform.width / current.transform.width;
         }
@@ -2240,7 +2240,7 @@ export const useEditorStore = create<EditorState>((set, get) => {
       set((state) => ({
         elements: {
           ...state.elements,
-          ...transformGroupChildren(current, updated.transform, state.elements),
+          ...transformGroupChildren(current, updated.transform, state.elements, resizeMode),
           [id]: updated,
         },
       }));

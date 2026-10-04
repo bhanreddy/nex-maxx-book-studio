@@ -78,7 +78,7 @@ export function renderCurriculum(block: SmartBlockInstance, h: AtelierHelpers, o
   const motifBox = (id: string, fallback: { x: number; y: number; w: number; h: number }, kind: string) => {
     const found = o.motifs?.find(a => a.id === id);
     const scale = found?.originWidth && !found.nudged ? w / found.originWidth : 1;
-    const box = found ? { x: found.x * scale, y: found.y * scale, w: found.w * scale, h: found.h * scale } : fallback;
+    const box = found ? { x: found.x * scale, y: found.y * (o.responsiveResize ? 1 : scale), w: found.w * scale, h: found.h * (o.responsiveResize ? 1 : scale) } : fallback;
     frames.push({ id, role: found?.role || "illustration", kind, ...box, locked: found?.locked });
     return box;
   };

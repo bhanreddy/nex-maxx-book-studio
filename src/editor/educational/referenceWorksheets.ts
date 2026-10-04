@@ -39,17 +39,19 @@ export type ReferenceTextLayout = {
 };
 
 export function renderReferenceWorksheet(block: SmartBlockInstance, artwork: ReferenceWorksheet, version: 'original' | 'blank' | 'editable', hue: number, layout: ReferenceTextLayout): PublicationScene {
-  const source = artwork.worksheet, width = Math.max(1, block.transform.width), scale = width / source.width, height = source.height * scale;
+  const source = artwork.worksheet, width = Math.max(1, block.transform.width), responsive = block.styleOverrides.responsiveResize;
+  const scaleX = width / source.width, height = responsive ? block.transform.height || source.height * 480 / source.width : source.height * scaleX;
+  const scale = height / source.height;
   const gray = block.styleOverrides.printMode === 'grayscale', tokens = REFERENCE_WORKSHEET_TEXT[artwork.slug];
   const paint = (hex: string) => {
     const pixel = new Uint8ClampedArray([parseInt(hex.slice(1, 3), 16), parseInt(hex.slice(3, 5), 16), parseInt(hex.slice(5, 7), 16), 255]);
     filterImagePixels(pixel, { hueRotate: hue }, gray);
     return '#' + [...pixel.slice(0, 3)].map(v => v.toString(16).padStart(2, '0')).join('');
   };
-  const frame = (f: Frame) => ({ x: f.x * scale, y: f.y * scale, w: f.w * scale, h: f.h * scale });
+  const frame = (f: Frame) => ({ x: f.x * scaleX, y: f.y * scale, w: f.w * scaleX, h: f.h * scale });
   const nodes: SceneNode[] = [{ kind: 'image', x: 0, y: 0, w: width, h: height,
     src: `/assets/reference-banners/${artwork.slug}${version === 'original' ? '' : '-blank'}.png`, alt: artwork.description,
-    sourceWidth: version === 'original' ? source.width : source.blankSize?.width || source.width, sourceHeight: version === 'original' ? source.height : source.blankSize?.height || source.height, focalX: .5, focalY: .5, scale: 1, fit: 'contain', hueRotate: hue, saturation: gray ? 0 : 100 }];
+    sourceWidth: version === 'original' ? source.width : source.blankSize?.width || source.width, sourceHeight: version === 'original' ? source.height : source.blankSize?.height || source.height, focalX: .5, focalY: .5, scale: 1, fit: responsive ? 'fill' : 'contain', hueRotate: hue, saturation: gray ? 0 : 100 }];
   const warnings: string[] = [];
   if (version !== 'editable') return { width, height, nodes, warnings, variant: 'reference-worksheet' };
   const title = block.semanticContent.title, family = block.styleOverrides.fontFamily || 'Nunito', heading = frame(source.heading);
@@ -76,7 +78,7 @@ export function renderReferenceWorksheet(block: SmartBlockInstance, artwork: Ref
 
   const body = frame(source.body), bodyFamily = 'Nunito';
   const addBody = (text: string, fieldPath: string, area: Frame) => {
-    let bodySize = Math.max(10, Math.min(16, width * .026));
+    let bodySize = Math.max(10, Math.min(16, (responsive ? 480 : width) * .026));
     let bodyLines = layout.wrapText(text, area.w, bodySize, false, false, bodyFamily);
     while (bodySize > 6 && bodyLines.length * bodySize * 1.45 > area.h) { bodySize *= .95; bodyLines = layout.wrapText(text, area.w, bodySize, false, false, bodyFamily); }
     if (bodyLines.length * bodySize * 1.45 > area.h) warnings.push('Worksheet content exceeds the writing area. Shorten the text or increase the block size.');

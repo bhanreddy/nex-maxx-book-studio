@@ -15,6 +15,7 @@ import { toGrayHex } from "../../editor/design/contrast";
 import jsPDF from "jspdf";
 import { publicationSceneForElement, renderPublicationPdf } from "../../editor/educational/publicationPdf";
 import { prepareTextWrapContours } from "../../editor/layoutPartner/textWrapLayout";
+import { prepareResponsiveElementScenes } from "../../editor/math/mathDomScene";
 import confetti from "canvas-confetti";
 import {
   X,
@@ -112,6 +113,7 @@ export const ExportModal: React.FC = () => {
         dimensions.heightPt
       );
       const totalPages = exportPages.length;
+      await prepareResponsiveElementScenes(Object.values(exportElements));
 
       for (let i = 0; i < totalPages; i++) {
         const page = exportPages[i];

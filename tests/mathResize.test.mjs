@@ -100,7 +100,7 @@ test('legacy per-line edits migrate into authored text with their design overrid
   assert.ok(layout(wide).parts.some(p => p.text?.includes('My edited heading')));
 });
 
-test('Shift and group scaling preserve the current reflow layout; explicit scale remains available', () => {
+test('Shift and group scaling preserve the current reflow layout; explicit proportional gestures remain available', () => {
   const t = getMathTemplate('premium-question-answer'), el = fixture(t, 600, t.measureHeight(t.defaultData, 600), { resizeMode: 'reflow' });
   const before = layout(el);
   const scaled = withBlockTransform(el, { ...el.transform, width: 300, height: el.transform.height / 2 }, 'scale');
@@ -111,7 +111,8 @@ test('Shift and group scaling preserve the current reflow layout; explicit scale
   assert.deepEqual(layout(child).parts.map(p => p.text), before.parts.map(p => p.text));
   assert.equal(layout(child).frame.scaleX, .5);
   const locked = fixture(t, 460, t.defaultHeight, { resizeMode: 'scale', resizeModeLocked: true });
-  assert.equal(layout(withBlockTransform(locked, { ...locked.transform, width: 720 })).frame.renderWidth, 460);
+  assert.equal(layout(withBlockTransform(locked, { ...locked.transform, width: 720 }, 'scale')).frame.renderWidth, 460);
+  assert.equal(layout(withBlockTransform(locked, { ...locked.transform, width: 720 })).frame.offsetX, 0);
 });
 
 test('narrow choice, true/false and ordering layouts rearrange their controls into available width', () => {

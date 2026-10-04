@@ -86,7 +86,7 @@ export function renderLessonSchema(block: SmartBlockInstance, h: Pick<AtelierHel
       y += topHeight + 20;
       const centreWidth = inner * .26, cw = inner * .33, centreSize = fs * 1.3;
       const centreLines = central ? lines(central, centreWidth - 12, centreSize) : [];
-      const radius = Math.max(centreWidth / 2, (centreLines.length * centreSize * 1.35 + 24) / 2);
+      const radius = Math.max(o.responsiveResize ? Math.min(centreWidth / 2, 120) : centreWidth / 2, (centreLines.length * centreSize * 1.35 + 24) / 2);
       // Long labels grow vertically without shrinking type or losing words.
       const rowHeights = Array.from({ length: 3 }, (_, i) => Math.max(42, ...group.slice(1 + i * 2, 3 + i * 2).map(t => topicHeight(t, cw))));
       const area = Math.max(radius * 2 + 16, rowHeights.reduce((sum, rh) => sum + rh, 0) + 26);

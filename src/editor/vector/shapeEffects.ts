@@ -13,7 +13,7 @@ import {
   ShapeGlassEffect,
   ShapePaperEffect,
 } from "../../domain/element/types";
-import { SceneNode } from "../educational/publicationScene";
+import { SceneNode, wrapText } from "../educational/publicationScene";
 import { generateShapeSvgPath } from "./shapeGeometry";
 
 export interface ShapePresetStyle {
@@ -641,23 +641,28 @@ export function shapeToPublicationSceneNodes(
     const font = (shapeText.fontFamily?.toLowerCase().includes("serif") ? "serif" : "sans") as "serif" | "sans";
     const bold = Boolean(shapeText.fontWeight && (Number(shapeText.fontWeight) >= 600 || shapeText.fontWeight === "bold"));
     const textFill = shapeText.color || "#0f172a";
+    const padding = shapeText.padding ?? 10;
+    const wrapWidth = Math.max(1, w - padding * 2);
+    const lines = wrapText(shapeText.text, wrapWidth, fontSize, bold, font === "serif", shapeText.fontFamily);
+    const lineHeight = fontSize * (shapeText.lineHeight || 1.25);
+    const textHeight = lines.length * lineHeight;
 
     // Text position
     let textX = w / 2;
     let align: "start" | "middle" | "end" = "middle";
     if (shapeText.textAlign === "left") {
-      textX = shapeText.padding || 12;
+      textX = padding;
       align = "start";
     } else if (shapeText.textAlign === "right") {
-      textX = w - (shapeText.padding || 12);
+      textX = w - padding;
       align = "end";
     }
 
-    let textY = h / 2 + fontSize * 0.35;
+    let textY = (h - textHeight) / 2 + fontSize;
     if (shapeText.verticalAlign === "top") {
-      textY = (shapeText.padding || 12) + fontSize;
+      textY = padding + fontSize;
     } else if (shapeText.verticalAlign === "bottom") {
-      textY = h - (shapeText.padding || 12);
+      textY = h - padding - textHeight + fontSize;
     }
 
     nodes.push({
@@ -670,6 +675,10 @@ export function shapeToPublicationSceneNodes(
       font,
       bold,
       align,
+      fontFamily: shapeText.fontFamily,
+      wrapWidth,
+      lineHeight,
+      lines,
     });
   }
 

@@ -123,6 +123,7 @@ export const ContextToolbar: React.FC = () => {
               <input
                 type="number"
                 value={Math.round(currentTransform.x)}
+                aria-label="Element X (pt)"
                 onChange={(e) => {
                   if (singleElement.smartBlockData?.curriculum?.chapterId && singleElement.smartBlockData.isLockedDesign) {
                     setFrameworkMode(singleElement.smartBlockData.curriculum.chapterId, "design");
@@ -135,6 +136,7 @@ export const ContextToolbar: React.FC = () => {
               <input
                 type="number"
                 value={Math.round(currentTransform.y)}
+                aria-label="Element Y (pt)"
                 onChange={(e) => {
                   if (singleElement.smartBlockData?.curriculum?.chapterId && singleElement.smartBlockData.isLockedDesign) {
                     setFrameworkMode(singleElement.smartBlockData.curriculum.chapterId, "design");
@@ -168,7 +170,7 @@ export const ContextToolbar: React.FC = () => {
               <input
                 type="number"
                 value={Math.round(currentTransform.height)}
-                    title="Block height — trim empty space without shrinking content"
+                title="Block height — fit text and inner content while keeping width fixed"
                 onChange={(e) => {
                   if (singleElement.smartBlockData?.curriculum?.chapterId && singleElement.smartBlockData.isLockedDesign) {
                     setFrameworkMode(singleElement.smartBlockData.curriculum.chapterId, "design");

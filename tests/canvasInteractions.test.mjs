@@ -123,7 +123,7 @@ test('Alt-drag moves the duplicate and leaves the original untouched', () => {
   history.getState().undo(); assert.equal(store.getState().elements[copyId], undefined);
 });
 
-test('multi-selection corners and edges scale every member with one undo', () => {
+test('multi-selection width and height handles resize independently with one undo', () => {
   for (const handle of ['se', 'e', 's']) {
     const { a, b, loop, props } = setup();
     store.setState({ selectedElementIds: ['a', 'b'] });
@@ -131,8 +131,9 @@ test('multi-selection corners and edges scale every member with one undo', () =>
     const grip = nodes(tree).find(node => node.props?.['aria-label'] === `Resize from ${handle}`);
     start(grip); loop.dispatchEvent(pointer('pointerup', 320, 160));
     const current = store.getState().elements;
-    assert.equal(current.a.transform.width, 160); assert.equal(current.b.transform.width, 160);
-    assert.equal(current.b.transform.x - current.a.transform.x, 320);
+    assert.equal(current.a.transform.width, handle === 's' ? 80 : 160); assert.equal(current.b.transform.width, handle === 's' ? 80 : 160);
+    assert.equal(current.a.transform.height, handle === 'e' ? 40 : 80);
+    assert.equal(current.b.transform.x - current.a.transform.x, handle === 's' ? 160 : 320);
     assert.equal(history.getState().past.length, 1); history.getState().undo();
     assert.deepEqual(store.getState().elements.a, a); assert.deepEqual(store.getState().elements.b, b);
   }

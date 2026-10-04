@@ -1,25 +1,38 @@
 import type { PageElement, ElementTransform } from "../../domain/element/types";
 import { buildPublicationScene } from "../educational/publicationScene";
 import { withMathTransform } from "../math/mathResize";
+import { anchorResizedHeight, fitLayoutScale } from "./resizeLayout";
+import { contentNodeBounds } from "../educational/sceneBounds";
+import { withElementTransform } from "./elementResize";
 
-/** Corners scale the design; vertical edges change its available space without shrinking content. */
+/** Normal resizing reflows width and fits height. Shift explicitly scales the design. */
 export type BlockResizeMode = "auto" | "scale" | "trim-height" | "reflow-bottom";
 export function withBlockTransform(element: PageElement, transform: ElementTransform, mode: BlockResizeMode = "auto"): PageElement {
   if (element.type === "math-component") return withMathTransform(element, transform, mode);
   const block = element.smartBlockData;
-  if (!block) return { ...element, transform };
-  if(block.presetId.startsWith('edu-')&&!block.styleOverrides.contentLayout?.enabled){
-    const styleOverrides={...block.styleOverrides,resizeFrame:undefined,compactScale:undefined};
-    const next={...block,styleOverrides,transform:{...transform,width:Math.max(180,transform.width),height:0}};
-    const height=buildPublicationScene(next).height;
-    // Publishing blocks rewrap at the requested width; type and illustration proportions stay intact.
-    const measured={...transform,width:next.transform.width,height};
-    return {...element,transform:measured,smartBlockData:{...next,transform:measured}};
-  }
+  if (!block) return withElementTransform(element, transform, mode);
   const widthChanged = transform.width !== element.transform.width;
   const heightChanged = transform.height !== element.transform.height;
+  if (!widthChanged && !heightChanged) return { ...element, transform, smartBlockData: { ...block, transform } };
+  if (mode !== "scale" && mode !== "trim-height") {
+    const width = Math.max(60, transform.width);
+    const previousScale = element.transform.width / (block.styleOverrides.resizeFrame?.width || element.transform.width);
+    const naturalHeight = (logicalWidth: number) => {
+      const scene = buildPublicationScene({ ...block, transform: { ...transform, width: logicalWidth, height: 0 }, styleOverrides: { ...block.styleOverrides, responsiveResize: true, resizeFrame: undefined } });
+      // Moved text and images remain inside the fitted frame.
+      return scene.nodes.reduce((bottom, node) => {
+        if (node.kind !== "text" && node.kind !== "image") return bottom;
+        const bounds = contentNodeBounds(node);
+        return Math.max(bottom, bounds.y + bounds.height + 4);
+      }, scene.height);
+    };
+    const height = heightChanged ? Math.max(30, transform.height) : naturalHeight(width / previousScale) * previousScale;
+    const scale = heightChanged ? fitLayoutScale(width, height, naturalHeight, previousScale, 180, 22, previousScale * height / Math.max(1, element.transform.height)) : previousScale;
+    transform = anchorResizedHeight(element.transform, { ...transform, width }, height, mode === "reflow-bottom");
+    return { ...element, transform, smartBlockData: { ...block, transform, styleOverrides: { ...block.styleOverrides, responsiveResize: true, resizeFrame: { width: width / scale, height: height / scale } } } };
+  }
   let resizeFrame = block.styleOverrides.resizeFrame || (widthChanged || heightChanged ? { width: element.transform.width, height: element.transform.height } : undefined);
-  if (resizeFrame && heightChanged && (mode === "trim-height" || (mode === "auto" && !widthChanged))) {
+  if (resizeFrame && heightChanged && mode === "trim-height") {
     const scaleY = element.transform.height / resizeFrame.height;
     const natural = buildPublicationScene({ ...block, styleOverrides: { ...block.styleOverrides, resizeFrame: { ...resizeFrame, height: 0 } } });
     // Include manually moved text/images, so trimming whitespace never crops authored content.

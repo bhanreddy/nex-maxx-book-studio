@@ -80,6 +80,48 @@ export function mathDomScene(element: PageElement, template: MathTemplate): Publ
   const body = document.createElement("div");
   body.style.cssText = `position:absolute;left:${frame.padding + frame.offsetX}pt;top:${frame.padding + frame.offsetY}pt;width:${frame.renderWidth}pt;height:${frame.renderHeight}pt;transform:scale(${frame.scaleX},${frame.scaleY});transform-origin:top left;`;
   appendTree(body, tree); host.appendChild(body); document.body.appendChild(host);
+  return captureDomScene(host, body, width, height, frame.scaleY, "math-component");
+}
+
+/** Clone the current responsive HTML layout for vector export, independent of canvas zoom. */
+const preparedElementScenes = new WeakMap<PageElement, PublicationScene>();
+export function elementDomScene(element: PageElement, source?: HTMLElement): PublicationScene | null {
+  if (!source && preparedElementScenes.has(element)) return preparedElementScenes.get(element)!;
+  if (typeof document === "undefined" || !document.body) return null;
+  const live = source || document.getElementById(`element-${element.id}`);
+  if (!live) return null;
+  const host = live.cloneNode(true) as HTMLElement;
+  host.removeAttribute("id");
+  host.style.cssText += `;position:fixed;left:-100000px;top:0;width:${element.transform.width}pt;height:${element.transform.height}pt;transform:none;opacity:1;pointer-events:none;`;
+  for (const node of host.querySelectorAll("[id], [data-canvas-controls]")) {
+    if (node.hasAttribute("data-canvas-controls")) node.remove(); else node.removeAttribute("id");
+  }
+  document.body.appendChild(host);
+  return captureDomScene(host, host, element.transform.width, element.transform.height, element.responsiveLayout?.scale || 1, "responsive-element");
+}
+
+/** Render inactive pages offscreen too; export must not depend on which page is open. */
+export async function prepareResponsiveElementScenes(elements: PageElement[]): Promise<void> {
+  const responsive = elements.filter(element => element.responsiveLayout && !element.hidden);
+  if (!responsive.length || typeof document === "undefined" || !document.body) return;
+  const [{ createRoot }, { flushSync }, { ElementRenderer }] = await Promise.all([import("react-dom/client"), import("react-dom"), import("../renderer/ElementRenderer")]);
+  for (const element of responsive) {
+    const container = document.createElement("div");
+    container.style.cssText = `position:fixed;left:-100000px;top:0;width:${element.transform.width}pt;height:${element.transform.height}pt;pointer-events:none;`;
+    document.body.appendChild(container);
+    const root = createRoot(container);
+    try {
+      flushSync(() => root.render(React.createElement(ElementRenderer, { element: { ...element, transform: { ...element.transform, x: 0, y: 0, rotation: 0 } } })));
+      const rendered = container.firstElementChild as HTMLElement | null;
+      if (rendered) {
+        const scene = elementDomScene(element, rendered);
+        if (scene) preparedElementScenes.set(element, scene);
+      }
+    } finally { flushSync(() => root.unmount()); container.remove(); }
+  }
+}
+
+function captureDomScene(host: HTMLElement, body: HTMLElement, width: number, height: number, readingScale: number, variant: string): PublicationScene | null {
   try {
     const bounds = host.getBoundingClientRect(), ratio = width / bounds.width;
     if (!Number.isFinite(ratio) || ratio <= 0) return null;
@@ -103,6 +145,7 @@ export function mathDomScene(element: PageElement, template: MathTemplate): Publ
       }
       const mark = { opacity, clipId };
       if (!isSvg) {
+        if (tag === "img" && el instanceof HTMLImageElement && el.src && rect.width && rect.height) nodes.push({ kind: "image", x: px(rect.left), y: py(rect.top), w: rect.width * ratio, h: rect.height * ratio, src: el.src, alt: el.alt, focalX: .5, focalY: .5, scale: 1, fit: "contain", ...mark });
         const fill = color(css.backgroundColor);
         const gradient = css.backgroundImage.match(/(?:#[\da-f]{3,8}|rgba?\([^)]*\))/gi);
         let gradientId: string | undefined;
@@ -159,7 +202,7 @@ export function mathDomScene(element: PageElement, template: MathTemplate): Publ
         const rects = Array.from(range.getClientRects());
         if (!rects.length) continue;
         const matrix = isSvg ? (el as SVGGraphicsElement).getScreenCTM() : null;
-        const elementScale = matrix ? Math.hypot(matrix.c, matrix.d) : el instanceof HTMLElement && el.offsetHeight ? el.getBoundingClientRect().height / el.offsetHeight : frame.scaleY;
+        const elementScale = matrix ? Math.hypot(matrix.c, matrix.d) : el instanceof HTMLElement && el.offsetHeight ? el.getBoundingClientRect().height / el.offsetHeight : readingScale;
         const size = (parseFloat(css.fontSize) || 12) * ratio * elementScale;
         const fill = color(isSvg ? css.fill : css.color);
         const pushText = (value: string, r: DOMRect) => {
@@ -181,6 +224,6 @@ export function mathDomScene(element: PageElement, template: MathTemplate): Publ
       }
     };
     walk(body);
-    return { width, height, variant: "math-component", warnings: [], nodes };
+    return { width, height, variant, warnings: [], nodes };
   } finally { host.remove(); }
 }

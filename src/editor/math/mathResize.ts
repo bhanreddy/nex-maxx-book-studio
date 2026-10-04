@@ -32,7 +32,7 @@ export function withMathTransform(element: PageElement, requested: ElementTransf
   // shrink the visible artwork sideways while the outer width stayed unchanged.
   // Explicit proportional gestures above still scale both dimensions together.
   const fitHeightOnly = heightChanged && !widthChanged && mode !== "trim-height";
-  if ((fitHeightOnly && currentMode !== "reflow") || (currentMode === "scale" && !appearance.resizeModeLocked)) {
+  if ((fitHeightOnly || widthChanged) && currentMode !== "reflow") {
     appearance = { ...appearance, resizeMode: "reflow", resizeModeLocked: false, reflowScale: before.scaleX, scaleFrame: undefined };
   }
   if ((appearance.resizeMode || defaultMathResizeMode(template)) !== "reflow") return { ...element, transform: requested };
@@ -40,7 +40,7 @@ export function withMathTransform(element: PageElement, requested: ElementTransf
   if (heightChanged && mode !== "trim-height") {
     const height = Math.max(32, requested.height);
     const padding = mathRenderFrame(template, width, height, appearance, data).padding;
-    const reflowScale = fitReadingScale(template, { ...element.content, mathData: data }, width - 2 * padding, height - 2 * padding, appearance.reflowScale || 1);
+    const reflowScale = fitReadingScale(template, { ...element.content, mathData: data }, width - 2 * padding, height - 2 * padding, appearance.reflowScale || 1, before.scaleY * height / Math.max(1, old.height));
     appearance = { ...appearance, reflowScale };
     return { ...element, content: { ...element.content, mathAppearance: appearance }, transform: fitMathHeight(old, { ...requested, width }, height, mode === "reflow-bottom") };
   }
@@ -57,13 +57,13 @@ export function withMathTransform(element: PageElement, requested: ElementTransf
 /** Find a uniform reading size that fits the requested height after wrapping.
  * Scaling both axes keeps letters and artwork in proportion; the layout still
  * uses the complete physical width. Wrapping makes a simple height ratio wrong. */
-function fitReadingScale(template: NonNullable<ReturnType<typeof getMathTemplate>>, content: PageElement["content"], width: number, height: number, previousScale: number): number {
+function fitReadingScale(template: NonNullable<ReturnType<typeof getMathTemplate>>, content: PageElement["content"], width: number, height: number, previousScale: number, maximumScale: number): number {
   const data = content.mathData || content;
   const measure = (scale: number) => {
     const renderWidth = Math.max(24, width / scale);
     return (template.measureHeight?.(data, renderWidth) ?? measureMathDomHeight(template, content, renderWidth) ?? template.defaultHeight) * scale;
   };
-  let low = .001, high = Math.max(low, width / (template.measureHeight ? 240 : 48));
+  let low = .001, high = Math.max(low, Math.min(width / (template.measureHeight ? 240 : 48), maximumScale));
   // Start near the previous reading size, so HTML layouts need fewer DOM reads.
   const estimate = Math.min(high, Math.max(low, previousScale * height / Math.max(1, measure(previousScale))));
   const estimatedHeight = measure(estimate);

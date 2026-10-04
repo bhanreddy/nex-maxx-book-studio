@@ -1,5 +1,6 @@
 import type { PageElement, ElementTransform } from "../../domain/element/types";
 import { withBlockTransform } from "./blockResize";
+import type { BlockResizeMode } from "./blockResize";
 
 /** Children keep absolute page coordinates, so grouping never changes their appearance. */
 export function elementTree(ids: string[], elements: Record<string, PageElement>): PageElement[] {
@@ -34,7 +35,7 @@ export function isElementLocked(id: string, elements: Record<string, PageElement
   return false;
 }
 
-export function transformGroupChildren(group: PageElement, next: ElementTransform, elements: Record<string, PageElement>): Record<string, PageElement> {
+export function transformGroupChildren(group: PageElement, next: ElementTransform, elements: Record<string, PageElement>, mode: BlockResizeMode = "scale"): Record<string, PageElement> {
   const old = group.transform;
   const sx = next.width / Math.max(1, old.width), sy = next.height / Math.max(1, old.height);
   const angle = (next.rotation - old.rotation) * Math.PI / 180;
@@ -47,7 +48,7 @@ export function transformGroupChildren(group: PageElement, next: ElementTransfor
       y: cy + dx * Math.sin(angle) + dy * Math.cos(angle) - t.height * sy / 2,
       width: t.width * sx, height: t.height * sy, rotation: t.rotation + next.rotation - old.rotation,
       zIndex: t.zIndex + next.zIndex - old.zIndex };
-    return [child.id, withBlockTransform(child, transform, "scale")];
+    return [child.id, withBlockTransform(child, transform, mode)];
   }));
 }
 

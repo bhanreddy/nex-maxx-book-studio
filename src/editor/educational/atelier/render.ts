@@ -13,10 +13,10 @@ export interface AtelierHelpers {
   resolvePublicationPalette: (block: SmartBlockInstance) => PublicationPalette;
 }
 
-function scaledBox(motif: BlockMotif, width: number): Box {
+function scaledBox(motif: BlockMotif, width: number, reflow = false): Box {
   if (motif.nudged || !motif.originWidth) return { x: motif.x, y: motif.y, w: motif.w, h: motif.h };
   const scale = width / motif.originWidth;
-  return { x: motif.x * scale, y: motif.y * scale, w: motif.w * scale, h: motif.h * scale };
+  return { x: motif.x * scale, y: reflow ? motif.y : motif.y * scale, w: motif.w * scale, h: reflow ? motif.h : motif.h * scale };
 }
 
 export function renderAtelier(block: SmartBlockInstance, helpers: AtelierHelpers, options: { teacher?: boolean } = {}): PublicationScene | null {
@@ -62,7 +62,7 @@ export function renderAtelier(block: SmartBlockInstance, helpers: AtelierHelpers
     for (const motif of block.styleOverrides.motifs || []) {
       if (motif.role !== "plate" && motif.role !== "photo" && motif.role !== "illustration") continue;
       if (frames.some(frame => frame.id === motif.id)) continue;
-      const box = scaledBox(motif, width);
+      const box = scaledBox(motif, width, block.styleOverrides.responsiveResize);
       frames.push({ id: motif.id, role: motif.role, kind: motif.kind, x: box.x, y: box.y, w: box.w, h: box.h, locked: motif.locked });
       const bucket = motif.behind === false ? frontNodes : plateNodes;
       if (motif.role === "photo" && motif.src) {

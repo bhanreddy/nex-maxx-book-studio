@@ -295,8 +295,10 @@ export interface SmartBlockInstance {
     illustrationPreset?: string;
     backgroundImage?: { src: string; alt: string; focalX: number; focalY: number; opacity: number; scale: number; rawWidthPx?: number; rawHeightPx?: number };
     motifs?: BlockMotif[];
-    /** Design dimensions: corners scale content; height-only edits trim or add whitespace. */
+    /** Logical layout dimensions, scaled into the physical element frame. */
     resizeFrame?: { width: number; height: number };
+    /** Width reflows content; height fits its reading size into the frame. */
+    responsiveResize?: boolean;
     /** Compact insertion scale, baked into scene geometry before pagination/export. */
     compactScale?: number;
     /** Authored text/image positions stay inside the original block, without detaching it. */

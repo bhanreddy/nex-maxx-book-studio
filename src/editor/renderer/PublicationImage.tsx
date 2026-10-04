@@ -131,7 +131,7 @@ export function PublicationImage({ element }: { element: PageElement }) {
       </div>
 
       {c.caption && (
-        <div className="bg-white/95 text-slate-800 text-[7.5pt] px-2 py-1 border-t border-slate-200 truncate select-text shrink-0">
+        <div className="bg-white/95 text-slate-800 text-[7.5pt] px-2 py-1 border-t border-slate-200 truncate select-text shrink-0" style={{ fontSize: `${element.style.fontSize || 7.5}pt` }}>
           {c.caption}
         </div>
       )}

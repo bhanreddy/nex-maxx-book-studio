@@ -677,6 +677,8 @@ export interface PresetSlotDefinition {
 }
 
 export interface PageElement {
+  /** Uniform reading size; inner layout reflows at physical width / scale. */
+  responsiveLayout?: { scale: number };
   id: string;
   pageId: string;
   type: ElementType;
@@ -817,5 +819,4 @@ export interface ElementPreset {
     editableFields: string[];
   };
 }
-
 

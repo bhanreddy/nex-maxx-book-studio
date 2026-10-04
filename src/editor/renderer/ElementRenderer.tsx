@@ -45,6 +45,7 @@ import { FlowText } from "./FlowText";
 import { FLOW_FONT_FAMILY, isFlowText } from "../layoutPartner/textWrapLayout";
 import { MathComponentRenderer } from "../math/MathComponentRenderer";
 import { generateShapeSvgPath } from "../vector/shapeGeometry";
+import { elementLayoutFrame } from "../core/elementResize";
 import {
   resolveShapeFill,
   resolveShapeStroke,
@@ -224,10 +225,13 @@ const InlineEditable: React.FC<{
 };
 
 export const ElementRenderer: React.FC<ElementRendererProps> = memo(function ElementRenderer({
-  element,
+  element: sourceElement,
   isSelected = false,
   zoom = 1,
 }) {
+  const physicalTransform = sourceElement.transform;
+  const layoutFrame = elementLayoutFrame(sourceElement);
+  const element = sourceElement.responsiveLayout ? { ...sourceElement, transform: { ...physicalTransform, width: layoutFrame.width, height: layoutFrame.height } } : sourceElement;
   const updateElementContent = useEditorStore(s => s.updateElementContent);
   const updateElementStyle = useEditorStore(s => s.updateElementStyle);
   const updateElementTransform = useEditorStore(s => s.updateElementTransform);
@@ -287,18 +291,18 @@ export const ElementRenderer: React.FC<ElementRendererProps> = memo(function Ele
   const containerStyle: React.CSSProperties = {
     position: "absolute",
     pointerEvents: type === "group" || (isFlowText(element) && !isEditingText) ? "none" : "auto",
-    left: `${transform.x}pt`,
-    top: `${transform.y}pt`,
-    width: `${transform.width}pt`,
-    height: `${transform.height}pt`,
-    transform: transform.rotation ? `rotate(${transform.rotation}deg)` : undefined,
+    left: `${physicalTransform.x}pt`,
+    top: `${physicalTransform.y}pt`,
+    width: `${physicalTransform.width}pt`,
+    height: `${physicalTransform.height}pt`,
+    transform: physicalTransform.rotation ? `rotate(${physicalTransform.rotation}deg)` : undefined,
     zIndex: isEditingText ? 50000 : transform.zIndex,
     backgroundColor: style.textHighlight?.color || (type === "smart-block" || type === "shape" || content.publicationPrimitive ? undefined : style.backgroundColor),
     borderRadius: type === "shape" ? undefined : (style.borderRadius ? `${style.borderRadius}pt` : undefined),
     ...(type === "smart-block" || type === "shape" || content.publicationPrimitive ? {} : borderStyle(style)),
     opacity: style.opacity ?? 1,
     boxShadow: type === "shape" ? undefined : style.boxShadow,
-    padding: !isFlowText(element) && style.padding
+    padding: !sourceElement.responsiveLayout && !isFlowText(element) && style.padding
       ? `${style.padding.top}pt ${style.padding.right}pt ${style.padding.bottom}pt ${style.padding.left}pt`
       : undefined,
     color: style.color || "#0f172a",
@@ -635,7 +639,7 @@ export const ElementRenderer: React.FC<ElementRendererProps> = memo(function Ele
                 style={{
                   alignItems: shapeText.verticalAlign === "top" ? "flex-start" : shapeText.verticalAlign === "bottom" ? "flex-end" : "center",
                   justifyContent: shapeText.textAlign === "left" ? "flex-start" : shapeText.textAlign === "right" ? "flex-end" : "center",
-                  padding: shapeText.padding ?? 10,
+                  padding: `${shapeText.padding ?? 10}pt`,
                 }}
               >
                 <div
@@ -649,6 +653,7 @@ export const ElementRenderer: React.FC<ElementRendererProps> = memo(function Ele
                   }}
                 >
                   <InlineEditable
+                    style={{ lineHeight: shapeText.lineHeight || 1.25 }}
                     value={shapeText.text}
                     onCommit={(val) => {
                       updateElementStyle(element.id, {
@@ -782,7 +787,7 @@ export const ElementRenderer: React.FC<ElementRendererProps> = memo(function Ele
       case "ai-vector":
         return content.svgContent ? (
           <div
-            className="w-full h-full overflow-hidden rounded-[inherit]"
+            className="w-full h-full overflow-hidden rounded-[inherit] [&>svg]:w-full [&>svg]:h-full"
             dangerouslySetInnerHTML={{ __html: content.svgContent }}
           />
         ) : (
@@ -1532,6 +1537,7 @@ export const ElementRenderer: React.FC<ElementRendererProps> = memo(function Ele
 
       case "smart-block":
         if (element.smartBlockData) {
+          if (element.smartBlockData.styleOverrides.responsiveResize && !element.smartBlockData.presetId.startsWith("edu-")) return <BlockContentEditor element={element} selected={isSelected && !locked && !grouped} zoom={zoom}/>;
           if (referenceBannerFor(element.smartBlockData.presetId)) return <EducationalBlock element={element} selected={isSelected && !locked && !grouped}/>;
           if (element.smartBlockData.presetId.startsWith("edu-") && !element.smartBlockData.styleOverrides.contentLayout?.enabled) return <EducationalBlock element={element} selected={isSelected && !locked && !grouped}/>;
           if (element.smartBlockData.styleOverrides.compactScale || element.smartBlockData.styleOverrides.contentLayout?.enabled || isPremiumBlockLayout(element.smartBlockData.styleOverrides.layoutVariant)) return <BlockContentEditor element={element} selected={isSelected && !locked && !grouped} zoom={zoom}/>;
@@ -1602,7 +1608,9 @@ export const ElementRenderer: React.FC<ElementRendererProps> = memo(function Ele
   };
 
   const renderedContent = renderContent();
-  const scaledContent = resizeFrame
+  const scaledContent = sourceElement.responsiveLayout
+    ? <div data-element-layout style={{ width: `${layoutFrame.width}pt`, height: `${layoutFrame.height}pt`, transform: `scale(${layoutFrame.scale})`, transformOrigin: "top left", padding: style.padding ? `${style.padding.top}pt ${style.padding.right}pt ${style.padding.bottom}pt ${style.padding.left}pt` : undefined, minWidth: 0, overflowWrap: "anywhere" }}>{renderedContent}</div>
+    : resizeFrame
     ? <div style={{ width: `${resizeFrame.width}pt`, height: `${resizeFrame.height}pt`, transform: `scale(${transform.width / resizeFrame.width}, ${transform.height / resizeFrame.height})`, transformOrigin: "top left" }}>{renderedContent}</div>
     : renderedContent;
 

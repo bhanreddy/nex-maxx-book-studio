@@ -375,6 +375,7 @@ function buildScene(block: SmartBlockInstance, options: { teacher?: boolean } = 
 }
 
 export function imagePlacement(n: Extract<SceneNode,{kind:"image"}>):{x:number;y:number;w:number;h:number} {
+  if (n.fit === "fill") return { x: n.x, y: n.y, w: n.w, h: n.h };
   const sw=n.sourceWidth||n.w,sh=n.sourceHeight||n.h;
   const quarterTurn=Math.abs((n.rotation||0)%180)===90,rw=quarterTurn?sh:sw,rh=quarterTurn?sw:sh;
   const scale=(n.fit === "contain" ? Math.min(n.w/rw,n.h/rh) : Math.max(n.w/rw,n.h/rh))*Math.max(1,n.scale);

@@ -12,6 +12,7 @@ import { PUBLICATION_PALETTES } from "../../domain/educational/designTokens";
 import { toGrayHex } from "../design/contrast";
 import { textFlowScene } from "../layoutPartner/textWrapLayout";
 import { shapeToPublicationSceneNodes } from "../vector/shapeEffects";
+import { elementDomScene } from "../math/mathDomScene";
 
 const sceneCache = new Map<PageElement, PublicationScene | null>();
 export function publicationSceneForElement(el:PageElement,pageElements?:PageElement[]):PublicationScene|null {
@@ -23,6 +24,7 @@ export function publicationSceneForElement(el:PageElement,pageElements?:PageElem
   return scene;
 }
 function uncachedPublicationScene(el:PageElement,pageElements?:PageElement[]):PublicationScene|null {
+  if (el.responsiveLayout) { const responsive = elementDomScene(el); if (responsive) return responsive; }
   if(pageElements){const flow=textFlowScene(el,pageElements);if(flow)return flow;}
   if(el.type==="smart-media-qr")return smartQrScene(el);
   if(el.type==="math-component")return mathSceneForElement(el);

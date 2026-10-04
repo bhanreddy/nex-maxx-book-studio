@@ -69,8 +69,8 @@ test('500 inactive blocks render without mounting editors or fetching illustrati
 
 test('publishing resize rewraps text and keeps readable type instead of stretching a source frame',()=>{
  const {withBlockTransform}=require('../src/editor/core/blockResize.ts');const store=reset(),el=store.addEducationalBlock('edu-do-you-know-visual-right');
- const next=withBlockTransform(el,{...el.transform,width:240,height:90});
- assert.equal(next.transform.width,240);assert.ok(next.transform.height>90);assert.equal(next.smartBlockData.styleOverrides.resizeFrame,undefined);
+ const next=withBlockTransform(el,{...el.transform,width:240});
+ assert.equal(next.transform.width,240);assert.ok(next.transform.height>90);assert.equal(next.smartBlockData.styleOverrides.resizeFrame.width,240);
  const scene=buildPublicationScene(next.smartBlockData);assert.equal(scene.width,240);assert.ok(scene.nodes.find(n=>n.kind==='text'&&n.fieldPath==='introText').size>=11);
 });
 test('saved publishing templates preserve content and undo continuation page insertion together',()=>{
