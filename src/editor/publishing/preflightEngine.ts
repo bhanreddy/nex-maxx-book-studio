@@ -131,10 +131,13 @@ export function runFullPreflightScan(
       if (![el.transform.x, el.transform.y, el.transform.width, el.transform.height].every(Number.isFinite)) issue('invalid-geometry', 'geometry', 'Invalid geometry', 'Element coordinates must be finite.');
       if (typeof el.content.text === 'string' && !el.smartBlockData && !furniture) {
         if (!el.content.text.trim()) issue('blank-text', 'text', 'Empty text frame', 'Add text or remove the empty frame.', 'warning');
-        if (el.isOverset || (el.oversetChars || 0) > 0 || (el.metadata?.tags?.includes('manuscript-import')
-          ? layoutTextFlow(el, textWrapObstacles(el, page.elementIds.map(id => elementsMap[id]).filter(Boolean))).oversetChars > 0
-          : estimateTextHeight(el.content.text, el.style.fontSize || 10.5, el.style.lineHeight || 1.45, el.transform.width) > el.transform.height + 4)) {
-          textOverflowCount++; issue('overset', 'text', 'Text overflows its frame', 'Increase the frame height or flow the text to a continuation page.');
+        const hasExplicitOverset = Boolean(el.isOverset || (el.oversetChars || 0) > 0);
+        const hasManuscriptOverset = Boolean(el.metadata?.tags?.includes('manuscript-import') && layoutTextFlow(el, textWrapObstacles(el, page.elementIds.map(id => elementsMap[id]).filter(Boolean))).oversetChars > 0);
+        if (hasExplicitOverset || hasManuscriptOverset) {
+          textOverflowCount++;
+          issue('overset', 'text', 'Text overflows its frame', 'Increase the frame height or flow the text to a continuation page.', 'error');
+        } else if (estimateTextHeight(el.content.text, el.style.fontSize || 10.5, el.style.lineHeight || 1.45, el.transform.width) > el.transform.height + 24) {
+          issue('overset-advisory', 'text', 'Text may exceed frame bounds', 'Check text layout or increase container height.', 'warning');
         }
         try { printFont(el.content.text, el.style.fontFamily); } catch (error) { issue('missing-font', 'font', 'Font unavailable for print', String(error)); }
       }
@@ -166,18 +169,19 @@ export function runFullPreflightScan(
       // 1. Check Text Overflow & Margin Exceedance
       const elBottom = el.transform.y + el.transform.height;
       if (!furniture && elBottom > safeBottom + 4) {
-        textOverflowCount++;
+        const isPastPageBounds = elBottom > book.dimensions.heightPt + book.bleed.bottomPt;
+        if (isPastPageBounds) textOverflowCount++;
         issues.push({
           id: `overflow-${el.id}`,
-          severity: "error",
-          category: "text",
-          title: `Content Exceeds Bottom Margin`,
+          severity: isPastPageBounds ? "error" : "warning",
+          category: isPastPageBounds ? "text" : "geometry",
+          title: isPastPageBounds ? `Content Exceeds Page Trim` : `Content Extends into Bottom Margin`,
           message: `'${el.displayName}' extends ${Math.round(elBottom - safeBottom)} pt into the bottom print-safe margin.`,
           pageIndex: pageIdx,
           pageId: page.id,
           elementId: el.id,
           elementName: el.displayName,
-          remediation: "Use Auto-Pagination to flow content onto the next page.",
+          remediation: "Use Auto-Pagination or Auto Rebalance to fit content onto the page.",
         });
       }
 

@@ -16,7 +16,7 @@ function worksheetLayout(data: Record<string, unknown>, width: number) {
   const answerLeading = Math.max(leading, bounded(data.lineSpacing, WORKSHEET_COMPACT_SPACING.lineSpacing, 20, 56));
   const title = plain && !string(data.title).trim() ? [] : worksheetLines(data.title, width - 48, size + 4);
   const instructions = plain && !string(data.instructions).trim() ? [] : worksheetLines(data.instructions, width - 48, size - 3);
-  let y = 30 + title.length * (size + 8) + instructions.length * leading + 18;
+  let y = 20 + title.length * (size + 8) + instructions.length * leading + 12;
   const rows = Array.isArray(data.questions) ? data.questions as WorksheetRow[] : [];
   const laidOut = rows.map(row => {
     const prompt = worksheetLines(row.prompt, width - 84, size);
@@ -30,8 +30,7 @@ function worksheetLayout(data: Record<string, unknown>, width: number) {
     y = labelTop + response.height + bounded(data.questionGap, WORKSHEET_COMPACT_SPACING.questionGap, 12, 96);
     return { row, prompt, answer: response.lines, response, working, workingTop, count: response.count, top, labelTop, answerTop, bottom: y };
   });
-  // A generous empty workspace remains after removing every question.
-  return { size, leading, answerLeading, title, instructions, rows: laidOut, height: Math.max(160, y + 20) };
+  return { size, leading, answerLeading, title, instructions, rows: laidOut, height: Math.max(48, y - (laidOut.length ? bounded(data.questionGap, WORKSHEET_COMPACT_SPACING.questionGap, 12, 96) : 0) + 16) };
 }
 
 export const WorksheetRenderer: React.FC<MathRendererProps> = props => {
@@ -44,13 +43,12 @@ export const WorksheetRenderer: React.FC<MathRendererProps> = props => {
   const actualHeight = Math.max(height, metrics.height);
   return <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" viewBox={`0 0 ${width} ${actualHeight}`} aria-label={string(data.title)} fontFamily="Inter, sans-serif">
     <rect x={.5} y={.5} width={width - 1} height={actualHeight - 1} rx={16} fill={paper} stroke={line} />
-    <rect x={24} y={20} width={32} height={3} rx={1.5} fill={accent} />
-    {metrics.title.map((value, i) => text(value, 24, 44 + i * (metrics.size + 8), metrics.size + 4, accent, true, `title-${i}`))}
-    {metrics.instructions.map((value, i) => text(value, 24, 30 + metrics.title.length * (metrics.size + 8) + (i + .8) * metrics.leading, metrics.size - 3, muted, false, `instructions-${i}`))}
+    {metrics.title.map((value, i) => text(value, 24, 34 + i * (metrics.size + 8), metrics.size + 4, accent, true, `title-${i}`))}
+    {metrics.instructions.map((value, i) => text(value, 24, 20 + metrics.title.length * (metrics.size + 8) + (i + .8) * metrics.leading, metrics.size - 3, muted, false, `instructions-${i}`))}
     {metrics.rows.map((r, index) => {
       const show = mode === "teacher" || (data.showExample === true && index === 0);
       return <g key={`question-${index}`}>
-        <rect x={18} y={r.top - 10} width={width - 36} height={r.bottom - r.top - 8} rx={bounded(data.cornerRadius, 10, 0, 24)} fill={data.showPanels === false ? paper : index % 2 === 0 ? tint : paper} />
+        <rect x={18} y={r.top - 5} width={width - 36} height={r.bottom - r.top - bounded(data.questionGap, WORKSHEET_COMPACT_SPACING.questionGap, 12, 96) + 10} rx={bounded(data.cornerRadius, 10, 0, 24)} fill={data.showPanels === false ? paper : index % 2 === 0 ? tint : paper} />
         <circle cx={38} cy={r.top + 9} r={13} fill={paper} stroke={line} />
         <text key="number" x={38} y={r.top + 14} textAnchor="middle" fontSize={14} fill={accent} fontWeight={700}>{data.showNumbering === false ? "" : worksheetNumberLabel(index, data)}</text>
         {r.prompt.map((value, i) => text(value, 62, r.top + metrics.size + i * metrics.leading, metrics.size, colors.ink, bounded(data.questionWeight, 600, 400, 700), `prompt-${i}`))}
@@ -69,8 +67,8 @@ export const PlainWorksheetRenderer: React.FC<MathRendererProps> = ({ data, mode
   const text = (value: string, x: number, y: number, size: number, key: string, weight = 400, fill = colors.ink) => <text key={key} x={x} y={y} fontSize={size} fill={fill} fontWeight={weight}>{value}</text>;
   return <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" viewBox={`0 0 ${width} ${actualHeight}`} aria-label={string(data.title) || "Plain questions and answers"} fontFamily="Inter, sans-serif">
     <rect key="paper" x={0} y={0} width={width} height={actualHeight} fill={paper} />
-    {metrics.title.map((value, i) => text(value, 24, 44 + i * (metrics.size + 8), metrics.size + 4, `title-${i}`, 600, colors.accent))}
-    {metrics.instructions.map((value, i) => text(value, 24, 30 + metrics.title.length * (metrics.size + 8) + (i + .8) * metrics.leading, metrics.size - 3, `instructions-${i}`, 400, muted))}
+    {metrics.title.map((value, i) => text(value, 24, 34 + i * (metrics.size + 8), metrics.size + 4, `title-${i}`, 600, colors.accent))}
+    {metrics.instructions.map((value, i) => text(value, 24, 20 + metrics.title.length * (metrics.size + 8) + (i + .8) * metrics.leading, metrics.size - 3, `instructions-${i}`, 400, muted))}
     {metrics.rows.map((r, index) => {
       const show = mode === "teacher" || (data.showExample === true && index === 0);
       return <g key={`question-${index}`}>
@@ -111,8 +109,8 @@ const plainBase = worksheet("plain-question-answer", "Question & Answer · Plain
   row("What is a noun?", "A noun names a person, place, animal or thing."),
   row("Why do plants need sunlight?", "Plants use sunlight to make their food."),
   row("What is evaporation?", "Evaporation is the change of a liquid into a gas."),
-], "short", 2, false);
-const plainData = { ...plainBase.defaultData, presentation: "plain", answerLabel: "Answer", showAnswerLabel: true, responseStyle: "ruled", lineSpacing: 28, questionGap: 20 };
+], "short", 1, false);
+const plainData = { ...plainBase.defaultData, presentation: "plain", answerLabel: "Answer", showAnswerLabel: true, responseStyle: "ruled" };
 export const PlainQuestionAnswerTemplate: MathTemplate = {
   ...plainBase, defaultData: plainData, defaultHeight: worksheetLayout(plainData, plainBase.defaultWidth).height,
   tags: [...plainBase.tags, "plain", "minimal", "simple", "any subject", "english", "science", "blank answer space"],
@@ -122,8 +120,8 @@ export const PlainQuestionAnswerTemplate: MathTemplate = {
     { key: "answerLabel", label: "Answer label", type: "text", defaultValue: "Answer" },
     { key: "showAnswerLabel", label: "Show answer label", type: "boolean", defaultValue: true },
     { key: "responseStyle", label: "Writing space", type: "select", defaultValue: "ruled", options: [{ label: "Fine ruled lines", value: "ruled" }, { label: "Open blank space", value: "open" }] },
-    { key: "lineSpacing", label: "Writing line spacing (pt)", type: "number", defaultValue: 28, min: 20, max: 56 },
-    { key: "questionGap", label: "Space between questions (pt)", type: "number", defaultValue: 20, min: 12, max: 80 },
+    { key: "lineSpacing", label: "Writing line spacing (pt)", type: "number", defaultValue: WORKSHEET_COMPACT_SPACING.lineSpacing, min: 20, max: 56 },
+    { key: "questionGap", label: "Space between questions (pt)", type: "number", defaultValue: WORKSHEET_COMPACT_SPACING.questionGap, min: 12, max: 80 },
   ],
 };
 

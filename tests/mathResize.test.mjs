@@ -198,7 +198,8 @@ test('height then width resizing keeps the chosen reading size and is fully undo
     store.getState().updateElementTransform(elementId, { width: 350 }, true);
     const narrow = structuredClone(store.getState().elements[elementId]);
     assert.equal(layout(narrow).frame.scaleY, size);
-    assert.ok(narrow.transform.height + .0001 >= compact.transform.height);
+    const t = getMathTemplate(id), frame = layout(narrow).frame;
+    assert.ok(Math.abs(narrow.transform.height - (t.measureHeight(narrow.content.mathData, frame.renderWidth) * size + frame.padding * 2)) < .0001, 'width reflow removes spare height at the chosen reading size');
     history.getState().undo(); assert.deepEqual(store.getState().elements[elementId], compact);
     history.getState().undo(); assert.deepEqual(store.getState().elements[elementId], original);
     history.getState().redo(); assert.deepEqual(store.getState().elements[elementId], compact);

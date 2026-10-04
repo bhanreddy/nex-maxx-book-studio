@@ -1,6 +1,7 @@
 import React from "react";
 import type { MathRendererProps, MathTemplate } from "./types";
 import { matchingOrder } from "./templates/premiumExerciseTemplates";
+import { wordProblemData } from "./wordProblemLayout";
 
 export interface MathPartOverride {
   text?: string;
@@ -104,6 +105,7 @@ function callLayout(layout: (props: Record<string, unknown>) => React.ReactNode,
 /** Templates are deliberately synchronous, hook-free layout functions. Keeping the
  * original host tree preserves every SVG, class, colour and layout rule during edits. */
 export function buildEditableMathTree(template: MathTemplate, props: MathRendererProps, options: TreeOptions = {}) {
+  if (template.id === "math-word-problem") props = { ...props, data: wordProblemData(props.data, options.overrides) };
   const parts: MathPart[] = [];
   const bindingCursors = new Map<string, number>();
   const visit = (node: React.ReactNode, path: string, inSvg = false, inheritedSize = 12): React.ReactNode => {
@@ -142,7 +144,7 @@ export function buildEditableMathTree(template: MathTemplate, props: MathRendere
     // Bind wrapped exercise lines to the authored string, rather than treating
     // each line as a separate caption that disappears when wrapping changes.
     const keyText = String(node.key || "");
-    const lineKey = template.measureHeight && isText ? keyText.match(/^(title|instructions?|kicker|prompt|answer|working|explanation|left-text|right-text|left-title|right-title|choice-text|cell-text|head-text|reason-answer|correction-text)-(\d+)$/) : null;
+    const lineKey = template.measureHeight && isText ? keyText.match(/^(title|story|operation|instructions?|kicker|prompt|answer|working|explanation|left-text|right-text|left-title|right-title|choice-text|cell-text|head-text|reason-answer|correction-text)-(\d+)$/) : null;
     const inlineKey = template.measureHeight && isText && ["word", "blank-answer"].includes(keyText) && path.includes("/kinline-");
     if (lineKey || inlineKey) {
       const row = path.match(/\/kquestion-(\d+)(?:\/|$)/);

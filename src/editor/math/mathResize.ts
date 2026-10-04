@@ -3,6 +3,7 @@ import type { BlockResizeMode } from "../core/blockResize";
 import { getMathTemplate } from "./mathRegistry";
 import { buildEditableMathTree, defaultMathResizeMode, mathDataFieldPatch, mathRenderFrame, type MathAppearance, type MathPartOverride } from "./mathEditableTree";
 import { measureMathDomHeight } from "./mathDomScene";
+import { wordProblemData } from "./wordProblemLayout";
 
 /** Shared by width inputs, pointer gestures, group transforms and document edits. */
 export function withMathTransform(element: PageElement, requested: ElementTransform, mode: BlockResizeMode = "auto"): PageElement {
@@ -13,6 +14,10 @@ export function withMathTransform(element: PageElement, requested: ElementTransf
   const heightChanged = requested.height !== old.height;
   if (!widthChanged && !heightChanged) return { ...element, transform: requested };
   let data = element.content.mathData || element.content;
+  if (template.id === "math-word-problem") {
+    data = wordProblemData(data, element.content.mathOverrides);
+    element = { ...element, content: { ...element.content, mathData: data } };
+  }
   let appearance: MathAppearance = element.content.mathAppearance || {};
   const before = mathRenderFrame(template, old.width, old.height, appearance, data);
   const overrides: Record<string, MathPartOverride> = element.content.mathOverrides || {};

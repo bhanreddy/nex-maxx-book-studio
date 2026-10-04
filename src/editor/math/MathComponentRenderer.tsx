@@ -5,6 +5,7 @@ import { getMathTemplate } from "./mathRegistry";
 import { useUiStore } from "../stores/uiStore";
 import { buildEditableMathTree, mathRenderFrame, type MathPart, type MathPartOverride } from "./mathEditableTree";
 import { updateMathPartText, updateMathTemplateData } from "./mathActions";
+import { wordProblemData } from "./wordProblemLayout";
 
 interface MathComponentRendererProps {
   element: PageElement;
@@ -18,7 +19,8 @@ export const MathComponentRenderer: React.FC<MathComponentRendererProps> = ({ el
   const draft = useRef("");
   const cancelled = useRef(false);
   const template = getMathTemplate(element.content.mathTemplateId || element.presetId || "math-place-value-indian");
-  const data = element.content.mathData || element.content;
+  const authoredData = element.content.mathData || element.content;
+  const data = template?.id === "math-word-problem" ? wordProblemData(authoredData, element.content.mathOverrides) : authoredData;
   const overrides: Record<string, MathPartOverride> = element.content.mathOverrides || {};
   const appearance = element.content.mathAppearance || {};
 

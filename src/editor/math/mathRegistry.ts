@@ -77,6 +77,7 @@ import {
   WordProblemRenderer,
   MathActivityCardRenderer,
 } from "./renderers/ThinkingAndWorkedExampleRenderers";
+import { WORD_PROBLEM_DEFAULTS, wordProblemLayout } from "./wordProblemLayout";
 
 import {
   DecimalPlaceValueRenderer,
@@ -1179,16 +1180,16 @@ registerMathTemplate({
   type: "practice",
   tags: ["word problem", "story", "operation", "answer space"],
   defaultWidth: 270,
-  defaultHeight: 115,
+  defaultHeight: wordProblemLayout(WORD_PROBLEM_DEFAULTS, 270).height,
+  measureHeight: (data, width) => wordProblemLayout(data, width).height,
   styleVariants: ["clean", "visual"],
   renderer: WordProblemRenderer,
-  defaultData: {
-    story: "A fruit seller had 450 apples. He sold 285 apples during the day. How many apples are left with him?",
-    operation: "Subtraction (450 - 285)",
-    answer: "165 apples",
-  },
+  defaultData: { ...WORD_PROBLEM_DEFAULTS },
   configFields: [
     { key: "story", label: "Story Prompt", type: "text", defaultValue: "A fruit seller had 450 apples..." },
+    { key: "operation", label: "Operation", type: "text", defaultValue: WORD_PROBLEM_DEFAULTS.operation },
+    { key: "title", label: "Title", type: "text", defaultValue: WORD_PROBLEM_DEFAULTS.title },
+    { key: "fontSize", label: "Text size (pt)", type: "number", defaultValue: WORD_PROBLEM_DEFAULTS.fontSize, min: 10, max: 20 },
     { key: "answer", label: "Answer", type: "text", defaultValue: "165 apples" },
   ],
 });

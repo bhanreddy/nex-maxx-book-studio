@@ -83,7 +83,7 @@ export function createDefaultDemoBook(): { book: Book; elements: Record<string, 
         rawHeightPx: 1000,
       },
     }),
-    createElement("page-cover", "preset-body-paragraph", 54, 640, {
+    createElement("page-cover", "preset-body-paragraph", 54, 600, {
       displayName: "Publisher Imprint",
       style: { fontSize: 11, fontWeight: 600, color: "#475569", textAlign: "center" },
       content: { text: "NEX MAXX PUBLISHING HOUSE • CURRICULUM EDITION" },

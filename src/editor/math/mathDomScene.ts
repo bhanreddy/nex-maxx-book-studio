@@ -4,6 +4,7 @@ import type { PublicationScene, SceneNode } from "../educational/publicationScen
 import { transformScenePath } from "../educational/sceneGeometry";
 import { buildEditableMathTree, mathRenderFrame } from "./mathEditableTree";
 import type { MathTemplate } from "./types";
+import { wordProblemData } from "./wordProblemLayout";
 
 const SVG_NS = "http://www.w3.org/2000/svg";
 const unitless = new Set(["opacity", "fontWeight", "lineHeight", "flex", "flexGrow", "flexShrink", "order", "zIndex", "strokeWidth"]);
@@ -42,7 +43,7 @@ function color(value: string): string {
 
 /** Catalogue HTML uses browser line breaking. Measure the same tree and CSS
  * synchronously so its height belongs to the resize's single undo action. */
-export function measureMathDomHeight(template: MathTemplate, content: PageElement["content"], width: number): number | null {
+export function measureMathDomHeight(template: MathTemplate, content: PageElement["content"], width: number, intrinsic = false): number | null {
   if (typeof document === "undefined" || !document.body) return null;
   const { tree } = buildEditableMathTree(template, {
     data: content.mathData || content, mode: content.mathMode || "teacher", styleVariant: content.styleVariant || "color-coded",
@@ -52,10 +53,19 @@ export function measureMathDomHeight(template: MathTemplate, content: PageElemen
   host.className = "math-component-frame";
   host.style.cssText = `position:fixed;left:-100000px;top:0;width:${width}pt;height:${template.defaultHeight}pt;pointer-events:none;color-scheme:light;font-family:Inter,sans-serif;`;
   appendTree(host, tree);
+  if (intrinsic) {
+    host.style.height = "auto";
+    const root = host.firstElementChild as HTMLElement | null;
+    if (root && root.namespaceURI !== SVG_NS) {
+      root.style.height = "auto";
+      root.style.justifyContent = "flex-start";
+      if (root.classList.contains("justify-between")) root.style.rowGap = "6px";
+    }
+  }
   document.body.appendChild(host);
   try {
     const top = host.getBoundingClientRect().top;
-    let bottom = top + template.defaultHeight / .75;
+    let bottom = intrinsic ? host.getBoundingClientRect().bottom : top + template.defaultHeight / .75;
     for (const node of host.querySelectorAll("*")) {
       if (getComputedStyle(node).display === "none") continue;
       const rect = node.getBoundingClientRect();
@@ -68,7 +78,9 @@ export function measureMathDomHeight(template: MathTemplate, content: PageElemen
 export function mathDomScene(element: PageElement, template: MathTemplate): PublicationScene | null {
   if (typeof document === "undefined" || typeof document.createElementNS !== "function" || !document.body) return null;
   const { width, height } = element.transform;
-  const frame = mathRenderFrame(template, width, height, element.content.mathAppearance, element.content.mathData || element.content);
+  const authoredData = element.content.mathData || element.content;
+  const data = template.id === "math-word-problem" ? wordProblemData(authoredData, element.content.mathOverrides) : authoredData;
+  const frame = mathRenderFrame(template, width, height, element.content.mathAppearance, data);
   const { tree } = buildEditableMathTree(template, { data: element.content.mathData || element.content,
     mode: element.content.mathMode || "teacher", styleVariant: element.content.styleVariant || "color-coded",
     width: frame.renderWidth, height: frame.renderHeight,

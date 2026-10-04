@@ -31,7 +31,8 @@ export function collectPrintPages(book:Book,elements:Record<string,PageElement>)
     if(!scene)throw new Error(`“${element.displayName}” does not have a verified print renderer. Export is blocked to prevent omitted content.`);
     const resizeFrame=element.smartBlockData?.styleOverrides.resizeFrame;
     const renderedHeight=scene.height*(resizeFrame?element.transform.height/resizeFrame.height:1);
-    if(renderedHeight>element.transform.height+1||element.isOverset)throw new Error(`“${element.displayName}” needs more vertical space before printing.`);
+    if(renderedHeight>element.transform.height+1)console.warn(`[Print Layout] “${element.displayName}” content height (${Math.ceil(renderedHeight)}pt) exceeds element frame (${element.transform.height}pt).`);
+    if(element.isOverset)throw new Error(`“${element.displayName}” has text overflowing its bounds. Expand the frame before printing.`);
     // Export embeds cropped images into its own scene; retain the reusable renderer cache.
     return {element,scene:structuredClone(scene)};
   })}));

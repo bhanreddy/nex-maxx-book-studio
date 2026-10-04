@@ -1,20 +1,13 @@
 import type { MathConfigField, MathStyleVariant } from "./types";
 import { MATH_TOKENS, WORKSHEET_PALETTES } from "./tokens";
+import { wrapText } from "../educational/publicationScene";
 export { WORKSHEET_PALETTES } from "./tokens";
 export const worksheetString = (value: unknown) => String(value ?? "");
 export const worksheetNumber = (value: unknown, fallback: number, min: number, max: number) => Math.max(min, Math.min(max, Number.isFinite(Number(value)) ? Number(value) : fallback));
 
-/** Conservative, portable wrapping for editable vector text. */
+/** Use the shared glyph measurement so short words do not waste a full line. */
 export function worksheetLines(value: unknown, width: number, size: number): string[] {
-  const capacity = Math.max(1, Math.floor(width / (size * .62)));
-  return worksheetString(value).split("\n").flatMap(paragraph => {
-    const result: string[] = []; let current = "";
-    for (const word of paragraph.split(/\s+/).filter(Boolean)) for (const chunk of word.match(new RegExp(`.{1,${capacity}}`, "gu")) || []) {
-      if (current && current.length + chunk.length + 1 > capacity) { result.push(current); current = ""; }
-      current = current ? `${current} ${chunk}` : chunk;
-    }
-    result.push(current); return result;
-  });
+  return wrapText(worksheetString(value), Math.max(1, width), size, true, false, "Inter, sans-serif");
 }
 
 export function worksheetPalettePatch(id: string) {
@@ -32,10 +25,10 @@ export function worksheetColors(data: Record<string, unknown>, variant: MathStyl
   const clean = variant === "clean";
   return { accent: clean ? p.main : color(data.accentColor, p.main), answer: clean ? p.main : color(data.answerColor, p.main), ink: clean ? MATH_TOKENS.print.ink : color(data.inkColor, MATH_TOKENS.print.ink), tint: clean ? p.tint : color(data.tintColor, p.tint), rule: clean ? MATH_TOKENS.print.line : color(data.ruleColor, MATH_TOKENS.print.line), border: p.border, paper: MATH_TOKENS.print.paper, muted: MATH_TOKENS.print.muted };
 }
-export const WORKSHEET_COMPACT_SPACING = { answerGap: 6, questionGap: 20, lineSpacing: 28 };
+export const WORKSHEET_COMPACT_SPACING = { answerGap: 4, questionGap: 12, lineSpacing: 24 };
 export const WORKSHEET_DESIGN_DEFAULTS = {
   ...WORKSHEET_COMPACT_SPACING,
-  fontSize: 20, answerLines: 2, startNumber: 1, showExample: false,
+  fontSize: 20, answerLines: 1, startNumber: 1, showExample: false,
   showNumbering: true, showAnswerLabel: true, answerLabel: "Answer", responseStyle: "ruled", showPanels: true,
   cornerRadius: 12, numberingStyle: "numbers", questionWeight: 600, matchingColumnGap: 52,
 };

@@ -6,6 +6,8 @@
 import React from "react";
 import { MathRendererProps } from "../types";
 import { parseMathNumber } from "../mathAlgorithms";
+import { wordProblemLayout } from "../wordProblemLayout";
+import { worksheetColors } from "../worksheetDesign";
 
 /**
  * 23. Number Bond Model (Whole -> Part + Part)
@@ -210,37 +212,21 @@ export const WorkedExampleRenderer: React.FC<MathRendererProps> = ({ data }) => 
 /**
  * 22. Word Problem Builder
  */
-export const WordProblemRenderer: React.FC<MathRendererProps> = ({ data, mode }) => {
-  const story = data.story || "A fruit seller had 450 apples. He sold 285 apples during the day. How many apples are left with him?";
-  const operation = data.operation || "Subtraction (450 - 285)";
-  const answer = data.answer || "165 apples";
-
-  return (
-    <div className="w-full h-full flex flex-col justify-between p-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 select-none">
-      <div className="flex items-center gap-1.5 mb-1 text-[10px] font-bold text-amber-600">
-        <span>📖</span>
-        <span>Word Problem</span>
-      </div>
-
-      <p className="text-xs text-slate-800 dark:text-slate-200 leading-relaxed mb-2 font-medium">
-        {story}
-      </p>
-
-      {/* Solution breakdown box */}
-      <div className="grid grid-cols-2 gap-2 text-[9px] p-2 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200">
-        <div>
-          <span className="text-slate-400 block font-bold">Operation:</span>
-          <span className="font-mono font-bold text-slate-700">{operation}</span>
-        </div>
-        <div>
-          <span className="text-slate-400 block font-bold">Final Answer:</span>
-          <span className="font-mono font-bold text-indigo-600">
-            {mode === "student" ? "________" : answer}
-          </span>
-        </div>
-      </div>
-    </div>
-  );
+export const WordProblemRenderer: React.FC<MathRendererProps> = ({ data, mode, styleVariant, width, height }) => {
+  const l = wordProblemLayout(data, width), c = worksheetColors(data, styleVariant), h = Math.max(height, l.height);
+  return <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" viewBox={`0 0 ${width} ${h}`} fontFamily="Inter, sans-serif" aria-label="Word problem">
+    <rect key="paper" x={.5} y={.5} width={width - 1} height={h - 1} rx={10} fill={c.paper} stroke={c.rule}/>
+    {l.title.map((text, i) => <text key={`title-${i}`} x={12} y={12 + l.size + 1 + i * (l.size + 4)} fontSize={l.size + 1} fontWeight={700} fill={c.accent}>{text}</text>)}
+    {l.story.map((text, i) => <text key={`story-${i}`} x={12} y={l.storyTop + l.size + i * l.leading} fontSize={l.size} fill={c.ink}>{text}</text>)}
+    <rect key="solution-panel" x={12} y={l.solutionTop} width={width - 24} height={l.solutionHeight} rx={7} fill={c.tint} stroke={c.rule}/>
+    {l.fields.map((field, index) => {
+      const row = Math.floor(index / l.columns), x = 20 + (index % l.columns) * (l.cellWidth + 12);
+      const top = l.solutionTop + 8 + l.rowHeights.slice(0, row).reduce((sum, value) => sum + value + 6, 0);
+      return <g key={`field-${field.key}`}>
+        <text key="label" x={x} y={top + l.size} fontSize={l.labelSize} fontWeight={600} fill={c.muted}>{field.label}</text>
+        {mode === "teacher" ? field.lines.map((text, i) => <text key={`${field.key}-${i}`} x={x + l.labelWidth} y={top + l.size + i * l.leading} fontSize={l.size} fill={c.answer}>{text}</text>) : <line key="writing-rule" x1={x + l.labelWidth} x2={x + l.labelWidth + l.valueWidth} y1={top + l.size + 3} y2={top + l.size + 3} stroke={c.rule}/>}</g>;
+    })}
+  </svg>;
 };
 
 /**

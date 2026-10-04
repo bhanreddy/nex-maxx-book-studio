@@ -147,7 +147,7 @@ test('question-to-answer and row gaps independently expand Q&A writing space', (
   for (const id of ['premium-question-answer', 'worksheet-plain-question-answer', 'worksheet-short-answer']) {
     const t = getMathTemplate(id), data = { ...t.defaultData, answerGap: 8, questionGap: 20 };
     assert.equal(t.measureHeight({ ...data, answerGap: 40 }, 460) - t.measureHeight(data, 460), 32 * data.questions.length);
-    assert.equal(t.measureHeight({ ...data, questionGap: 52 }, 460) - t.measureHeight(data, 460), 32 * data.questions.length);
+    assert.equal(t.measureHeight({ ...data, questionGap: 52 }, 460) - t.measureHeight(data, 460), 32 * Math.max(0, data.questions.length - 1));
   }
 });
 
@@ -240,7 +240,7 @@ test('compact Q&A puts the label on the answer baseline and respects the actual 
     const tag = [...output.matchAll(/<text\b([^>]*)>([^<]*)<\/text>/g)].find(match => match[2] === value);
     assert.ok(tag, value); return Number(tag[1].match(/\by="([^"]+)"/)[1]);
   };
-  assert.equal(data.answerGap, 6);
+  assert.equal(data.answerGap, 4);
   assert.equal(textY('An answer.') - textY('Question?'), data.fontSize + data.answerGap);
   assert.equal(textY('Answer:'), textY('An answer.'), 'label shares the response row');
   assert.ok(t.defaultHeight < 530, 'three questions fit without the former blank label rows');

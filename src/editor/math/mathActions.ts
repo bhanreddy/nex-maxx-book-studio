@@ -12,6 +12,25 @@ import { getMathTemplate, recordRecentMathId } from "./mathRegistry";
 import { mathSceneForElement } from "./mathScene";
 import { PageElement } from "../../domain/element/types";
 import { defaultMathResizeMode, mathRenderFrame, mathTextDataPatch, type MathPart } from "./mathEditableTree";
+import { measureMathDomHeight } from "./mathDomScene";
+import { wordProblemData } from "./wordProblemLayout";
+
+/** Remove unused frame height at the current text size; one undo restores it. */
+export function fitMathComponentToContent(elementId: string): void {
+  const store = useEditorStore.getState(), element = store.elements[elementId];
+  if (!element || element.locked) return;
+  const template = getMathTemplate(element.content.mathTemplateId || element.presetId || "");
+  if (!template) return;
+  const authoredData = element.content.mathData || element.content;
+  const data = template.id === "math-word-problem" ? wordProblemData(authoredData, element.content.mathOverrides) : authoredData;
+  const appearance = element.content.mathAppearance || {};
+  const frame = mathRenderFrame(template, element.transform.width, element.transform.height, appearance, data);
+  const width = (element.transform.width - frame.padding * 2) / frame.scaleY;
+  const naturalHeight = template.measureHeight?.(data, width) ?? measureMathDomHeight(template, element.content, width, true);
+  if (!naturalHeight || !Number.isFinite(naturalHeight)) return;
+  store.updateElement(elementId, { transform: { ...element.transform, height: naturalHeight * frame.scaleY + frame.padding * 2 },
+    content: { ...element.content, mathData: data, mathAppearance: { ...appearance, resizeMode: "reflow", reflowScale: frame.scaleY, scaleFrame: undefined, resizeModeLocked: false } } });
+}
 
 /** Authored exercise text must reflow and participate in intrinsic measurement. */
 export function updateMathPartText(elementId: string, part: MathPart, text: string): void {
@@ -29,7 +48,8 @@ export function updateMathTemplateData(elementId: string, patch: Record<string, 
   const element = store.elements[elementId];
   if (!element || element.locked) return;
   const template = getMathTemplate(element.content.mathTemplateId || element.presetId || "");
-  const data = { ...(element.content.mathData || element.content), ...patch };
+  const authoredData = element.content.mathData || element.content;
+  const data = { ...(template?.id === "math-word-problem" ? wordProblemData(authoredData, element.content.mathOverrides) : authoredData), ...patch };
   const content: PageElement["content"] = { ...element.content, ...patch, mathData: data };
   // A palette is a complete color design, including when the exercise was monochrome.
   if (template?.measureHeight && Object.keys(patch).some(key => key === "paletteId" || key.endsWith("Color"))) content.styleVariant = "color-coded";

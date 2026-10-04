@@ -14,8 +14,9 @@ export function publicationPreflight(book:Book,elements:Record<string,PageElemen
       const block={...el.smartBlockData,transform:el.transform},scene=buildPublicationScene(block),p=resolvePublicationPalette(block);
       const frame=block.styleOverrides.resizeFrame;
       const renderedHeight=scene.height*(frame?el.transform.height/frame.height:1);
-      if(renderedHeight>el.transform.height+1)add("Block needs more height",`${el.displayName} needs ${Math.ceil(renderedHeight)} pt. Resize before export; content has been preserved.`,"text","error");
-      if(el.transform.y+renderedHeight>book.dimensions.heightPt-pageMarginsFor(book,page).bottomPt)add("Content reaches the bottom margin","Move the block to another page or edit its content. Do not shrink the reading size.","geometry","error");
+      if(renderedHeight>el.transform.height+1)add("Block needs more height",`${el.displayName} needs ${Math.ceil(renderedHeight)} pt. Resize before export; content has been preserved.`,"text","warning");
+      if(el.transform.y+renderedHeight>book.dimensions.heightPt+book.bleed.bottomPt)add("Content exceeds page boundaries","Move the block to another page or edit its content.","geometry","error");
+      else if(el.transform.y+renderedHeight>book.dimensions.heightPt-pageMarginsFor(book,page).bottomPt)add("Content reaches the bottom margin","Move the block to another page or edit its content. Do not shrink the reading size.","geometry","warning");
       try { if(block.presetId.startsWith("edu-")&&block.styleOverrides.fontFamily) printFont("Text",block.styleOverrides.fontFamily); } catch(error) { add("Font unavailable for print",String(error),"font","error"); }
       for (const node of scene.nodes) if (node.kind === 'text') {
         try { printFont(node.text, node.fontFamily, node.font === 'serif'); }

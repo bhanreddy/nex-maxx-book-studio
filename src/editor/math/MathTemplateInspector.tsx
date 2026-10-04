@@ -22,7 +22,7 @@ import { MathDesignControls } from "./MathDesignControls";
 import { MathDataFields } from "./MathDataFields";
 import { WorksheetStyleControls } from "./WorksheetStyleControls";
 import { WORKSHEET_DESIGN_KEYS } from "./worksheetDesign";
-import { updateMathTemplateData } from "./mathActions";
+import { updateMathTemplateData, fitMathComponentToContent } from "./mathActions";
 
 interface MathTemplateInspectorProps {
   element: PageElement;
@@ -211,6 +211,8 @@ export const MathTemplateInspector: React.FC<MathTemplateInspectorProps> = ({ el
       </div>
 
       {isWorksheet && <WorksheetStyleControls template={template} data={mathData} variant={currentVariant} onUpdate={handleUpdate} />}
+      <button type="button" className="worksheet-action" onClick={() => fitMathComponentToContent(element.id)} disabled={element.locked}>Fit content</button>
+      <p className="text-[11px] text-slate-500">Remove unused height while keeping the text size and writing lines.</p>
 
       {/* 4. Dynamic Mathematical Fields (Section 30: CONTENT & OPTIONS) */}
       <div className="space-y-2 pt-1 border-t border-slate-200/80 dark:border-white/10">

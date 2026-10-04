@@ -19,7 +19,7 @@ export function WorksheetStyleControls({ template, data, variant, onUpdate }: { 
   const effective = { ...WORKSHEET_DESIGN_DEFAULTS, ...template.defaultData, ...data, accentColor: colors.accent, answerColor: colors.answer, inkColor: colors.ink, tintColor: colors.tint, ruleColor: colors.rule, cornerRadius: data.cornerRadius ?? template.defaultData.cornerRadius ?? (template.id.startsWith('premium-') ? 12 : 10) };
   const kind = String(data.exerciseKind || (Array.isArray(data.questions) ? 'qa' : 'math')), plain = data.presentation === 'plain';
   const hasWriting = kind === 'qa' || kind === 'sequence' || Boolean(data.requireExplanation || data.requireCorrection);
-  const basicKeys = ['fontSize', 'answerGap', ...(kind === 'table' || kind === 'classify' ? [] : ['questionGap'])];
+  const basicKeys = ['fontSize', 'answerGap', ...(kind === 'table' || kind === 'classify' ? [] : ['questionGap']), ...(hasWriting ? ['answerLines'] : [])];
   const allowed = WORKSHEET_DESIGN_FIELDS.filter(f => f.key !== 'paletteId' && (kind !== 'math' || ['accentColor', 'ruleColor'].includes(f.key)) &&
     (hasWriting || !['lineSpacing', 'answerLines', 'showAnswerLabel', 'answerLabel', 'responseStyle'].includes(f.key)) &&
     (kind === 'match' || f.key !== 'matchingColumnGap') &&
