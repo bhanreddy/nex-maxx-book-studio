@@ -2176,9 +2176,9 @@ export const useEditorStore = create<EditorState>((set, get) => {
       }
       if ((old.locked || old.smartBlockData?.isLockedDesign) && updates.transform) return;
       const next = { ...old, ...updates };
-      if (next.smartBlockData && updates.transform && !updates.smartBlockData && !updates.content && !updates.style) {
+      if ((next.smartBlockData || next.type === "math-component") && updates.transform && !updates.smartBlockData && !updates.content && !updates.style) {
         const resized = withBlockTransform({ ...next, transform: old.transform }, next.transform);
-        next.transform = resized.transform; next.smartBlockData = resized.smartBlockData;
+        next.transform = resized.transform; next.smartBlockData = resized.smartBlockData; next.content = resized.content;
       }
       if (updates.content && old.metadata?.tags?.some(tag => ['master-header','master-footer','master-folio'].includes(tag))) next.metadata = { ...next.metadata, styleOverride: true };
       if (next.type === "body" && next.content.publicationPrimitive && (updates.content || updates.style || updates.transform)) {

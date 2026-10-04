@@ -40,6 +40,31 @@ function color(value: string): string {
   return `#${rgb.slice(1, 4).map(n => Number(n).toString(16).padStart(2, "0")).join("")}`;
 }
 
+/** Catalogue HTML uses browser line breaking. Measure the same tree and CSS
+ * synchronously so its height belongs to the resize's single undo action. */
+export function measureMathDomHeight(template: MathTemplate, content: PageElement["content"], width: number): number | null {
+  if (typeof document === "undefined" || !document.body) return null;
+  const { tree } = buildEditableMathTree(template, {
+    data: content.mathData || content, mode: content.mathMode || "teacher", styleVariant: content.styleVariant || "color-coded",
+    width, height: template.defaultHeight,
+  }, { overrides: content.mathOverrides, appearance: content.mathAppearance });
+  const host = document.createElement("div");
+  host.className = "math-component-frame";
+  host.style.cssText = `position:fixed;left:-100000px;top:0;width:${width}pt;height:${template.defaultHeight}pt;pointer-events:none;color-scheme:light;font-family:Inter,sans-serif;`;
+  appendTree(host, tree);
+  document.body.appendChild(host);
+  try {
+    const top = host.getBoundingClientRect().top;
+    let bottom = top + template.defaultHeight / .75;
+    for (const node of host.querySelectorAll("*")) {
+      if (getComputedStyle(node).display === "none") continue;
+      const rect = node.getBoundingClientRect();
+      if (rect.width && rect.height) bottom = Math.max(bottom, rect.bottom);
+    }
+    return Math.ceil((bottom - top) * .75);
+  } finally { host.remove(); }
+}
+
 export function mathDomScene(element: PageElement, template: MathTemplate): PublicationScene | null {
   if (typeof document === "undefined" || typeof document.createElementNS !== "function" || !document.body) return null;
   const { width, height } = element.transform;

@@ -234,9 +234,9 @@ export const MatchFollowingTemplate: MathTemplate = {
         <div className="space-y-2">
           {pairs.map((p: { colA: string; colB: string }, i: number) => (
             <div key={`match-row-${i}`} className="flex items-center justify-between px-2">
-              <span className="font-bold text-xs text-indigo-700 bg-indigo-50 px-2 py-1 rounded w-28 text-center">{p.colA}</span>
-              <span className="text-slate-300 font-mono">············</span>
-              <span className="font-bold text-xs text-emerald-700 bg-emerald-50 px-2 py-1 rounded w-28 text-center">{p.colB}</span>
+              <span className="font-bold text-xs text-indigo-700 bg-indigo-50 px-2 py-1 rounded flex-1 min-w-0 text-center">{p.colA}</span>
+              <span className="text-slate-300 font-mono shrink-0 mx-2">····</span>
+              <span className="font-bold text-xs text-emerald-700 bg-emerald-50 px-2 py-1 rounded flex-1 min-w-0 text-center">{p.colB}</span>
             </div>
           ))}
         </div>
@@ -288,10 +288,10 @@ export const TrueFalseTemplate: MathTemplate = {
         <div className="space-y-2 text-xs">
           {stmts.map((s: { text: string; answer: string }, i: number) => (
             <div key={`tf-stmt-${i}`} className="flex items-center justify-between border-b border-slate-100 pb-1">
-              <span className="text-slate-800 dark:text-slate-200 font-medium">
+              <span className="text-slate-800 dark:text-slate-200 font-medium min-w-0 flex-1 mr-2">
                 {i + 1}. {s.text}
               </span>
-              <div className="flex items-center gap-1 font-bold">
+              <div className="flex items-center gap-1 font-bold shrink-0">
                 <span className={`px-2 py-0.5 rounded text-[10px] ${isTeacher && s.answer === "True" ? "bg-emerald-500 text-white" : "bg-slate-100 text-slate-600"}`}>[ T ]</span>
                 <span className={`px-2 py-0.5 rounded text-[10px] ${isTeacher && s.answer === "False" ? "bg-red-500 text-white" : "bg-slate-100 text-slate-600"}`}>[ F ]</span>
               </div>

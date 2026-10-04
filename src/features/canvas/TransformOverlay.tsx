@@ -320,7 +320,7 @@ export const TransformOverlay: React.FC<TransformOverlayProps> = ({
             height: newRect.height === initialRect.height ? initialRect.height : Math.round(newRect.height * 10) / 10,
           },
           false,
-          verticalEdge && !moveEvent.shiftKey ? "trim-height" : "scale"
+          singleElement.type === "math-component" && !moveEvent.shiftKey ? (["n", "nw", "ne"].includes(handle) ? "reflow-bottom" : "auto") : verticalEdge && !moveEvent.shiftKey ? "trim-height" : "scale"
         );
       } else if (handle !== "rot") {
         const minWidth = Math.max(...movableElements.map(el => (el.smartBlockData ? 60 : 20) * initialRect.width / el.transform.width));

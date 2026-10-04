@@ -284,7 +284,7 @@ test('compact spacing trims surplus height for scaled and reflowed exercise fram
   history.getState().clearHistory();
   try {
     const t = getMathTemplate('premium-question-answer');
-    for (const [width, appearance, scale] of [[230, {}, .5], [600, { resizeMode: 'reflow', padding: 12 }, 1]]) {
+    for (const [width, appearance, scale] of [[230, { resizeMode: 'scale' }, .5], [600, { resizeMode: 'reflow', padding: 12 }, 1]]) {
       const id = insertMathComponent(t.id, 20, 20, undefined, { mode: 'teacher', width, height: 1500, appearance });
       const old = structuredClone(store.getState().elements[id]);
       updateMathTemplateData(id, { answerGap: 6, questionGap: 20, lineSpacing: 28 }, { fitHeight: true });

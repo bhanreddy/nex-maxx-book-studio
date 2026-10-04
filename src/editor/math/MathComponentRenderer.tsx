@@ -2,10 +2,9 @@ import React, { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import type { PageElement } from "../../domain/element/types";
 import { getMathTemplate } from "./mathRegistry";
-import { useEditorStore } from "../stores/editorStore";
 import { useUiStore } from "../stores/uiStore";
 import { buildEditableMathTree, mathRenderFrame, type MathPart, type MathPartOverride } from "./mathEditableTree";
-import { updateMathTemplateData } from "./mathActions";
+import { updateMathPartText, updateMathTemplateData } from "./mathActions";
 
 interface MathComponentRendererProps {
   element: PageElement;
@@ -14,7 +13,6 @@ interface MathComponentRendererProps {
 }
 
 export const MathComponentRenderer: React.FC<MathComponentRendererProps> = ({ element, isSelected = false, zoom = 1 }) => {
-  const updateContent = useEditorStore(s => s.updateElementContent);
   const target = useUiStore(s => s.mathEditingTarget);
   const [editing, setEditing] = useState<{ part: MathPart; left: number; top: number; width: number } | null>(null);
   const draft = useRef("");
@@ -43,11 +41,7 @@ export const MathComponentRenderer: React.FC<MathComponentRendererProps> = ({ el
   const finish = (save: boolean) => {
     if (!editing) return;
     if (save && !cancelled.current && draft.current !== editing.part.text) {
-      const current = useEditorStore.getState().elements[element.id];
-      const parts = current?.content.mathOverrides || {};
-      updateContent(element.id, { mathOverrides: { ...parts, [editing.part.id]: {
-        ...parts[editing.part.id], source: editing.part.source, text: draft.current,
-      } } });
+      updateMathPartText(element.id, editing.part, draft.current);
     }
     setEditing(null);
     if (useUiStore.getState().editingTextElementId === element.id) useUiStore.getState().setEditingTextElementId(null);

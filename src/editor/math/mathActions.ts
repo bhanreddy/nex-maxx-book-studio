@@ -11,7 +11,17 @@ import { useUiStore } from "../stores/uiStore";
 import { getMathTemplate, recordRecentMathId } from "./mathRegistry";
 import { mathSceneForElement } from "./mathScene";
 import { PageElement } from "../../domain/element/types";
-import { mathRenderFrame } from "./mathEditableTree";
+import { defaultMathResizeMode, mathRenderFrame, mathTextDataPatch, type MathPart } from "./mathEditableTree";
+
+/** Authored exercise text must reflow and participate in intrinsic measurement. */
+export function updateMathPartText(elementId: string, part: MathPart, text: string): void {
+  const store = useEditorStore.getState(), element = store.elements[elementId];
+  if (!element || element.locked) return;
+  const patch = mathTextDataPatch(element.content.mathData || element.content, part, text);
+  if (patch) { updateMathTemplateData(elementId, patch); return; }
+  const overrides = element.content.mathOverrides || {};
+  store.updateElementContent(elementId, { mathOverrides: { ...overrides, [part.id]: { ...overrides[part.id], source: part.source, text } } });
+}
 
 /** Fit measured exercises after layout edits without changing their writing scale. */
 export function updateMathTemplateData(elementId: string, patch: Record<string, any>, options: { fitHeight?: boolean } = {}): void {
@@ -30,6 +40,9 @@ export function updateMathTemplateData(elementId: string, patch: Record<string, 
   const previousHeight = template.measureHeight(element.content.mathData || element.content, before.renderWidth);
   const measuredHeight = template.measureHeight(data, after.renderWidth);
   const layoutChanged = Math.abs(measuredHeight - previousHeight) > .01;
+  if (appearance.resizeMode === "scale" && appearance.scaleFrame && (options.fitHeight || layoutChanged)) {
+    content.mathAppearance = { ...appearance, scaleFrame: { ...appearance.scaleFrame, height: measuredHeight } };
+  }
   const height = options.fitHeight || layoutChanged
     ? measuredHeight * before.scaleY + 2 * before.padding
     : element.transform.height;
@@ -69,7 +82,9 @@ export function insertMathComponent(
 
   const width = settings?.width || template.defaultWidth;
   const dataPayload = { ...template.defaultData, ...customData };
-  const height = settings?.height || template.measureHeight?.(dataPayload, template.defaultWidth) || template.defaultHeight;
+  const appearance = structuredClone(settings?.appearance || { resizeMode: defaultMathResizeMode(template) });
+  const initialFrame = mathRenderFrame(template, width, settings?.height || template.defaultHeight, appearance, dataPayload);
+  const height = settings?.height || (template.measureHeight?.(dataPayload, initialFrame.renderWidth) || template.defaultHeight) * initialFrame.scaleY + 2 * initialFrame.padding;
   const posX =
     targetX !== undefined
       ? Math.max(10, Math.min(book.dimensions.widthPt - width - 10, targetX))
@@ -102,7 +117,7 @@ export function insertMathComponent(
       mathData: structuredClone(dataPayload),
       mathMode: settings?.mode || "teacher",
       styleVariant: settings?.styleVariant || (template.styleVariants.includes("color-coded") ? "color-coded" : template.styleVariants[0]),
-      mathAppearance: structuredClone(settings?.appearance || { resizeMode: "scale" }),
+      mathAppearance: appearance,
       mathOverrides: structuredClone(settings?.overrides || {}),
     },
     locked: false,

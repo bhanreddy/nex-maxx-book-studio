@@ -1,10 +1,11 @@
 import React, { useMemo } from "react";
 import type { PageElement } from "../../domain/element/types";
 import type { MathTemplate } from "./types";
-import { buildEditableMathTree, mathRenderFrame, type MathPartOverride } from "./mathEditableTree";
+import { buildEditableMathTree, defaultMathResizeMode, mathRenderFrame, type MathAppearance, type MathPartOverride } from "./mathEditableTree";
 import { useEditorStore } from "../stores/editorStore";
 import { useUiStore } from "../stores/uiStore";
 import { MATH_GRADE_PALETTES } from "./tokens";
+import { updateMathPartText } from "./mathActions";
 
 export function MathDesignControls({ element, template }: { element: PageElement; template: MathTemplate }) {
   const updateContent = useEditorStore(s => s.updateElementContent);
@@ -19,7 +20,22 @@ export function MathDesignControls({ element, template }: { element: PageElement
   }, { overrides }).parts, [template, element.content, frame.renderWidth, frame.renderHeight, overrides]);
   const selected = target?.elementId === element.id ? parts.find(p => p.id === target.partId) : undefined;
   const selectedOverride = selected ? overrides[selected.id] || {} : {};
-  const patchAppearance = (patch: Record<string, unknown>) => updateContent(element.id, { mathAppearance: { ...appearance, ...patch } });
+  const patchAppearance = (patch: MathAppearance) => {
+    const nextAppearance = { ...appearance, ...patch };
+    if (patch.resizeMode) {
+      nextAppearance.resizeModeLocked = patch.resizeMode !== "reflow";
+      if (patch.resizeMode === "reflow") {
+        nextAppearance.reflowScale = frame.scaleX;
+        nextAppearance.scaleFrame = undefined;
+      } else if ((appearance.resizeMode || defaultMathResizeMode(template)) === "reflow") {
+        nextAppearance.scaleFrame = { width: frame.renderWidth, height: frame.renderHeight };
+      }
+    }
+    const nextFrame = mathRenderFrame(template, element.transform.width, element.transform.height, nextAppearance, element.content.mathData || element.content);
+    const height = template.measureHeight && (nextAppearance.resizeMode || defaultMathResizeMode(template)) === "reflow"
+      ? template.measureHeight(element.content.mathData || element.content, nextFrame.renderWidth) * nextFrame.scaleY + 2 * nextFrame.padding : element.transform.height;
+    useEditorStore.getState().updateElement(element.id, { content: { ...element.content, mathAppearance: nextAppearance }, transform: { ...element.transform, height } });
+  };
   const patchPart = (patch: MathPartOverride) => {
     if (!selected) return;
     updateContent(element.id, { mathOverrides: { ...overrides, [selected.id]: { ...selectedOverride, ...patch } } });
@@ -50,10 +66,10 @@ export function MathDesignControls({ element, template }: { element: PageElement
   return (
     <fieldset disabled={element.locked} className="math-design-controls space-y-3">
       <div className="math-edit-hint">
-        Double-click any text to edit it. Double-click a shape to select its design controls. {template.measureHeight ? "Edit questions, answers and writing space in Mathematical Content." : "Change values in Mathematical Content to recalculate answers."}
+        Width reflows text. Height resizes the text and layout together. Double-click text to edit it. {template.measureHeight ? "Edit questions, answers and writing space in Mathematical Content." : "Change values in Mathematical Content to recalculate answers."}
       </div>
       <div className="math-control-grid">
-        {numberInput("Template width (pt)", element.transform.width, width => updateTransform(element.id, { width }, true), 48, 2400)}
+        {numberInput("Template width (pt)", element.transform.width, width => updateTransform(element.id, { width }, true), template.measureHeight ? 240 : 48, 2400)}
         {numberInput("Template height (pt)", element.transform.height, height => updateTransform(element.id, { height }, true), 32, 2400)}
         {numberInput("Template X (pt)", element.transform.x, x => updateTransform(element.id, { x }, true), -2400, 2400)}
         {numberInput("Template Y (pt)", element.transform.y, y => updateTransform(element.id, { y }, true), -2400, 2400)}
@@ -62,12 +78,12 @@ export function MathDesignControls({ element, template }: { element: PageElement
         <span>Resize behaviour</span>
         <select
           aria-label="Maths resize behaviour"
-          value={appearance.resizeMode || "scale"}
-          onChange={e => patchAppearance({ resizeMode: e.target.value })}
+          value={appearance.resizeMode || defaultMathResizeMode(template)}
+          onChange={e => patchAppearance({ resizeMode: e.target.value as MathAppearance["resizeMode"] })}
         >
+          <option value="reflow">Auto layout · fit width & height</option>
           <option value="scale">Uniform scale · preserve proportions</option>
           <option value="stretch">Stretch · fill entire box</option>
-          <option value="reflow">Reflow contents · adapt layout</option>
         </select>
       </label>
       <div className="math-control-grid">
@@ -116,7 +132,7 @@ export function MathDesignControls({ element, template }: { element: PageElement
                 <textarea
                   aria-label="Selected maths text"
                   value={selected.text}
-                  onChange={e => patchPart({ text: e.target.value, source: selected.source })}
+                  onChange={e => updateMathPartText(element.id, selected, e.target.value)}
                   rows={3}
                 />
               </label>

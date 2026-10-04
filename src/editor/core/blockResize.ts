@@ -1,9 +1,11 @@
 import type { PageElement, ElementTransform } from "../../domain/element/types";
 import { buildPublicationScene } from "../educational/publicationScene";
+import { withMathTransform } from "../math/mathResize";
 
 /** Corners scale the design; vertical edges change its available space without shrinking content. */
-export type BlockResizeMode = "auto" | "scale" | "trim-height";
+export type BlockResizeMode = "auto" | "scale" | "trim-height" | "reflow-bottom";
 export function withBlockTransform(element: PageElement, transform: ElementTransform, mode: BlockResizeMode = "auto"): PageElement {
+  if (element.type === "math-component") return withMathTransform(element, transform, mode);
   const block = element.smartBlockData;
   if (!block) return { ...element, transform };
   if(block.presetId.startsWith('edu-')&&!block.styleOverrides.contentLayout?.enabled){

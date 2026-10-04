@@ -73,8 +73,9 @@ export function premiumExerciseLayout(data: Data, width: number) {
     const top = y, prompt = worksheetLines(question.prompt, bodyWidth, size), answer = worksheetLines(question.answer, bodyWidth - 12, size);
     const explanation = s(question.explanation).trim() ? worksheetLines(question.explanation, bodyWidth - 12, size - 2) : [];
     const choices = Array.isArray(question.choices) ? question.choices.map(s) : [];
-    const choiceColumns = Math.round(n(data.choiceColumns, 2, 1, 2)), choiceWidth = (bodyWidth - (choiceColumns - 1) * 12) / choiceColumns;
-    const tfLabels = [s(data.trueLabel || 'True'), s(data.falseLabel || 'False')].map(value => worksheetLines(value, 86, size - 3));
+    const choiceColumns = Math.min(Math.round(n(data.choiceColumns, 2, 1, 2)), Math.max(1, Math.floor((bodyWidth + 12) / 132))), choiceWidth = (bodyWidth - (choiceColumns - 1) * 12) / choiceColumns;
+    const tfColumns = bodyWidth >= 220 ? 2 : 1, tfWidth = Math.min(128, (bodyWidth - (tfColumns - 1) * 12) / tfColumns);
+    const tfLabels = [s(data.trueLabel || 'True'), s(data.falseLabel || 'False')].map(value => worksheetLines(value, tfWidth - 42, size - 3));
     const tfHeight = Math.max(36, Math.max(...tfLabels.map(v => v.length)) * leading + 12);
     const choiceHeight = Math.max(1, ...choices.map(c => worksheetLines(c, choiceWidth - 42, size - 2).length)) * leading + 16;
     const promptEnd = top + (prompt.length - 1) * leading + size;
@@ -99,9 +100,10 @@ export function premiumExerciseLayout(data: Data, width: number) {
       answerTop = top + inline.height + gap;
       bottom = answerTop + (data.showExplanations ? Math.max(1, explanation.length) * leading : 0) + rowGap;
     } else if (kind === 'true-false') {
-      responseTop = choiceTop + tfHeight + gap;
+      const tfBottom = choiceTop + Math.ceil(2 / tfColumns) * tfHeight + (tfColumns === 1 ? 12 : 0);
+      responseTop = tfBottom + gap;
       answerTop = responseTop + response.labelHeight;
-      bottom = choiceTop + tfHeight + (data.requireCorrection ? gap + response.height : 0) + rowGap;
+      bottom = tfBottom + (data.requireCorrection ? gap + response.height : 0) + rowGap;
     } else if (kind === 'choice' || kind === 'odd' || kind === 'sequence') {
       responseTop = choiceBottom + gap;
       answerTop = responseTop + response.labelHeight;
@@ -115,7 +117,7 @@ export function premiumExerciseLayout(data: Data, width: number) {
       bottom = top + cellHeight;
     } else if (data.showExplanations && explanation.length) { explanationTop = bottom - rowGap + 6; bottom += explanation.length * leading + 6; }
     y = bottom;
-    return { question, top, bottom, prompt, answer: kind === 'qa' || kind === 'sequence' ? response.lines : answer, explanation: kind === 'true-false' || kind === 'odd' || kind === 'choice' ? response.lines : explanation, label, response, responseTop, explanationTop, answerTop, count, choices, choiceColumns, choiceWidth, choiceHeight, choiceTop, tfLabels, tfHeight, inline, matchLeft, matchRight, cells, cellHeight };
+    return { question, top, bottom, prompt, answer: kind === 'qa' || kind === 'sequence' ? response.lines : answer, explanation: kind === 'true-false' || kind === 'odd' || kind === 'choice' ? response.lines : explanation, label, response, responseTop, explanationTop, answerTop, count, choices, choiceColumns, choiceWidth, choiceHeight, choiceTop, tfLabels, tfHeight, tfWidth, tfColumns, inline, matchLeft, matchRight, cells, cellHeight };
   });
   return { kind, size, leading, writingLeading, title, instructions, kicker, titleY, instructionY, bankY, wordBank, bodyWidth, columnGap, columnWidth, leftHeading, rightHeading, columnsY, order, columns, cellWidth, tableY, tableHeadHeight, rows, height: Math.max(180, y + 24) };
 }
@@ -179,8 +181,8 @@ export const PremiumExerciseRenderer: React.FC<MathRendererProps> = ({ data, mod
         {l.kind === 'qa' && <g key="response">{responseLabel}{rules(r)}{show && lines(r.answer, answerX, answerTextY, 'answer', l.size, c.answer, 400, l.writingLeading)}{show && data.showExplanations && lines(r.explanation, 68, r.explanationTop + l.size - 2, 'explanation', l.size - 2, c.muted)}</g>}
         {l.kind === 'blanks' && show && data.showExplanations && lines(r.explanation, 68, r.answerTop + l.size - 2, 'explanation', l.size - 2, c.muted)}
         {l.kind === 'true-false' && <g key="true-false">{r.tfLabels.map((values, i) => {
-          const selected = show && s(r.question.answer).toLowerCase() === (i === 0 ? 'true' : 'false'), x = 68 + i * 140;
-          return <g key={`tf-${i}`}><rect key="box" x={x} y={r.choiceTop} width={128} height={r.tfHeight} rx={radius} fill={selected ? c.tint : c.paper} stroke={selected ? c.accent : c.rule} /><circle key="radio" cx={x + 16} cy={r.choiceTop + r.tfHeight / 2} r={6} fill={selected ? c.accent : c.paper} stroke={c.rule} />{lines(values, x + 32, r.choiceTop + l.size + 4, 'tf-label', l.size - 3)}</g>;
+          const selected = show && s(r.question.answer).toLowerCase() === (i === 0 ? 'true' : 'false'), x = 68 + i % r.tfColumns * (r.tfWidth + 12), y = r.choiceTop + Math.floor(i / r.tfColumns) * (r.tfHeight + 12);
+          return <g key={`tf-${i}`}><rect key="box" x={x} y={y} width={r.tfWidth} height={r.tfHeight} rx={radius} fill={selected ? c.tint : c.paper} stroke={selected ? c.accent : c.rule} /><circle key="radio" cx={x + 16} cy={y + r.tfHeight / 2} r={6} fill={selected ? c.accent : c.paper} stroke={c.rule} />{lines(values, x + 32, y + l.size + 4, 'tf-label', l.size - 3)}</g>;
         })}{data.requireCorrection && <g key="correction">{responseLabel}{rules(r, Math.max(r.count, r.explanation.length))}{show && lines(r.explanation, answerX, answerTextY, 'correction-text', l.size - 2, c.answer, 400, l.writingLeading)}</g>}</g>}
         {(l.kind === 'odd' || l.kind === 'choice' || l.kind === 'sequence') && <g key="options">{choices}{(data.requireExplanation || l.kind === 'sequence') && <g key="reason">{responseLabel}{rules(r, Math.max(r.count, r.explanation.length))}{show && lines(l.kind === 'sequence' ? r.answer : r.explanation, answerX, answerTextY, 'reason-answer', l.size - 2, c.answer, 400, l.writingLeading)}</g>}</g>}
       </g>;

@@ -191,7 +191,7 @@ export const NumberExerciseRenderer: React.FC<MathRendererProps> = ({ data, mode
     const answer = worksheetLines(teacher ? sorted.map(n => format(n, data)).join(descending ? " > " : " < ") : "Answer: __________________________________", width - 56, 16);
     answer.forEach((value, i) => nodes.push(text(value, 28, top + numbers.length * 56 + 18 + i * 23, `answer-${i}`, accent)));
   } else {
-    const columns = Math.max(1, Math.min(5, numbers.length)), cw = (width - 56) / columns;
+    const columns = Math.max(1, Math.min(5, numbers.length, Math.floor((width - 56) / 80))), cw = (width - 56) / columns;
     const source = worksheetLines(`Numbers: ${numbers.map(n => format(n, data)).join("; ")}`, width - 56, 16);
     source.forEach((value, i) => nodes.push(text(value, 28, top + 15 + i * 23, `source-${i}`)));
     const base = top + source.length * 23 + 20;
@@ -218,7 +218,8 @@ function numberExerciseHeight(data: Record<string, unknown>, width: number) {
   if (data.kind === "marked-line") return top + 180;
   if (data.kind === "digit-cards") return top + numbers.length * 56 + worksheetLines(numbers.map(n => format(n, data)).join(" < "), width - 56, 16).length * 23 + 42;
   const sourceHeight = worksheetLines(`Numbers: ${numbers.map(n => format(n, data)).join("; ")}`, width - 56, 16).length * 23;
-  return top + sourceHeight + Math.max(1, Math.ceil(numbers.length / 5)) * 140 + 24;
+  const columns = Math.max(1, Math.min(5, numbers.length, Math.floor((width - 56) / 80)));
+  return top + sourceHeight + Math.max(1, Math.ceil(numbers.length / columns)) * 140 + 24;
 }
 function numberExercise(id: string, name: string, kind: string, data: Record<string, unknown>): MathTemplate {
   const defaultData = { kind, title: name, instructions: "Arrange the numbers from smallest to largest.", numbers: [67200, 60250, 62380, 60830], direction: "ascending", system: "indian", ...data };
