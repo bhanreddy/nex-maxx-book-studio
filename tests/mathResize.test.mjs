@@ -219,11 +219,48 @@ test('height fitting supports existing scaled blocks, padding and very small fra
   }
 });
 
+test('height-only edits fill the visible width even when uniform scaling was explicitly locked', () => {
+  for (const t of READY_MADE_MATH_TEMPLATES) for (const resizeMode of ['scale', 'stretch']) {
+    const original = fixture(t, 535, 600, { resizeMode, resizeModeLocked: true, padding: 12, scaleFrame: { width: 460, height: 600 } });
+    let el = original;
+    for (const height of [220, 480, 180]) {
+      el = withBlockTransform(el, { ...el.transform, height });
+      const { frame } = layout(el);
+      assert.equal(el.transform.width, 535, t.id);
+      assert.equal(el.transform.height, height, t.id);
+      assert.equal(el.content.mathAppearance.resizeMode, 'reflow', t.id);
+      assert.equal(el.content.mathAppearance.resizeModeLocked, false, t.id);
+      assert.equal(el.content.mathAppearance.scaleFrame, undefined, t.id);
+      assert.equal(frame.offsetX, 0, `${t.id}: no horizontal inset from proportional scaling`);
+      assert.equal(frame.scaleX, frame.scaleY, `${t.id}: text remains in proportion`);
+      assert.ok(Math.abs(frame.renderWidth * frame.scaleX + 2 * frame.padding - 535) < .0001, `${t.id}: visible artwork keeps full width`);
+      assert.ok(t.measureHeight(el.content.mathData, frame.renderWidth) * frame.scaleY <= height - 2 * frame.padding + .0001, t.id);
+      assert.deepEqual(el.content.mathData, original.content.mathData, t.id);
+    }
+  }
+});
+
+test('store height edits migrate locked scaling and undo restores the original layout mode', () => isolated(() => {
+  for (const templateId of ['premium-question-answer', 'worksheet-plain-question-answer']) {
+    const id = insertMathComponent(templateId, 40, 60, undefined, { width: 535 });
+    const current = store.getState().elements[id];
+    store.getState().updateElement(id, { content: { ...current.content, mathAppearance: { resizeMode: 'scale', resizeModeLocked: true } } });
+    const original = structuredClone(store.getState().elements[id]);
+    store.getState().updateElementTransform(id, { height: 180 }, true);
+    const compact = structuredClone(store.getState().elements[id]);
+    assert.equal(compact.transform.width, original.transform.width);
+    assert.equal(compact.content.mathAppearance.resizeMode, 'reflow');
+    assert.equal(layout(compact).frame.offsetX, 0);
+    history.getState().undo(); assert.deepEqual(store.getState().elements[id], original);
+    history.getState().redo(); assert.deepEqual(store.getState().elements[id], compact);
+  }
+}));
+
 test('top and bottom height drags keep the opposite edge fixed, including rotated blocks', () => {
   const { calculateRotatedResize, rotatePoint, getTransformHandles } = require('../src/editor/core/geometry.ts');
   const t = getMathTemplate('premium-question-answer');
   for (const rotation of [0, 30, 90, 225]) for (const handle of ['n', 's', 'ne', 'sw']) {
-    const el = fixture(t, 460, t.defaultHeight, { resizeMode: 'reflow' }); el.transform.rotation = rotation;
+    const el = fixture(t, 460, t.defaultHeight, { resizeMode: 'scale', resizeModeLocked: true }); el.transform.rotation = rotation;
     const delta = rotatePoint(0, handle.startsWith('n') ? 120 : -120, 0, 0, rotation);
     const requested = calculateRotatedResize(el.transform, rotation, handle, delta.x, delta.y, false, 240, 32);
     const next = withBlockTransform(el, { ...el.transform, ...requested }, handle.startsWith('n') ? 'reflow-bottom' : 'auto');
@@ -232,6 +269,9 @@ test('top and bottom height drags keep the opposite edge fixed, including rotate
     assert.ok(Math.abs(anchor(next.transform).x - anchor(el.transform).x) < 1e-7, `${rotation} ${handle}`);
     assert.ok(Math.abs(anchor(next.transform).y - anchor(el.transform).y) < 1e-7, `${rotation} ${handle}`);
     assert.equal(next.transform.height, requested.height);
+    assert.equal(next.transform.width, el.transform.width);
+    assert.equal(layout(next).frame.offsetX, 0);
+    assert.ok(Math.abs(layout(next).frame.renderWidth * layout(next).frame.scaleX - el.transform.width) < .0001);
     assert.ok(layout(next).frame.scaleY < 1);
   }
 });

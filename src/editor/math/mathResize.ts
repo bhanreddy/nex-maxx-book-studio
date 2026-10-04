@@ -27,8 +27,13 @@ export function withMathTransform(element: PageElement, requested: ElementTransf
     if (currentMode === "reflow") appearance = { ...appearance, resizeMode: "scale", scaleFrame: { width: before.renderWidth, height: before.renderHeight } };
     return { ...element, content: { ...element.content, mathAppearance: appearance }, transform: requested };
   }
-  if ((widthChanged || heightChanged) && currentMode === "scale" && !appearance.resizeModeLocked) {
-    appearance = { ...appearance, resizeMode: "reflow", reflowScale: before.scaleX, scaleFrame: undefined };
+  // A height-only edit is a vertical fit, including saved templates that were
+  // explicitly set to uniform scaling. Keeping their fixed source width would
+  // shrink the visible artwork sideways while the outer width stayed unchanged.
+  // Explicit proportional gestures above still scale both dimensions together.
+  const fitHeightOnly = heightChanged && !widthChanged && mode !== "trim-height";
+  if ((fitHeightOnly && currentMode !== "reflow") || (currentMode === "scale" && !appearance.resizeModeLocked)) {
+    appearance = { ...appearance, resizeMode: "reflow", resizeModeLocked: false, reflowScale: before.scaleX, scaleFrame: undefined };
   }
   if ((appearance.resizeMode || defaultMathResizeMode(template)) !== "reflow") return { ...element, transform: requested };
   const width = Math.max(template.measureHeight ? 240 : 48, requested.width);

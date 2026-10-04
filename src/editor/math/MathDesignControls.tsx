@@ -66,7 +66,7 @@ export function MathDesignControls({ element, template }: { element: PageElement
   return (
     <fieldset disabled={element.locked} className="math-design-controls space-y-3">
       <div className="math-edit-hint">
-        Width reflows text. Height resizes the text and layout together. Double-click text to edit it. {template.measureHeight ? "Edit questions, answers and writing space in Mathematical Content." : "Change values in Mathematical Content to recalculate answers."}
+        Width reflows text. Changing only height keeps the width fixed and fits text automatically. Double-click text to edit it. {template.measureHeight ? "Edit questions, answers and writing space in Mathematical Content." : "Change values in Mathematical Content to recalculate answers."}
       </div>
       <div className="math-control-grid">
         {numberInput("Template width (pt)", element.transform.width, width => updateTransform(element.id, { width }, true), template.measureHeight ? 240 : 48, 2400)}
