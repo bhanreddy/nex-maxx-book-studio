@@ -2,7 +2,7 @@ import React from 'react';
 import { Shuffle, RotateCcw } from 'lucide-react';
 import type { MathTemplate, MathStyleVariant } from './types';
 import { MathDataFields } from './MathDataFields';
-import { WORKSHEET_PALETTES, WORKSHEET_DESIGN_FIELDS, WORKSHEET_DESIGN_DEFAULTS, worksheetPalettePatch, nextWorksheetPalette, worksheetColors } from './worksheetDesign';
+import { WORKSHEET_PALETTES, WORKSHEET_DESIGN_FIELDS, WORKSHEET_DESIGN_DEFAULTS, WORKSHEET_COMPACT_SPACING, worksheetPalettePatch, nextWorksheetPalette, worksheetColors } from './worksheetDesign';
 import { shuffleMatchingOrder } from './templates/premiumExerciseTemplates';
 
 type Data = Record<string, unknown>;
@@ -14,9 +14,9 @@ export function WorksheetPalettePicker({ paletteId, onChange }: { paletteId: str
 }
 
 /** Keep frequently used layout controls visible; advanced styling stays optional. */
-export function WorksheetStyleControls({ template, data, variant, onUpdate }: { template: MathTemplate; data: Data; variant: MathStyleVariant; onUpdate: (patch: Data) => void }) {
+export function WorksheetStyleControls({ template, data, variant, onUpdate }: { template: MathTemplate; data: Data; variant: MathStyleVariant; onUpdate: (patch: Data, fitHeight?: boolean) => void }) {
   const colors = worksheetColors(data, variant);
-  const effective = { ...WORKSHEET_DESIGN_DEFAULTS, ...template.defaultData, ...data, accentColor: colors.accent, answerColor: colors.answer, inkColor: colors.ink, tintColor: colors.tint, ruleColor: colors.rule, lineSpacing: data.lineSpacing ?? template.defaultData.lineSpacing ?? (template.id.startsWith('premium-') || data.presentation === 'plain' ? 32 : Number(data.fontSize || 20) * 1.45), cornerRadius: data.cornerRadius ?? template.defaultData.cornerRadius ?? (template.id.startsWith('premium-') ? 12 : 10) };
+  const effective = { ...WORKSHEET_DESIGN_DEFAULTS, ...template.defaultData, ...data, accentColor: colors.accent, answerColor: colors.answer, inkColor: colors.ink, tintColor: colors.tint, ruleColor: colors.rule, cornerRadius: data.cornerRadius ?? template.defaultData.cornerRadius ?? (template.id.startsWith('premium-') ? 12 : 10) };
   const kind = String(data.exerciseKind || (Array.isArray(data.questions) ? 'qa' : 'math')), plain = data.presentation === 'plain';
   const hasWriting = kind === 'qa' || kind === 'sequence' || Boolean(data.requireExplanation || data.requireCorrection);
   const basicKeys = ['fontSize', 'answerGap', ...(kind === 'table' || kind === 'classify' ? [] : ['questionGap'])];
@@ -33,6 +33,7 @@ export function WorksheetStyleControls({ template, data, variant, onUpdate }: { 
     <WorksheetPalettePicker paletteId={paletteId} onChange={pick} />
     <p>Shuffle a coordinated theme. Your questions and answer key stay intact.</p>
     <MathDataFields template={template} data={effective} fields={allowed.filter(f => basicKeys.includes(f.key))} onUpdate={onUpdate} />
+    {kind !== 'math' && kind !== 'table' && kind !== 'classify' && <button type="button" className="worksheet-action" onClick={() => onUpdate(WORKSHEET_COMPACT_SPACING, true)}>Compact spacing</button>}
     {kind === 'match' && <button type="button" className="worksheet-action" onClick={() => onUpdate(shuffleMatchingOrder(data))}><Shuffle size={14} />Shuffle matching choices</button>}
     {(kind === 'choice' || kind === 'odd') && <p>Use the exact option text as the answer key. Add your reason in Explanation.</p>}
     {kind === 'true-false' && <p>Use True or False as the answer key, including when you rename the buttons.</p>}

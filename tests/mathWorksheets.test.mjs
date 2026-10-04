@@ -231,3 +231,67 @@ test('palette and spacing changes form undoable edits and grow the frame', () =>
     history.getState().redo(); assert.deepEqual(store.getState().elements[id], after);
   } finally { store.setState(saved); history.getState().clearHistory(); }
 });
+
+test('compact Q&A puts the label on the answer baseline and respects the actual question gap', () => {
+  const t = getMathTemplate('premium-question-answer');
+  const data = { ...t.defaultData, questions: [{ prompt: 'Question?', answer: 'An answer.' }] };
+  const output = markup(t, 'teacher', data);
+  const textY = value => {
+    const tag = [...output.matchAll(/<text\b([^>]*)>([^<]*)<\/text>/g)].find(match => match[2] === value);
+    assert.ok(tag, value); return Number(tag[1].match(/\by="([^"]+)"/)[1]);
+  };
+  assert.equal(data.answerGap, 6);
+  assert.equal(textY('An answer.') - textY('Question?'), data.fontSize + data.answerGap);
+  assert.equal(textY('Answer:'), textY('An answer.'), 'label shares the response row');
+  assert.ok(t.defaultHeight < 530, 'three questions fit without the former blank label rows');
+});
+
+test('compact answers and long labels remain inside their rows at every supported text size', () => {
+  const t = getMathTemplate('premium-question-answer');
+  for (const size of [14, 20, 28]) for (const showLabel of [true, false]) {
+    const data = { ...t.defaultData, fontSize: size, lineSpacing: 20, showAnswerLabel: showLabel, answerLabel: 'Explain your answer carefully using examples. '.repeat(4), questions: [{ prompt: 'A longer question. '.repeat(8), answer: 'A longer response that wraps. '.repeat(12) }] };
+    const layout = premiumExerciseLayout(data, 460), row = layout.rows[0];
+    const lastBaseline = row.answerTop + size + (row.answer.length - 1) * layout.writingLeading;
+    assert.ok(lastBaseline + 4 <= row.bottom - data.questionGap + .001);
+    assert.ok(layout.writingLeading >= size * 1.45);
+    assert.ok(!markup(t, 'teacher', data).includes('NaN'));
+    assert.ok(!markup(t, 'student', data).includes('A longer response'));
+  }
+});
+
+test('reducing spacing shrinks a measured block and undo restores its full layout', () => {
+  const saved = store.getState(), book = structuredClone(saved.getActiveBook()); book.pages[0].elementIds = [];
+  store.setState({ books: [book], activeBookId: book.id, activePageIndex: 0, elements: {}, selectedElementIds: [], saveToStorage: () => {} });
+  history.getState().clearHistory();
+  try {
+    const id = insertMathComponent('premium-question-answer', 20, 20, { answerGap: 60, questionGap: 60, lineSpacing: 48 }, { mode: 'student' });
+    const before = structuredClone(store.getState().elements[id]);
+    updateMathTemplateData(id, { answerGap: 6, questionGap: 20, lineSpacing: 28 });
+    const after = structuredClone(store.getState().elements[id]);
+    assert.ok(after.transform.height < before.transform.height);
+    assert.equal(after.transform.width, before.transform.width);
+    assert.deepEqual(after.content.mathData.questions, before.content.mathData.questions);
+    assert.equal(after.content.mathMode, 'student');
+    assert.equal(after.transform.height, getMathTemplate('premium-question-answer').measureHeight(after.content.mathData, 460));
+    history.getState().undo(); assert.deepEqual(store.getState().elements[id], before);
+    history.getState().redo(); assert.deepEqual(store.getState().elements[id], after);
+  } finally { store.setState(saved); history.getState().clearHistory(); }
+});
+
+test('compact spacing trims surplus height for scaled and reflowed exercise frames', () => {
+  const saved = store.getState(), book = structuredClone(saved.getActiveBook()); book.pages[0].elementIds = [];
+  store.setState({ books: [book], activeBookId: book.id, activePageIndex: 0, elements: {}, selectedElementIds: [], saveToStorage: () => {} });
+  history.getState().clearHistory();
+  try {
+    const t = getMathTemplate('premium-question-answer');
+    for (const [width, appearance, scale] of [[230, {}, .5], [600, { resizeMode: 'reflow', padding: 12 }, 1]]) {
+      const id = insertMathComponent(t.id, 20, 20, undefined, { mode: 'teacher', width, height: 1500, appearance });
+      const old = structuredClone(store.getState().elements[id]);
+      updateMathTemplateData(id, { answerGap: 6, questionGap: 20, lineSpacing: 28 }, { fitHeight: true });
+      const next = store.getState().elements[id], renderWidth = appearance.resizeMode === 'reflow' ? width - 24 : 460;
+      assert.equal(next.transform.height, t.measureHeight(next.content.mathData, renderWidth) * scale + 2 * (appearance.padding || 0));
+      assert.equal(next.transform.width, width);
+      assert.ok(next.transform.height < old.transform.height);
+    }
+  } finally { store.setState(saved); history.getState().clearHistory(); }
+});

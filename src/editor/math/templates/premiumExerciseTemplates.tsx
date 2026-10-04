@@ -1,6 +1,6 @@
 import React from "react";
 import type { MathTemplate, MathRendererProps, MathConfigField } from "../types";
-import { worksheetLines, worksheetNumber as n, worksheetString as s, worksheetColors, worksheetNumberLabel, WORKSHEET_DESIGN_DEFAULTS, WORKSHEET_DESIGN_FIELDS } from "../worksheetDesign";
+import { worksheetLines, worksheetNumber as n, worksheetString as s, worksheetColors, worksheetNumberLabel, WORKSHEET_DESIGN_DEFAULTS, WORKSHEET_DESIGN_FIELDS, worksheetResponseLayout } from "../worksheetDesign";
 
 export type ExerciseKind = "qa" | "match" | "blanks" | "true-false" | "odd" | "choice" | "sequence" | "classify" | "table";
 export interface ExerciseQuestion { prompt: string; answer: string; explanation?: string; choices?: string[]; cells?: string[] }
@@ -58,7 +58,7 @@ export function premiumExerciseLayout(data: Data, width: number) {
   let y = instructionY + instructions.length * leading + 20;
   const wordBank = data.showWordBank !== false && Array.isArray(data.wordBank) && data.wordBank.length ? worksheetLines(`Word bank: ${data.wordBank.map(s).join('  ·  ')}`, width - 64, size - 2) : [];
   const bankY = y; y += wordBank.length ? wordBank.length * leading + 22 : 0;
-  const bodyWidth = width - 92, gap = n(data.answerGap, 16, 0, 96), rowGap = n(data.questionGap, 26, 12, 96), writingLeading = Math.max(leading, n(data.lineSpacing, 32, 20, 56));
+  const bodyWidth = width - 92, gap = n(data.answerGap, WORKSHEET_DESIGN_DEFAULTS.answerGap, 0, 96), rowGap = n(data.questionGap, WORKSHEET_DESIGN_DEFAULTS.questionGap, 12, 96), writingLeading = Math.max(leading, n(data.lineSpacing, WORKSHEET_DESIGN_DEFAULTS.lineSpacing, 20, 56));
   const order = matchingOrder(data), questions = questionList(data);
   const columns = Array.isArray(data.columns) ? data.columns.map(s) : ['Item', 'Answer'];
   const columnGap = n(data.matchingColumnGap, 52, 24, 100), columnWidth = (width - 48 - columnGap) / 2;
@@ -77,13 +77,18 @@ export function premiumExerciseLayout(data: Data, width: number) {
     const tfLabels = [s(data.trueLabel || 'True'), s(data.falseLabel || 'False')].map(value => worksheetLines(value, 86, size - 3));
     const tfHeight = Math.max(36, Math.max(...tfLabels.map(v => v.length)) * leading + 12);
     const choiceHeight = Math.max(1, ...choices.map(c => worksheetLines(c, choiceWidth - 42, size - 2).length)) * leading + 16;
-    const choiceTop = top + prompt.length * leading + gap;
-    const choiceBottom = choiceTop + Math.ceil(choices.length / choiceColumns) * (choiceHeight + 12);
-    const count = Math.max(Math.round(n(data.answerLines, 2, 1, 8)), answer.length);
+    const promptEnd = top + (prompt.length - 1) * leading + size;
+    const choiceTop = promptEnd + gap + 4;
+    const choiceRows = Math.ceil(choices.length / choiceColumns);
+    const choiceBottom = choiceTop + choiceRows * choiceHeight + Math.max(0, choiceRows - 1) * 12;
+    const responseValue = kind === 'true-false' || kind === 'odd' || kind === 'choice' ? question.explanation : question.answer;
+    const response = worksheetResponseLayout(data, responseValue, bodyWidth - 12, size, writingLeading);
+    const count = response.count, label = response.label;
     const inline = blankRuns(s(question.prompt), s(question.answer), bodyWidth, size, n(data.blankWidth, 96, 48, 180));
-    const label = data.showAnswerLabel === false || !s(data.answerLabel).trim() ? [] : worksheetLines(data.answerLabel, bodyWidth, size - 4);
-    let answerTop = top + prompt.length * leading + gap + label.length * leading;
-    let bottom = answerTop + count * writingLeading + rowGap;
+    let responseTop = promptEnd + gap;
+    let answerTop = responseTop + response.labelHeight;
+    let bottom = responseTop + response.height + rowGap;
+    let explanationTop = bottom - rowGap + 6;
     let matchLeft: string[] = [], matchRight: string[] = [];
     let cells: string[][] = [], cellHeight = 0;
     if (kind === 'match') {
@@ -94,11 +99,13 @@ export function premiumExerciseLayout(data: Data, width: number) {
       answerTop = top + inline.height + gap;
       bottom = answerTop + (data.showExplanations ? Math.max(1, explanation.length) * leading : 0) + rowGap;
     } else if (kind === 'true-false') {
-      answerTop = top + prompt.length * leading + gap + tfHeight + 6 + (data.requireCorrection ? label.length * leading + gap : 0);
-      bottom = answerTop + (data.requireCorrection ? Math.max(count, explanation.length) * writingLeading : 0) + rowGap;
+      responseTop = choiceTop + tfHeight + gap;
+      answerTop = responseTop + response.labelHeight;
+      bottom = choiceTop + tfHeight + (data.requireCorrection ? gap + response.height : 0) + rowGap;
     } else if (kind === 'choice' || kind === 'odd' || kind === 'sequence') {
-      answerTop = choiceBottom + gap + (data.requireExplanation ? label.length * leading : 0);
-      bottom = answerTop + (kind === 'sequence' || data.requireExplanation ? Math.max(count, explanation.length) * writingLeading : 0) + rowGap;
+      responseTop = choiceBottom + gap;
+      answerTop = responseTop + response.labelHeight;
+      bottom = choiceBottom + (kind === 'sequence' || data.requireExplanation ? gap + response.height : 0) + rowGap;
     } else if (kind === 'classify' || kind === 'table') {
       const values = kind === 'classify' ? [question.prompt, ...columns.slice(1).map(() => '')] : [question.prompt, ...(Array.isArray(question.cells) ? question.cells : [])];
       const keys = s(question.answer).split('|'); let blankIndex = 0;
@@ -106,9 +113,9 @@ export function premiumExerciseLayout(data: Data, width: number) {
       const studentCells = columns.map((_, col) => worksheetLines(s(values[col]).replace(/\{\{blank\}\}/g, '________'), cellWidth - 16, size - 2));
       cellHeight = Math.max(1, ...cells.map(c => c.length), ...studentCells.map(c => c.length)) * leading + gap + 18;
       bottom = top + cellHeight;
-    } else if (data.showExplanations && explanation.length) { bottom += explanation.length * leading + 12; }
+    } else if (data.showExplanations && explanation.length) { explanationTop = bottom - rowGap + 6; bottom += explanation.length * leading + 6; }
     y = bottom;
-    return { question, top, bottom, prompt, answer, explanation, label, answerTop, count, choices, choiceColumns, choiceWidth, choiceHeight, choiceTop, tfLabels, tfHeight, inline, matchLeft, matchRight, cells, cellHeight };
+    return { question, top, bottom, prompt, answer: kind === 'qa' || kind === 'sequence' ? response.lines : answer, explanation: kind === 'true-false' || kind === 'odd' || kind === 'choice' ? response.lines : explanation, label, response, responseTop, explanationTop, answerTop, count, choices, choiceColumns, choiceWidth, choiceHeight, choiceTop, tfLabels, tfHeight, inline, matchLeft, matchRight, cells, cellHeight };
   });
   return { kind, size, leading, writingLeading, title, instructions, kicker, titleY, instructionY, bankY, wordBank, bodyWidth, columnGap, columnWidth, leftHeading, rightHeading, columnsY, order, columns, cellWidth, tableY, tableHeadHeight, rows, height: Math.max(180, y + 24) };
 }
@@ -117,7 +124,7 @@ export const PremiumExerciseRenderer: React.FC<MathRendererProps> = ({ data, mod
   const l = premiumExerciseLayout(data, width), c = worksheetColors(data, styleVariant), h = Math.max(height, l.height), radius = n(data.cornerRadius, 12, 0, 24);
   const label = (value: string, x: number, y: number, key: string, size = l.size, fill = c.ink, weight = 400, anchor: 'start' | 'middle' | 'end' = 'start') => <text key={key} x={x} y={y} fontSize={size} fill={fill} fontWeight={weight} textAnchor={anchor}>{value}</text>;
   const lines = (values: string[], x: number, y: number, key: string, size = l.size, fill = c.ink, weight = 400, step = l.leading) => values.map((value, i) => label(value, x, y + i * step, `${key}-${i}`, size, fill, weight));
-  const rules = (r: typeof l.rows[number], count = r.count) => data.responseStyle !== 'open' && Array.from({ length: count }, (_, i) => <line key={`rule-${i}`} x1={68} x2={width - 26} y1={r.answerTop + (i + 1) * l.writingLeading + 2} y2={r.answerTop + (i + 1) * l.writingLeading + 2} stroke={c.rule} strokeWidth={.8} />);
+  const rules = (r: typeof l.rows[number], count = r.count) => data.responseStyle !== 'open' && Array.from({ length: count }, (_, i) => <line key={`rule-${i}`} x1={68 + r.response.indent} x2={width - 26} y1={r.answerTop + l.size + i * l.writingLeading + 4} y2={r.answerTop + l.size + i * l.writingLeading + 4} stroke={c.rule} strokeWidth={.8} />);
   const isTable = l.kind === 'table' || l.kind === 'classify';
   return <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" viewBox={`0 0 ${width} ${h}`} fontFamily="Inter, sans-serif" aria-label={s(data.title) || 'Premium exercise'}>
     <rect key="paper" x={.5} y={.5} width={width - 1} height={h - 1} rx={16} fill={c.paper} stroke={c.rule} />
@@ -130,7 +137,9 @@ export const PremiumExerciseRenderer: React.FC<MathRendererProps> = ({ data, mod
     {l.rows.map((r, index) => {
       const show = mode === 'teacher' || data.showExample === true && index === 0;
       const number = worksheetNumberLabel(index, data);
-      const answerTextY = r.answerTop + l.writingLeading - 3;
+      const answerTextY = r.answerTop + l.size;
+      const answerX = 68 + r.response.indent;
+      const responseLabel = lines(r.label, 68, r.responseTop + (r.response.inlineLabel ? l.size : r.response.labelSize), 'answer-label', r.response.labelSize, c.muted, 400, r.response.labelLeading);
       const choices = r.choices.map((choice, i) => {
         const x = 68 + i % r.choiceColumns * (r.choiceWidth + 12), y = r.choiceTop + Math.floor(i / r.choiceColumns) * (r.choiceHeight + 12);
         const correct = show && (l.kind === 'odd' || l.kind === 'choice') && choice === r.question.answer;
@@ -152,7 +161,7 @@ export const PremiumExerciseRenderer: React.FC<MathRendererProps> = ({ data, mod
         })}</g>;
       }
       if (l.kind === 'match') {
-        const rightX = 24 + l.columnWidth + l.columnGap, rowHeight = r.bottom - r.top - n(data.questionGap, 26, 12, 96);
+        const rightX = 24 + l.columnWidth + l.columnGap, rowHeight = r.bottom - r.top - n(data.questionGap, WORKSHEET_DESIGN_DEFAULTS.questionGap, 12, 96);
         const dotY = r.top + rowHeight / 2;
         return <g key={`question-${index}`}><rect key="left-card" x={24} y={r.top} width={l.columnWidth} height={rowHeight} rx={radius} fill={data.showPanels === false ? c.paper : c.tint} stroke={c.rule} /><rect key="right-card" x={rightX} y={r.top} width={l.columnWidth} height={rowHeight} rx={radius} fill={c.paper} stroke={c.rule} />
           {data.showNumbering !== false && label(number, 34, r.top + l.size + 6, 'left-number', 14, c.accent, 600)}
@@ -160,20 +169,20 @@ export const PremiumExerciseRenderer: React.FC<MathRendererProps> = ({ data, mod
           {label(worksheetNumberLabel(index, { startNumber: 1, numberingStyle: 'letters' }), rightX + 10, r.top + l.size + 6, 'right-number', 14, c.accent, 600)}
           {lines(r.matchRight, rightX + 34, r.top + l.size + 6, 'right-text')}
           <circle key="left-dot" cx={24 + l.columnWidth} cy={dotY} r={3} fill={c.accent} /><circle key="right-dot" cx={rightX} cy={dotY} r={3} fill={c.accent} />
-          {show && (() => { const target = l.rows[l.order.indexOf(index)], targetHeight = target.bottom - target.top - n(data.questionGap, 26, 12, 96); return <line key="solution-link" x1={24 + l.columnWidth + 4} y1={dotY} x2={rightX - 4} y2={target.top + targetHeight / 2} stroke={c.answer} strokeWidth={1.4} />; })()}
+          {show && (() => { const target = l.rows[l.order.indexOf(index)], targetHeight = target.bottom - target.top - n(data.questionGap, WORKSHEET_DESIGN_DEFAULTS.questionGap, 12, 96); return <line key="solution-link" x1={24 + l.columnWidth + 4} y1={dotY} x2={rightX - 4} y2={target.top + targetHeight / 2} stroke={c.answer} strokeWidth={1.4} />; })()}
         </g>;
       }
       return <g key={`question-${index}`}>
         {data.showPanels !== false && <rect key="panel" x={18} y={r.top - 6} width={width - 36} height={Math.max(12, r.bottom - r.top - 8)} rx={radius} fill={index % 2 ? c.paper : c.tint} />}
         {data.showNumbering !== false && label(`${number}.`, 56, r.top + l.size, 'number', l.size - 2, c.accent, 600, 'end')}
         {l.kind === 'blanks' ? r.inline.runs.map((run, i) => <g key={`inline-${i}`}>{run.blank ? <g key="blank"><line key="rule" x1={68 + run.x} x2={68 + run.x + run.width} y1={r.top + run.y + l.size + 4} y2={r.top + run.y + l.size + 4} stroke={c.accent} />{show && label(run.text, 72 + run.x, r.top + run.y + l.size, 'blank-answer', l.size, c.answer, 600)}</g> : label(run.text, 68 + run.x, r.top + run.y + l.size, 'word')}</g>) : lines(r.prompt, 68, r.top + l.size, 'prompt', l.size, c.ink, n(data.questionWeight, 600, 400, 700))}
-        {l.kind === 'qa' && <g key="response">{lines(r.label, 68, r.answerTop - r.label.length * l.leading + l.size - 4, 'answer-label', l.size - 4, c.muted)}{rules(r)}{show && lines(r.answer, 68, answerTextY, 'answer', l.size, c.answer, 400, l.writingLeading)}{show && data.showExplanations && lines(r.explanation, 68, r.answerTop + r.count * l.writingLeading + l.leading, 'explanation', l.size - 2, c.muted)}</g>}
+        {l.kind === 'qa' && <g key="response">{responseLabel}{rules(r)}{show && lines(r.answer, answerX, answerTextY, 'answer', l.size, c.answer, 400, l.writingLeading)}{show && data.showExplanations && lines(r.explanation, 68, r.explanationTop + l.size - 2, 'explanation', l.size - 2, c.muted)}</g>}
         {l.kind === 'blanks' && show && data.showExplanations && lines(r.explanation, 68, r.answerTop + l.size - 2, 'explanation', l.size - 2, c.muted)}
         {l.kind === 'true-false' && <g key="true-false">{r.tfLabels.map((values, i) => {
           const selected = show && s(r.question.answer).toLowerCase() === (i === 0 ? 'true' : 'false'), x = 68 + i * 140;
           return <g key={`tf-${i}`}><rect key="box" x={x} y={r.choiceTop} width={128} height={r.tfHeight} rx={radius} fill={selected ? c.tint : c.paper} stroke={selected ? c.accent : c.rule} /><circle key="radio" cx={x + 16} cy={r.choiceTop + r.tfHeight / 2} r={6} fill={selected ? c.accent : c.paper} stroke={c.rule} />{lines(values, x + 32, r.choiceTop + l.size + 4, 'tf-label', l.size - 3)}</g>;
-        })}{data.requireCorrection && <g key="correction">{lines(r.label, 68, r.answerTop - r.label.length * l.leading + l.size - 4, 'correction-label', l.size - 4, c.muted)}{rules(r, Math.max(r.count, r.explanation.length))}{show && lines(r.explanation, 68, answerTextY, 'correction-text', l.size - 2, c.answer, 400, l.writingLeading)}</g>}</g>}
-        {(l.kind === 'odd' || l.kind === 'choice' || l.kind === 'sequence') && <g key="options">{choices}{(data.requireExplanation || l.kind === 'sequence') && <g key="reason">{lines(r.label, 68, r.answerTop - r.label.length * l.leading + l.size - 4, 'reason-label', l.size - 4, c.muted)}{rules(r, Math.max(r.count, r.explanation.length))}{show && lines(l.kind === 'sequence' ? r.answer : r.explanation, 68, answerTextY, 'reason-answer', l.size - 2, c.answer, 400, l.writingLeading)}</g>}</g>}
+        })}{data.requireCorrection && <g key="correction">{responseLabel}{rules(r, Math.max(r.count, r.explanation.length))}{show && lines(r.explanation, answerX, answerTextY, 'correction-text', l.size - 2, c.answer, 400, l.writingLeading)}</g>}</g>}
+        {(l.kind === 'odd' || l.kind === 'choice' || l.kind === 'sequence') && <g key="options">{choices}{(data.requireExplanation || l.kind === 'sequence') && <g key="reason">{responseLabel}{rules(r, Math.max(r.count, r.explanation.length))}{show && lines(l.kind === 'sequence' ? r.answer : r.explanation, answerX, answerTextY, 'reason-answer', l.size - 2, c.answer, 400, l.writingLeading)}</g>}</g>}
       </g>;
     })}
   </svg>;

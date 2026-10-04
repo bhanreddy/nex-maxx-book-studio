@@ -55,8 +55,8 @@ export const MathTemplateInspector: React.FC<MathTemplateInspectorProps> = ({ el
     );
   }
 
-  const handleUpdate = (patch: Record<string, any>) => {
-    updateMathTemplateData(element.id, patch);
+  const handleUpdate = (patch: Record<string, any>, fitHeight = false) => {
+    updateMathTemplateData(element.id, patch, { fitHeight });
   };
 
   const handleModeChange = (mode: MathAnswerMode) => {

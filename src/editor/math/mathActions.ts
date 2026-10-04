@@ -13,8 +13,8 @@ import { mathSceneForElement } from "./mathScene";
 import { PageElement } from "../../domain/element/types";
 import { mathRenderFrame } from "./mathEditableTree";
 
-/** Keep an exercise's writing size when edited content needs more vertical space. */
-export function updateMathTemplateData(elementId: string, patch: Record<string, any>): void {
+/** Fit measured exercises after layout edits without changing their writing scale. */
+export function updateMathTemplateData(elementId: string, patch: Record<string, any>, options: { fitHeight?: boolean } = {}): void {
   const store = useEditorStore.getState();
   const element = store.elements[elementId];
   if (!element || element.locked) return;
@@ -27,7 +27,12 @@ export function updateMathTemplateData(elementId: string, patch: Record<string, 
   const appearance = element.content.mathAppearance || {};
   const before = mathRenderFrame(template, element.transform.width, element.transform.height, appearance, element.content.mathData || element.content);
   const after = mathRenderFrame(template, element.transform.width, element.transform.height, appearance, data);
-  const height = Math.max(element.transform.height, after.renderHeight * before.scaleY + 2 * before.padding);
+  const previousHeight = template.measureHeight(element.content.mathData || element.content, before.renderWidth);
+  const measuredHeight = template.measureHeight(data, after.renderWidth);
+  const layoutChanged = Math.abs(measuredHeight - previousHeight) > .01;
+  const height = options.fitHeight || layoutChanged
+    ? measuredHeight * before.scaleY + 2 * before.padding
+    : element.transform.height;
   store.updateElement(elementId, { content, transform: { ...element.transform, height } });
 }
 

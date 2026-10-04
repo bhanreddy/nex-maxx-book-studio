@@ -1,7 +1,7 @@
 import React from "react";
 import type { MathConfigField, MathRendererProps, MathTemplate, MathTopic } from "../types";
 import { MATH_TOKENS } from "../tokens";
-import { worksheetLines, worksheetColors, WORKSHEET_DESIGN_FIELDS, worksheetNumberLabel } from "../worksheetDesign";
+import { worksheetLines, worksheetColors, WORKSHEET_DESIGN_FIELDS, worksheetNumberLabel, WORKSHEET_COMPACT_SPACING, worksheetResponseLayout } from "../worksheetDesign";
 import { PREMIUM_EXERCISE_TEMPLATES } from "./premiumExerciseTemplates";
 export { worksheetLines } from "../worksheetDesign";
 
@@ -13,24 +13,25 @@ const string = (value: unknown) => String(value ?? "");
 function worksheetLayout(data: Record<string, unknown>, width: number) {
   const plain = data.presentation === "plain";
   const size = bounded(data.fontSize, 20, 14, 28), leading = size * 1.45;
-  const answerLeading = Math.max(leading, bounded(data.lineSpacing, plain ? 32 : leading, 20, 56));
-  const answerLabel = plain && data.showAnswerLabel !== false && string(data.answerLabel).trim() ? worksheetLines(data.answerLabel, width - 84, size - 4) : [];
+  const answerLeading = Math.max(leading, bounded(data.lineSpacing, WORKSHEET_COMPACT_SPACING.lineSpacing, 20, 56));
   const title = plain && !string(data.title).trim() ? [] : worksheetLines(data.title, width - 48, size + 4);
   const instructions = plain && !string(data.instructions).trim() ? [] : worksheetLines(data.instructions, width - 48, size - 3);
   let y = 30 + title.length * (size + 8) + instructions.length * leading + 18;
   const rows = Array.isArray(data.questions) ? data.questions as WorksheetRow[] : [];
   const laidOut = rows.map(row => {
     const prompt = worksheetLines(row.prompt, width - 84, size);
-    const answer = worksheetLines(row.answer, width - 100, size);
-    const working = data.layout === "worked" ? worksheetLines(row.working, width - 84, size - 2) : [];
-    const count = Math.max(Math.round(bounded(data.answerLines, 1, 1, 8)), answer.length);
-    const top = y, labelTop = top + prompt.length * leading + bounded(data.answerGap, 16, 0, 96) + working.length * leading;
-    const answerTop = labelTop + answerLabel.length * leading;
-    y = answerTop + count * answerLeading + bounded(data.questionGap, plain ? 24 : 26, 12, 96);
-    return { row, prompt, answer, working, count, top, labelTop, answerTop, bottom: y };
+    const working = data.layout === "worked" && string(row.working).trim() ? worksheetLines(row.working, width - 84, size - 2) : [];
+    const response = worksheetResponseLayout({ ...data, answerLines: data.answerLines ?? 1 }, row.answer, width - 100, size, answerLeading, plain);
+    const top = y, promptEnd = top + (prompt.length - 1) * leading + size;
+    const gap = bounded(data.answerGap, WORKSHEET_COMPACT_SPACING.answerGap, 0, 96);
+    const workingTop = promptEnd + gap;
+    const labelTop = working.length ? workingTop + size - 2 + (working.length - 1) * leading + gap : promptEnd + gap;
+    const answerTop = labelTop + response.labelHeight;
+    y = labelTop + response.height + bounded(data.questionGap, WORKSHEET_COMPACT_SPACING.questionGap, 12, 96);
+    return { row, prompt, answer: response.lines, response, working, workingTop, count: response.count, top, labelTop, answerTop, bottom: y };
   });
   // A generous empty workspace remains after removing every question.
-  return { size, leading, answerLeading, answerLabel, title, instructions, rows: laidOut, height: Math.max(160, y + 20) };
+  return { size, leading, answerLeading, title, instructions, rows: laidOut, height: Math.max(160, y + 20) };
 }
 
 export const WorksheetRenderer: React.FC<MathRendererProps> = props => {
@@ -53,9 +54,9 @@ export const WorksheetRenderer: React.FC<MathRendererProps> = props => {
         <circle cx={38} cy={r.top + 9} r={13} fill={paper} stroke={line} />
         <text key="number" x={38} y={r.top + 14} textAnchor="middle" fontSize={14} fill={accent} fontWeight={700}>{data.showNumbering === false ? "" : worksheetNumberLabel(index, data)}</text>
         {r.prompt.map((value, i) => text(value, 62, r.top + metrics.size + i * metrics.leading, metrics.size, colors.ink, bounded(data.questionWeight, 600, 400, 700), `prompt-${i}`))}
-        {r.working.map((value, i) => text(show ? value : "", 62, r.top + (r.prompt.length + i + 1) * metrics.leading + 10, metrics.size - 2, muted, false, `working-${i}`))}
-        {data.responseStyle !== "open" && Array.from({ length: r.count }, (_, i) => <line key={`rule-${i}`} x1={62} x2={width - 30} y1={r.answerTop + (i + 1) * metrics.answerLeading + 3} y2={r.answerTop + (i + 1) * metrics.answerLeading + 3} stroke={colors.rule} strokeWidth={.8} />)}
-        {show && r.answer.map((value, i) => text(value, 68, r.answerTop + (i + 1) * metrics.answerLeading - 2, metrics.size, colors.answer, false, `answer-${i}`))}
+        {r.working.map((value, i) => text(show ? value : "", 62, r.workingTop + metrics.size - 2 + i * metrics.leading, metrics.size - 2, muted, false, `working-${i}`))}
+        {data.responseStyle !== "open" && Array.from({ length: r.count }, (_, i) => <line key={`rule-${i}`} x1={62} x2={width - 30} y1={r.answerTop + metrics.size + i * metrics.answerLeading + 4} y2={r.answerTop + metrics.size + i * metrics.answerLeading + 4} stroke={colors.rule} strokeWidth={.8} />)}
+        {show && r.answer.map((value, i) => text(value, 62, r.answerTop + metrics.size + i * metrics.answerLeading, metrics.size, colors.answer, false, `answer-${i}`))}
       </g>;
     })}
   </svg>;
@@ -75,10 +76,10 @@ export const PlainWorksheetRenderer: React.FC<MathRendererProps> = ({ data, mode
       return <g key={`question-${index}`}>
         <text key="number" x={50} y={r.top + metrics.size} textAnchor="end" fontSize={metrics.size} fill={colors.accent} fontWeight={600}>{data.showNumbering === false ? "" : `${worksheetNumberLabel(index, data)}.`}</text>
         {r.prompt.map((value, i) => text(value, 62, r.top + metrics.size + i * metrics.leading, metrics.size, `prompt-${i}`, bounded(data.questionWeight, 600, 400, 700)))}
-        {r.working.map((value, i) => text(show ? value : "", 62, r.top + (r.prompt.length + i + 1) * metrics.leading + 10, metrics.size - 2, `working-${i}`, 400, muted))}
-        {metrics.answerLabel.map((value, i) => text(value, 62, r.labelTop + (i + 1) * metrics.leading - 2, metrics.size - 4, `answer-label-${i}`, 400, muted))}
-        {data.responseStyle !== "open" && Array.from({ length: r.count }, (_, i) => <line key={`rule-${i}`} x1={62} x2={width - 30} y1={r.answerTop + (i + 1) * metrics.answerLeading + 3} y2={r.answerTop + (i + 1) * metrics.answerLeading + 3} stroke={colors.rule} strokeWidth={.8} />)}
-        {show && r.answer.map((value, i) => text(value, 62, r.answerTop + (i + 1) * metrics.answerLeading - 2, metrics.size, `answer-${i}`, 400, colors.answer))}
+        {r.working.map((value, i) => text(show ? value : "", 62, r.workingTop + metrics.size - 2 + i * metrics.leading, metrics.size - 2, `working-${i}`, 400, muted))}
+        {r.response.label.map((value, i) => text(value, 62, r.labelTop + (r.response.inlineLabel ? metrics.size : r.response.labelSize) + i * r.response.labelLeading, metrics.size - 4, `answer-label-${i}`, 400, muted))}
+        {data.responseStyle !== "open" && Array.from({ length: r.count }, (_, i) => <line key={`rule-${i}`} x1={62 + r.response.indent} x2={width - 30} y1={r.answerTop + metrics.size + i * metrics.answerLeading + 4} y2={r.answerTop + metrics.size + i * metrics.answerLeading + 4} stroke={colors.rule} strokeWidth={.8} />)}
+        {show && r.answer.map((value, i) => text(value, 62 + r.response.indent, r.answerTop + metrics.size + i * metrics.answerLeading, metrics.size, `answer-${i}`, 400, colors.answer))}
       </g>;
     })}
   </svg>;
@@ -96,7 +97,7 @@ const commonFields = (data: Record<string, unknown>): MathConfigField[] => [
 ];
 
 function worksheet(id: string, name: string, category: MathTopic, title: string, instructions: string, questions: WorksheetRow[], layout = "short", answerLines = 1, showExample = true): MathTemplate {
-  const defaultData = { title, instructions, questions, layout, answerLines, showExample, startNumber: 1, fontSize: 20 };
+  const defaultData = { ...WORKSHEET_COMPACT_SPACING, title, instructions, questions, layout, answerLines, showExample, startNumber: 1, fontSize: 20 };
   return { id: `worksheet-${id}`, name, category, grades: [1, 2, 3, 4, 5], subcategory: "Ready-made Q&A", chapterTag: "Question & Answer Studio", type: "practice",
     tags: ["question and answer", "q&a", "worksheet", "ready made", "editable", name.toLowerCase()], defaultData, defaultWidth: 460,
     defaultHeight: worksheetLayout(defaultData, 460).height, measureHeight: (data, width) => worksheetLayout(data, width).height,
@@ -111,7 +112,7 @@ const plainBase = worksheet("plain-question-answer", "Question & Answer · Plain
   row("Why do plants need sunlight?", "Plants use sunlight to make their food."),
   row("What is evaporation?", "Evaporation is the change of a liquid into a gas."),
 ], "short", 2, false);
-const plainData = { ...plainBase.defaultData, presentation: "plain", answerLabel: "Answer", showAnswerLabel: true, responseStyle: "ruled", lineSpacing: 32, questionGap: 24 };
+const plainData = { ...plainBase.defaultData, presentation: "plain", answerLabel: "Answer", showAnswerLabel: true, responseStyle: "ruled", lineSpacing: 28, questionGap: 20 };
 export const PlainQuestionAnswerTemplate: MathTemplate = {
   ...plainBase, defaultData: plainData, defaultHeight: worksheetLayout(plainData, plainBase.defaultWidth).height,
   tags: [...plainBase.tags, "plain", "minimal", "simple", "any subject", "english", "science", "blank answer space"],
@@ -121,8 +122,8 @@ export const PlainQuestionAnswerTemplate: MathTemplate = {
     { key: "answerLabel", label: "Answer label", type: "text", defaultValue: "Answer" },
     { key: "showAnswerLabel", label: "Show answer label", type: "boolean", defaultValue: true },
     { key: "responseStyle", label: "Writing space", type: "select", defaultValue: "ruled", options: [{ label: "Fine ruled lines", value: "ruled" }, { label: "Open blank space", value: "open" }] },
-    { key: "lineSpacing", label: "Writing line spacing (pt)", type: "number", defaultValue: 32, min: 20, max: 56 },
-    { key: "questionGap", label: "Space between questions (pt)", type: "number", defaultValue: 24, min: 12, max: 80 },
+    { key: "lineSpacing", label: "Writing line spacing (pt)", type: "number", defaultValue: 28, min: 20, max: 56 },
+    { key: "questionGap", label: "Space between questions (pt)", type: "number", defaultValue: 20, min: 12, max: 80 },
   ],
 };
 
