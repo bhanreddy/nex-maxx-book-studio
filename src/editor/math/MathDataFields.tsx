@@ -1,5 +1,6 @@
 import React from "react";
 import type { MathConfigField, MathTemplate } from "./types";
+import { ARITHMETIC_BLOCK_COLORS } from "./tokens";
 
 /** Every data property is available, including older templates with no schema. */
 export function editableMathFields(template: MathTemplate, data: Record<string, unknown>): MathConfigField[] {
@@ -35,7 +36,12 @@ function ValueEditor({ label, value, sample, onChange }: { label: string; value:
 export function MathDataFields({ template, data, onUpdate, fields, skipKeys = [] }: { template: MathTemplate; data: Record<string, unknown>; onUpdate: (patch: Record<string, unknown>) => void; fields?: MathConfigField[]; skipKeys?: string[] }) {
   return <div className="math-data-fields space-y-2">{(fields || editableMathFields(template, data)).filter(field => !skipKeys.includes(field.key)).map(field => {
     const value = data[field.key] ?? field.defaultValue;
-    const change = (next: unknown) => onUpdate({ [field.key]: next, ...(field.key === "options" && Array.isArray(next) ? { correctIndex: Math.max(0, Math.min(Number(data.correctIndex) || 0, next.length - 1)) } : {}) });
+    const change = (next: unknown) => {
+      const preset = ARITHMETIC_BLOCK_COLORS[next as "teal" | "violet" | "rose" | "blue" | "green" | "orange"];
+      onUpdate({ [field.key]: next,
+        ...(template.id.startsWith("reference-") && field.key === "palette" ? { accentColor: preset?.main, panelColor: preset?.tint, monochrome: false } : {}),
+        ...(field.key === "options" && Array.isArray(next) ? { correctIndex: Math.max(0, Math.min(Number(data.correctIndex) || 0, next.length - 1)) } : {}) });
+    };
     if (field.type === "items" || field.type === "array-numbers") return <ValueEditor key={field.key} label={field.label} value={value} sample={field.defaultValue} onChange={change} />;
     if (field.type === "boolean") return <label key={field.key} className="flex items-center gap-2 min-h-8"><input aria-label={field.label} type="checkbox" checked={Boolean(value)} onChange={e => change(e.target.checked)} />{field.label}</label>;
     if (field.type === "select") return <label key={field.key} className="math-control"><span>{field.label}</span><select aria-label={field.label} value={String(value)} onChange={e => change(field.options?.find(o => String(o.value) === e.target.value)?.value ?? e.target.value)}>{field.options?.map(o => <option key={String(o.value)} value={String(o.value)}>{o.label}</option>)}</select></label>;

@@ -66,10 +66,10 @@ export function MathDesignControls({ element, template }: { element: PageElement
   return (
     <fieldset disabled={element.locked} className="math-design-controls space-y-3">
       <div className="math-edit-hint">
-        Width reflows text. Changing only height keeps the width fixed and fits text automatically. Double-click text to edit it. {template.measureHeight ? "Edit questions, answers and writing space in Mathematical Content." : "Change values in Mathematical Content to recalculate answers."}
+        Width and height changes resize the text, grids and artwork automatically. Letters keep their proportions. Double-click text to edit it. {template.measureHeight ? "Edit questions, answers and writing space in Mathematical Content." : "Change values in Mathematical Content to recalculate answers."}
       </div>
       <div className="math-control-grid">
-        {numberInput("Template width (pt)", element.transform.width, width => updateTransform(element.id, { width }, true), template.measureHeight ? 240 : 48, 2400)}
+        {numberInput("Template width (pt)", element.transform.width, width => updateTransform(element.id, { width }, true), 48, 2400)}
         {numberInput("Template height (pt)", element.transform.height, height => updateTransform(element.id, { height }, true), 32, 2400)}
         {numberInput("Template X (pt)", element.transform.x, x => updateTransform(element.id, { x }, true), -2400, 2400)}
         {numberInput("Template Y (pt)", element.transform.y, y => updateTransform(element.id, { y }, true), -2400, 2400)}
@@ -81,7 +81,7 @@ export function MathDesignControls({ element, template }: { element: PageElement
           value={appearance.resizeMode || defaultMathResizeMode(template)}
           onChange={e => patchAppearance({ resizeMode: e.target.value as MathAppearance["resizeMode"] })}
         >
-          <option value="reflow">Auto layout · fit width & height</option>
+          <option value="reflow">Auto resize · text & content follow size</option>
           <option value="scale">Uniform scale · preserve proportions</option>
           <option value="stretch">Stretch · fill entire box</option>
         </select>

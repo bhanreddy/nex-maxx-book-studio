@@ -7,6 +7,9 @@ import {preparePrintHtml} from "../../editor/publishing/publicationPrint";
 import { prepareCompleteExportBook } from "../../editor/publishing/exportBook";
 import { selectExportPages } from "../../editor/publishing/exportScope";
 import { scanPreflightInBackground } from "../../editor/publishing/backgroundPreflight";
+import { fitReadingContentInsideFrame } from "../../editor/pageFrame/fitReadingContent";
+import { commitDocumentChange } from "../../editor/core/documentTransaction";
+import type { PreflightIssue } from "../../domain/publishing/types";
 import React, { useState } from "react";
 import { useUiStore } from "../../editor/stores/uiStore";
 import { useEditorStore } from "../../editor/stores/editorStore";
@@ -34,6 +37,8 @@ export const ExportModal: React.FC = () => {
   const [grayscaleProof, setGrayscaleProof] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [exportProgress, setExportProgress] = useState(0);
+  const [exportError, setExportError] = useState('');
+  const [preflightErrors, setPreflightErrors] = useState<PreflightIssue[]>([]);
 
   // Export Scope Selection (Part 8)
   const [exportScope, setExportScope] = useState<"all" | "chapter" | "selected">("all");
@@ -51,20 +56,41 @@ export const ExportModal: React.FC = () => {
 
   if (!exportModalOpen || !book) return null;
 
+  const prepareExport = async () => {
+    if (selection.error) throw new Error(selection.error);
+    const requestedIds = new Set(effectivePages.map(page => page.id));
+    const complete = await prepareCompleteExportBook(book, elements, exportScope === 'all' ? undefined : requestedIds);
+    const selected = selectExportPages(complete.book, exportScope, selectedChapterId || complete.book.chapters[0]?.id, pageRangeString);
+    const selectedIds = new Set(selected.map(page => page.id));
+    const fitted = fitReadingContentInsideFrame(complete.book, complete.elements, selectedIds);
+    const exportPages = fitted.book.pages.filter(page => selectedIds.has(page.id) || fitted.continuationPageIds.has(page.id));
+    // Keep the editor and proof in agreement, with one undo for all recovered/layout changes.
+    if (useEditorStore.getState().books.find(item => item.id === book.id) === book &&
+      (fitted.changed || fitted.book.pages.length !== book.pages.length || Object.keys(fitted.elements).some(id => !elements[id]))) {
+      const activeId = book.pages[useEditorStore.getState().activePageIndex]?.id;
+      commitDocumentChange('Repair export content and border overflow', fitted.book, fitted.elements, Math.max(0, fitted.book.pages.findIndex(page => page.id === activeId)));
+    }
+    // Scan against the complete structure so references to unselected pages remain valid.
+    const report = await scanPreflightInBackground(fitted.book, fitted.elements);
+    const printableIds = new Set(exportPages.map(page => page.id));
+    const criticalErrors = report.issues.filter(issue => issue.severity === 'error' && (!issue.pageId || printableIds.has(issue.pageId)) &&
+      (issue.category === 'font' || issue.category === 'structure' || issue.category === 'geometry' || issue.category === 'text'));
+    if (criticalErrors.length) {
+      setPreflightErrors(criticalErrors);
+      throw new Error(`${criticalErrors.length} export issue(s) need attention. ${criticalErrors[0].message}`);
+    }
+    return { book: fitted.book, elements: fitted.elements, exportPages };
+  };
+
   const handleEmbeddedPdf=async()=>{
+    if (isExporting) return;
+    setExportError(''); setPreflightErrors([]);
     const proof=window.open('','_blank');
-    if(!proof){showToast({type:'error',title:'Allow the print window',message:'Enable popups for Book Studio, then export again.'});return;}
+    if(!proof){setExportError('Enable popups for Book Studio, then export again.');return;}
     proof.opener=null;setIsExporting(true);setExportProgress(5);
     try{
-      if (selection.error) throw new Error(selection.error);
-      const complete = exportScope === 'all' ? await prepareCompleteExportBook(book, elements) : { book, elements };
-      const exportPages = selectExportPages(complete.book, exportScope, selectedChapterId || complete.book.chapters[0]?.id, pageRangeString);
-      const scopedElementIds = new Set(exportPages.flatMap(p => p.elementIds));
-      const scopedElements = Object.fromEntries(Object.entries(complete.elements).filter(([id]) => scopedElementIds.has(id)));
-      const scopedBook = { ...complete.book, pages: exportPages };
-      const report = await scanPreflightInBackground(scopedBook, scopedElements);
-      const criticalErrors = report.issues.filter(i => i.severity === 'error' && (i.category === 'font' || i.category === 'structure' || i.title === 'Invalid geometry'));
-      if (criticalErrors.length > 0) throw new Error(`${criticalErrors.length} critical preflight error(s): ${criticalErrors[0].message}`);
+      const complete = await prepareExport();
+      const { exportPages } = complete;
       const printable = { ...complete.book, pages: exportPages };
       const printElements = complete.elements;
       const html=await preparePrintHtml(printable,printElements,{bleed:includeBleed,cropMarks:includeCropMarks,grayscale:grayscaleProof});
@@ -78,25 +104,20 @@ export const ExportModal: React.FC = () => {
       if(overflow) console.warn(`Printed text near frame edge: “${overflow.textContent?.slice(0,100)}”.`);
       setExportProgress(100);proof.focus();proof.print();setExportModalOpen(false);
       showToast({type:'success',title:'Font-embedded print proof opened',message:'Choose Save as PDF. Use 100% scale, no browser headers, and background graphics.'});
-    }catch(error){proof.close();showToast({type:'error',title:'Print preflight failed',message:error instanceof Error?error.message:'PDF proof failed'});}
+    }catch(error){proof.close();setExportError(error instanceof Error?error.message:'PDF proof failed');}
     finally{setIsExporting(false);setExportProgress(0);}
   };
 
   // Real deterministic Vector PDF generation
   const handleExportPdf = async () => {
+    if (isExporting) return;
+    setExportError(''); setPreflightErrors([]);
     setIsExporting(true);
     setExportProgress(10);
 
     try {
-      if (selection.error) throw new Error(selection.error);
-      const complete = exportScope === 'all' ? await prepareCompleteExportBook(book, elements) : { book, elements };
-      const exportPages = selectExportPages(complete.book, exportScope, selectedChapterId || complete.book.chapters[0]?.id, pageRangeString);
-      const scopedElementIds = new Set(exportPages.flatMap(p => p.elementIds));
-      const scopedElements = Object.fromEntries(Object.entries(complete.elements).filter(([id]) => scopedElementIds.has(id)));
-      const scopedBook = { ...complete.book, pages: exportPages };
-      const report = await scanPreflightInBackground(scopedBook, scopedElements);
-      const criticalErrors = report.issues.filter(i => i.severity === 'error' && (i.category === 'font' || i.category === 'structure' || i.title === 'Invalid geometry'));
-      if (criticalErrors.length > 0) throw new Error(`${criticalErrors.length} critical preflight error(s): ${criticalErrors[0].message}`);
+      const complete = await prepareExport();
+      const { exportPages } = complete;
       if(/[\u0900-\u097f\u0c00-\u0c7f]/u.test(JSON.stringify({chapters:book.chapters,elements})))throw new Error('Use the font-embedded PDF exporter for Hindi or Telugu. The legacy exporter cannot shape these scripts.');
       const { dimensions, bleed } = book;
 
@@ -170,7 +191,7 @@ export const ExportModal: React.FC = () => {
           await renderPublicationPdf(doc, { ...scene, nodes: scene.nodes.filter(isFrameBackgroundNode) }, { id: `frame-${page.id}`, pageId: page.id, type: "shape", category: "decorative", version: 1, displayName: "Page paper", locked: false, hidden: false, transform: { x: 0, y: 0, width: scene.width, height: scene.height, rotation: 0, zIndex: -1 }, style: {}, content: {} }, originX, originY, grayscaleProof);
         }
         // Render page elements deterministically
-        const wrapElements = page.elementIds.map(id => elements[id]).filter(el => Boolean(el) && !el.content.teacherOnly);
+        const wrapElements = page.elementIds.map(id => exportElements[id]).filter(el => Boolean(el) && !el.content.teacherOnly);
         const pageElements = page.elementIds
           .map((id) => exportElements[id])
           .filter(el => Boolean(el) && !el.hidden && !el.content.teacherOnly)
@@ -340,11 +361,7 @@ export const ExportModal: React.FC = () => {
       setExportModalOpen(false);
     } catch (err) {
       console.error("PDF export failed", err);
-      showToast({
-        type: "error",
-        title: "Export Failed",
-        message: err instanceof Error?err.message:"An error occurred while compiling the print PDF.",
-      });
+      setExportError(err instanceof Error?err.message:"An error occurred while compiling the print PDF.");
     } finally {
       setIsExporting(false);
       setExportProgress(0);
@@ -357,17 +374,18 @@ export const ExportModal: React.FC = () => {
       onClick={() => !isExporting && setExportModalOpen(false)}
     >
       <div
-        className="w-full max-w-lg bg-[#111827] border border-white/10 rounded-2xl shadow-2xl overflow-hidden flex flex-col"
+        role="dialog" aria-modal="true" aria-labelledby="export-dialog-title"
+        className="w-full max-w-lg max-h-[calc(100dvh-2rem)] bg-[#111827] border border-white/10 rounded-2xl shadow-2xl overflow-hidden flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-white/10 bg-black/30">
+        <div className="shrink-0 flex items-center justify-between px-6 py-4 border-b border-white/10 bg-black/30">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-xl bg-teal-500/20 text-teal-400 flex items-center justify-center border border-teal-500/30">
               <FileDown className="w-5 h-5" />
             </div>
             <div>
-              <h2 className="font-bold text-sm text-slate-100">Publish & Export Book</h2>
+              <h2 id="export-dialog-title" className="font-bold text-sm text-slate-100">Publish & Export Book</h2>
               <p className="text-xs text-slate-400">Export vector educational layouts and digital proofs</p>
             </div>
           </div>
@@ -382,6 +400,7 @@ export const ExportModal: React.FC = () => {
         </div>
 
         {/* Configuration Body */}
+        <div className="min-h-0 overflow-y-auto">
         <p className="mx-6 mt-4 text-xs text-amber-200/90 leading-relaxed">Educational templates and artwork use shared vector geometry. Legacy elements may be simplified. The font-embedded proof uses bundled English, Telugu and Hindi fonts. PDF/X and ICC conversion still require the printer’s prepress process.</p>
         <div className="p-6 space-y-4 text-xs text-slate-300">
           {/* Export Scope Selector (Part 8) */}
@@ -444,6 +463,7 @@ export const ExportModal: React.FC = () => {
             <div className="text-[10px] text-teal-400/90 font-mono">
               Ready to export: {effectivePages.length} {effectivePages.length === 1 ? "page" : "pages"}
             </div>
+            <p className="text-[10px] text-slate-400 leading-relaxed">Content hidden by a border is moved into clear space or continued on extra pages. Layout repairs can be undone in the editor.</p>
           </div>
 
           {/* Preset Selector */}
@@ -560,8 +580,23 @@ export const ExportModal: React.FC = () => {
 
         <button className="curriculum-secondary mx-6 mb-3" disabled={isExporting || !!selection.error} title={selection.error || `Export ${effectivePages.length} pages`} onClick={handleExportPdf}>Legacy Latin-font vector proof</button>
         {selection.error && <p role="alert" className="px-6 py-3 text-sm text-rose-300">{selection.error}</p>}
+        </div>
+        {exportError && <div role="alert" className="shrink-0 mx-6 mb-3 rounded-lg border border-rose-500/40 bg-rose-950/60 p-3 text-xs text-rose-200">
+          <p className="font-semibold">Export needs attention</p>
+          <p className="mt-1 break-words">{exportError}</p>
+          {!!preflightErrors.length && <ul className="mt-2 max-h-24 overflow-y-auto space-y-2">
+            {preflightErrors.map((issue, index) => <li key={`${issue.id}-${index}`} className="flex items-start gap-2">
+              <span className="min-w-0 flex-1 break-words">{issue.pageIndex !== undefined ? `Page ${issue.pageIndex + 1}: ` : ''}{issue.title}. {issue.message}</span>
+              {issue.pageId && <button type="button" className="shrink-0 underline" onClick={() => {
+                const current = useEditorStore.getState().getActiveBook();
+                const index = current?.pages.findIndex(page => page.id === issue.pageId) ?? -1;
+                if (index >= 0) { useEditorStore.getState().setActivePageIndex(index); setExportModalOpen(false); }
+              }}>Go to page</button>}
+            </li>)}
+          </ul>}
+        </div>}
         {/* Footer */}
-        <div className="flex items-center justify-between px-6 py-4 border-t border-white/10 bg-black/20">
+        <div className="shrink-0 flex flex-wrap items-center justify-between gap-2 px-6 py-4 border-t border-white/10 bg-black/20">
           <span className="text-[11px] text-slate-400 font-mono">
             {book.pages.length} Pages • {book.dimensions.name}
           </span>

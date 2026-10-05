@@ -355,3 +355,15 @@ export const WORKSHEET_PALETTES = [
   { id: "forest", name: "Forest green", ...MATH_TOKENS.topics.money },
   { id: "mono", name: "Editorial ink", main: MATH_TOKENS.print.ink, accent: MATH_TOKENS.print.ink, tint: MATH_TOKENS.print.wash, border: MATH_TOKENS.print.line, badgeText: MATH_TOKENS.print.ink },
 ] as const;
+
+/** Arithmetic reference blocks: the same semantic color always means the same place. */
+export const ARITHMETIC_BLOCK_COLORS = {
+  ink: "#17315a", rule: "#b7c8db", paper: "#ffffff",
+  teal: { main: "#0c8983", tint: "#e8f8f5" },
+  violet: { main: "#7934c5", tint: "#f2eafa" },
+  rose: { main: "#db315e", tint: "#fff0f5" },
+  blue: { main: "#087fc5", tint: "#eaf7ff" },
+  green: { main: "#398e30", tint: "#eef9e7" },
+  orange: { main: "#c86315", tint: "#fff4e4" },
+  places: ["#db315e", "#c86315", "#398e30", "#087fc5", "#7934c5", "#0c8983", "#db315e"],
+} as const;

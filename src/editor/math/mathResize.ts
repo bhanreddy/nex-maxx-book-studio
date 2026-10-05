@@ -41,11 +41,19 @@ export function withMathTransform(element: PageElement, requested: ElementTransf
     appearance = { ...appearance, resizeMode: "reflow", resizeModeLocked: false, reflowScale: before.scaleX, scaleFrame: undefined };
   }
   if ((appearance.resizeMode || defaultMathResizeMode(template)) !== "reflow") return { ...element, transform: requested };
-  const width = Math.max(template.measureHeight ? 240 : 48, requested.width);
+  const width = Math.max(48, requested.width);
+  if (widthChanged && mode !== "trim-height") {
+    // Scale the existing reading size with the usable width. Keeping this
+    // ratio also keeps the logical layout stable for a width-only resize,
+    // so captions, grids, artwork and manually styled parts resize together.
+    const padding = mathRenderFrame(template, width, requested.height, appearance, data).padding;
+    const widthRatio = (width - 2 * padding) / Math.max(1, old.width - 2 * before.padding);
+    appearance = { ...appearance, reflowScale: Math.max(.001, before.scaleX * widthRatio) };
+  }
   if (heightChanged && mode !== "trim-height") {
     const height = Math.max(32, requested.height);
     const padding = mathRenderFrame(template, width, height, appearance, data).padding;
-    const reflowScale = fitReadingScale(template, { ...element.content, mathData: data }, width - 2 * padding, height - 2 * padding, appearance.reflowScale || 1, before.scaleY * height / Math.max(1, old.height));
+    const reflowScale = fitReadingScale(template, { ...element.content, mathData: data }, width - 2 * padding, height - 2 * padding, appearance.reflowScale || 1, before.scaleY * (height - 2 * padding) / Math.max(1, old.height - 2 * before.padding));
     appearance = { ...appearance, reflowScale };
     return { ...element, content: { ...element.content, mathAppearance: appearance }, transform: fitMathHeight(old, { ...requested, width }, height, mode === "reflow-bottom") };
   }

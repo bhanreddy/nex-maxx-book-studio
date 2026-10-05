@@ -141,6 +141,21 @@ export function buildEditableMathTree(template: MathTemplate, props: MathRendere
     const override = options.overrides?.[path] || {};
     const source = isText ? textOf(children) : undefined;
     let binding: MathPart["binding"];
+    // Native reference blocks can bind an authored line to a nested data field.
+    // Calculated digits deliberately have no binding and remain source-guarded.
+    const explicitField = node.props["data-math-field"];
+    if (isText && source && typeof explicitField === "string") {
+      try {
+        const fieldPath: unknown = JSON.parse(explicitField);
+        if (Array.isArray(fieldPath) && fieldPath.every(key => typeof key === "string" || Number.isInteger(key))) {
+          const authored = fieldPath.reduce<any>((value, key) => value?.[key], props.data);
+          if (typeof authored === "string") {
+            const id = JSON.stringify(fieldPath), start = authored.indexOf(source, bindingCursors.get(id) || 0);
+            if (start >= 0) { binding = { path: fieldPath, source: authored, start, end: start + source.length }; bindingCursors.set(id, start + source.length); }
+          }
+        }
+      } catch { /* An invalid optional binding leaves the presentation editable. */ }
+    }
     // Bind wrapped exercise lines to the authored string, rather than treating
     // each line as a separate caption that disappears when wrapping changes.
     const keyText = String(node.key || "");
@@ -278,7 +293,7 @@ export function mathRenderFrame(template: MathTemplate, width: number, height: n
     return { renderWidth, renderHeight, padding, scaleX: rawScaleX, scaleY: rawScaleY, offsetX: 0, offsetY: 0 };
   }
   if (isReflow) {
-    // Width reflows the layout; height chooses one uniform reading scale.
+    // Resizing updates the reading scale; height fitting reflows the layout.
     return { renderWidth, renderHeight, padding, scaleX: readingScale, scaleY: readingScale, offsetX: 0, offsetY: 0 };
   }
   // Uniform scale (default): scale = min(scaleX, scaleY), content centred in the box

@@ -102,7 +102,8 @@ export function insertMathComponent(
 
   const width = settings?.width || template.defaultWidth;
   const dataPayload = { ...template.defaultData, ...customData };
-  const appearance = structuredClone(settings?.appearance || { resizeMode: defaultMathResizeMode(template) });
+  const resizeMode = defaultMathResizeMode(template);
+  const appearance = structuredClone(settings?.appearance || { resizeMode, ...(resizeMode === "reflow" ? { reflowScale: 1 } : {}) });
   const initialFrame = mathRenderFrame(template, width, settings?.height || template.defaultHeight, appearance, dataPayload);
   const height = settings?.height || (template.measureHeight?.(dataPayload, initialFrame.renderWidth) || template.defaultHeight) * initialFrame.scaleY + 2 * initialFrame.padding;
   const posX =

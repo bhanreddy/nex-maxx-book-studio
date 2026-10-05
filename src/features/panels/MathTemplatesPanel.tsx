@@ -30,15 +30,22 @@ import {
 import { READY_MADE_MATH_TEMPLATES, PlainQuestionAnswerTemplate } from "../../editor/math/templates/worksheetTemplates";
 
 import { PREMIUM_EXERCISE_TEMPLATES } from "../../editor/math/templates/premiumExerciseTemplates";
+import { REFERENCE_BLOCK_TEMPLATES } from "../../editor/math/templates/referenceBlocks";
 import { WorksheetPalettePicker } from "../../editor/math/WorksheetStyleControls";
 import { worksheetPalettePatch } from "../../editor/math/worksheetDesign";
 
 const PREMIUM_IDS = new Set(PREMIUM_EXERCISE_TEMPLATES.map(t => t.id));
+const ARITHMETIC_IDS = new Set(REFERENCE_BLOCK_TEMPLATES.map(t => t.id));
 const READY_MADE_IDS = new Set(READY_MADE_MATH_TEMPLATES.map(t => t.id));
+const isWorksheetTemplate = (id: string) => READY_MADE_IDS.has(id) || ARITHMETIC_IDS.has(id);
+function libraryPalette(template: MathTemplate, id: string) {
+  const p = worksheetPalettePatch(id);
+  return ARITHMETIC_IDS.has(template.id) ? { accentColor: p.accentColor, panelColor: p.tintColor, inkColor: p.inkColor, ruleColor: p.ruleColor, monochrome: id === "mono" } : p;
+}
 
 export const MathTemplatesPanel: React.FC = () => {
   const [topTab, setTopTab] = useState<"nex-maxx" | "favorites" | "recent" | "custom">("nex-maxx");
-  const [collection, setCollection] = useState<"all" | "ready-made" | "premium">("premium");
+  const [collection, setCollection] = useState<"all" | "ready-made" | "premium" | "arithmetic">("premium");
   const [paletteId, setPaletteId] = useState<string | null>(null);
   const [answerMode, setAnswerMode] = useState<MathAnswerMode>("student");
   const [searchQuery, setSearchQuery] = useState("");
@@ -110,7 +117,7 @@ export const MathTemplatesPanel: React.FC = () => {
     }
 
     return list.filter(t =>
-      (collection === "all" || (collection === "premium" ? PREMIUM_IDS : READY_MADE_IDS).has(t.id)) &&
+      (collection === "all" || (collection === "arithmetic" ? ARITHMETIC_IDS : collection === "premium" ? PREMIUM_IDS : READY_MADE_IDS).has(t.id)) &&
       (selectedGrade === "all" || t.grades.includes(selectedGrade as 1 | 2 | 3 | 4 | 5)) &&
       (selectedTopic === "all" || t.category === selectedTopic) &&
       (selectedType === "all" || t.type === selectedType) &&
@@ -129,7 +136,7 @@ export const MathTemplatesPanel: React.FC = () => {
 
   // Insert template onto canvas
   const handleInsert = (template: MathTemplate, customData?: Record<string, unknown>, settings?: Partial<CustomMathTemplateEntry>) => {
-    insertMathComponent(template.id, undefined, undefined, customData || (paletteId && READY_MADE_IDS.has(template.id) ? worksheetPalettePatch(paletteId) : undefined), settings || (READY_MADE_IDS.has(template.id) ? { mode: answerMode } : undefined));
+    insertMathComponent(template.id, undefined, undefined, customData || (paletteId && isWorksheetTemplate(template.id) ? libraryPalette(template, paletteId) : undefined), settings || (isWorksheetTemplate(template.id) ? { mode: answerMode } : undefined));
     setRecents(getRecentMathIds());
   };
 
@@ -190,9 +197,10 @@ export const MathTemplatesPanel: React.FC = () => {
         </div>
         <button className="math-ready-made-insert" onClick={() => handleInsert(PREMIUM_EXERCISE_TEMPLATES[0])}><Plus size={15} />Insert premium Q&A</button>
         <button className="math-quiet-button w-full mt-1" onClick={() => handleInsert(PlainQuestionAnswerTemplate)}>Insert plain Q&A</button>
-        <div className="math-collection-switch" role="group" aria-label="Template collection">
+        <div className="math-collection-switch flex-wrap" role="group" aria-label="Template collection">
           <button aria-pressed={collection === "all"} onClick={() => setCollection("all")}>Full library</button>
           <button aria-pressed={collection === "premium"} onClick={() => { setCollection("premium"); setSearchQuery(""); setSelectedTopic("all"); setSelectedType("all"); setSelectedChapter("all"); }}>Premium · {PREMIUM_EXERCISE_TEMPLATES.length}</button>
+          <button aria-pressed={collection === "arithmetic"} onClick={() => { setCollection("arithmetic"); setSearchQuery(""); setSelectedTopic("all"); setSelectedType("all"); setSelectedChapter("all"); }}>Arithmetic blocks · {REFERENCE_BLOCK_TEMPLATES.length}</button>
           <button aria-pressed={collection === "ready-made"} onClick={() => { setCollection("ready-made"); setSearchQuery(""); setSelectedTopic("all"); setSelectedType("all"); setSelectedChapter("all"); }}>Ready-made · {READY_MADE_MATH_TEMPLATES.length}</button>
         </div>
       </div>}
@@ -400,30 +408,30 @@ export const MathTemplatesPanel: React.FC = () => {
                 draggable
                 onDragStart={(e) => {
                   e.dataTransfer.setData("application/x-nexmaxx-math-template", template.id);
-                  if (paletteId && READY_MADE_IDS.has(template.id)) e.dataTransfer.setData("application/x-nexmaxx-math-data", JSON.stringify(worksheetPalettePatch(paletteId)));
-                  if (READY_MADE_IDS.has(template.id)) e.dataTransfer.setData("application/x-nexmaxx-math-settings", JSON.stringify({ mode: answerMode }));
+                  if (paletteId && isWorksheetTemplate(template.id)) e.dataTransfer.setData("application/x-nexmaxx-math-data", JSON.stringify(libraryPalette(template, paletteId)));
+                  if (isWorksheetTemplate(template.id)) e.dataTransfer.setData("application/x-nexmaxx-math-settings", JSON.stringify({ mode: answerMode }));
                   e.dataTransfer.effectAllowed = "copy";
                 }}
                 className="group relative rounded-xl border border-slate-200 dark:border-white/10 hover:border-indigo-500/80 bg-white dark:bg-slate-900/80 transition-transform overflow-hidden flex flex-col cursor-grab active:cursor-grabbing"
                 onClick={() => handleInsert(template)}
               >
                 {/* Miniature Live Preview Frame - Compact Size */}
-                <div className={`${READY_MADE_IDS.has(template.id) ? "h-44" : "h-20"} w-full bg-slate-50/70 dark:bg-slate-950/40 border-b border-slate-100 dark:border-white/5 relative overflow-hidden flex items-center justify-center p-1.5`}>
+                <div className={`${isWorksheetTemplate(template.id) ? "h-44" : "h-20"} w-full bg-slate-50/70 dark:bg-slate-950/40 border-b border-slate-100 dark:border-white/5 relative overflow-hidden flex items-center justify-center p-1.5`}>
                   <div
                     style={{
                       width: template.defaultWidth,
                       height: template.defaultHeight,
                       transform: `scale(${Math.min(
                         260 / template.defaultWidth,
-                        (READY_MADE_IDS.has(template.id) ? 160 : 68) / template.defaultHeight
+                        (isWorksheetTemplate(template.id) ? 160 : 68) / template.defaultHeight
                       )})`,
                       transformOrigin: "center center",
                     }}
                     className="math-template-preview pointer-events-none"
                   >
                     <Renderer
-                      data={paletteId && READY_MADE_IDS.has(template.id) ? { ...template.defaultData, ...worksheetPalettePatch(paletteId) } : template.defaultData}
-                      mode={READY_MADE_IDS.has(template.id) ? answerMode : "teacher"}
+                      data={paletteId && isWorksheetTemplate(template.id) ? { ...template.defaultData, ...libraryPalette(template, paletteId) } : template.defaultData}
+                      mode={isWorksheetTemplate(template.id) ? answerMode : "teacher"}
                       styleVariant="color-coded"
                       width={template.defaultWidth}
                       height={template.defaultHeight}

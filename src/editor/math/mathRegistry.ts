@@ -114,6 +114,7 @@ export { insertMathComponent, detachMathComponentToElements } from "./mathAction
 import { PRIMARY_MATH_TEMPLATES } from "./primaryMathTemplates";
 import { CATALOGUE_TEMPLATES } from "./templates";
 import { READY_MADE_MATH_TEMPLATES } from "./templates/worksheetTemplates";
+import { REFERENCE_BLOCK_TEMPLATES } from "./templates/referenceBlocks";
 
 // In-memory registry map
 const REGISTRY: Record<string, MathTemplate> = {};
@@ -1635,6 +1636,7 @@ registerMathTemplate({
 PRIMARY_MATH_TEMPLATES.forEach(registerMathTemplate);
 CATALOGUE_TEMPLATES.forEach(registerMathTemplate);
 READY_MADE_MATH_TEMPLATES.forEach(registerMathTemplate);
+REFERENCE_BLOCK_TEMPLATES.forEach(registerMathTemplate);
 
 // ----------------------------------------------------------------------------
 // Search & Filter Helper

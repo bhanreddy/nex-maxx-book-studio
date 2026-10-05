@@ -221,7 +221,8 @@ export const MathTemplateInspector: React.FC<MathTemplateInspectorProps> = ({ el
         </label>
 
         <MathDataFields key={element.id} template={template} data={mathData} onUpdate={handleUpdate} skipKeys={isWorksheet ? [...WORKSHEET_DESIGN_KEYS, "exerciseKind", "matchOrder"] : []} />
-        {Array.isArray(mathData.questions) && template.measureHeight && <p className="text-[11px] leading-relaxed text-slate-500 dark:text-slate-400">Questions and their answer keys are authored separately. Update the answer when you change a question.</p>}
+        {mathTemplateId.startsWith("reference-") && <p className="text-[11px] leading-relaxed text-slate-500 dark:text-slate-400">Answers and working recalculate when you change the numbers. Direct edits to a calculated digit change its appearance; use the number fields to change the calculation.</p>}
+        {Array.isArray(mathData.questions) && template.measureHeight && !mathTemplateId.startsWith("reference-") && <p className="text-[11px] leading-relaxed text-slate-500 dark:text-slate-400">Questions and their answer keys are authored separately. Update the answer when you change a question.</p>}
       </div>
 
       {/* 5. Smart Actions: Generate Similar, Duplicate with New Data, Save Template */}

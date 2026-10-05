@@ -307,7 +307,7 @@ export const TransformOverlay: React.FC<TransformOverlayProps> = ({
       } else if (singleElement) {
         // Standard Resize
         const lockAspect = moveEvent.shiftKey;
-        const newRect = calculateRotatedResize(initialRect, rotation, handle, deltaX, deltaY, lockAspect, singleElement.smartBlockData ? 60 : 20, singleElement.smartBlockData ? 30 : 20);
+        const newRect = calculateRotatedResize(initialRect, rotation, handle, deltaX, deltaY, lockAspect, singleElement.smartBlockData ? 60 : singleElement.type === "math-component" ? 48 : 20, singleElement.smartBlockData ? 30 : singleElement.type === "math-component" ? 32 : 20);
 
         updateElementTransform(
           singleElement.id,
@@ -321,8 +321,8 @@ export const TransformOverlay: React.FC<TransformOverlayProps> = ({
           moveEvent.shiftKey ? "scale" : (["n", "nw", "ne"].includes(handle) ? "reflow-bottom" : "auto")
         );
       } else if (handle !== "rot") {
-        const minWidth = Math.max(...movableElements.map(el => (el.smartBlockData ? 60 : 20) * initialRect.width / el.transform.width));
-        const minHeight = Math.max(...movableElements.map(el => (el.smartBlockData ? 30 : 20) * initialRect.height / el.transform.height));
+        const minWidth = Math.max(...movableElements.map(el => (el.smartBlockData ? 60 : el.type === "math-component" ? 48 : 20) * initialRect.width / el.transform.width));
+        const minHeight = Math.max(...movableElements.map(el => (el.smartBlockData ? 30 : el.type === "math-component" ? 32 : 20) * initialRect.height / el.transform.height));
         const next = calculateResize(initialRect, handle, deltaX, deltaY, moveEvent.shiftKey, minWidth, minHeight);
         movableElements.forEach(el => {
           const member = resizeSelectionMember(el.transform, initialRect, next);
