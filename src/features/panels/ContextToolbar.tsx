@@ -28,6 +28,8 @@ import { setFrameworkMode } from "../../editor/curriculum/actions";
 import { effectiveTextWrap } from "../../editor/layoutPartner/textWrapLayout";
 import type { TextWrapMode } from "../../domain/creative/types";
 import { beginBlockContentEditing } from "../../editor/educational/blockContentEditing";
+import { GroupAutoLayoutControls } from "./GroupAutoLayoutControls";
+import { isElementLocked } from "../../editor/core/elementGroups";
 import { SelectionClipboardControls } from "./SelectionClipboardControls";
 
 export const ContextToolbar: React.FC = () => {
@@ -51,6 +53,8 @@ export const ContextToolbar: React.FC = () => {
     setActiveShapeType,
     activeMeasure,
     setGlyphBrowserOpen,
+    editingTextElementId,
+    setEditingTextElementId,
   } = useUiStore();
 
   const book = getActiveBook();
@@ -73,6 +77,11 @@ export const ContextToolbar: React.FC = () => {
             {selectedElements.every(el => el.locked) ? <Unlock size={15}/> : <Lock size={15}/>}{selectedElements.every(el => el.locked) ? "Unlock" : "Lock"}
           </button>
         </div>}
+
+        {singleElement?.type === "group" && <GroupAutoLayoutControls group={singleElement} />}
+        {singleElement && ["heading", "subheading", "body", "body-text", "caption", "quote", "chapter-title", "lesson-title", "header", "footer", "pageNumber", "page-number", "sidebar", "callout"].includes(singleElement.type) &&
+          <button type="button" className="publication-button min-h-9" disabled={isElementLocked(singleElement.id, elements)}
+            onClick={() => setEditingTextElementId(singleElement.id)} title="Edit selected words inside this text box">Edit text</button>}
 
         {/* 0A. MULTIPLE ELEMENTS: SMART STACK & CREATE LAYOUT */}
         {selectedElements.length > 1 && (
@@ -252,7 +261,7 @@ export const ContextToolbar: React.FC = () => {
         )}
 
         {/* 2. TYPOGRAPHY CONTROLS (When a text element is selected or FrameText tool active) */}
-        {(activeTool === "frameText" ||
+        {!editingTextElementId && (activeTool === "frameText" ||
           (singleElement &&
             ["heading", "subheading", "body", "caption", "quote"].includes(singleElement.type))) && (
           <div className="flex items-center gap-2 pl-1 border-l border-white/10">

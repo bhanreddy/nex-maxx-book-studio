@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useRef, useEffect, useState, useCallback } from "react";
+import React, { useRef, useEffect, useState, useCallback, useLayoutEffect } from "react";
+import { createPortal } from "react-dom";
 import {
   Bold,
   Italic,
@@ -21,10 +22,7 @@ import {
   Sigma,
   CaseSensitive,
   ChevronDown,
-  Sparkles,
   Eraser,
-  Indent,
-  Outdent,
 } from "lucide-react";
 import { PageElement } from "../../domain/element/types";
 import { FontSelectorPopover } from "../../features/ui/FontSelectorPopover";
@@ -34,7 +32,6 @@ import {
   toSentenceCase,
   toTitleCase,
   toCapitalizeWords,
-  FONT_PRESET_SIZES,
 } from "../design/typographyCatalog";
 
 // ==========================================
@@ -135,6 +132,12 @@ export const RichTextInlineEditor: React.FC<RichTextInlineEditorProps> = ({
   style = {},
 }) => {
   const editorRef = useRef<HTMLDivElement>(null);
+  const toolbarRef = useRef<HTMLDivElement>(null);
+  const commitRef = useRef(onCommit);
+  commitRef.current = onCommit;
+  const [toolbarPosition, setToolbarPosition] = useState<{ left: number; top: number } | null>(null);
+  const [currentColor, setCurrentColor] = useState(element.style.color || "#0f172a");
+  const [currentLineHeight, setCurrentLineHeight] = useState(element.style.lineHeight || 1.5);
   const isComposingRef = useRef(false);
   const lastCommittedTextRef = useRef(initialText);
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -175,7 +178,7 @@ export const RichTextInlineEditor: React.FC<RichTextInlineEditorProps> = ({
   const saveCurrentSelection = useCallback(() => {
     if (typeof window === "undefined") return;
     const sel = window.getSelection();
-    if (sel && sel.rangeCount > 0 && !sel.isCollapsed && editorRef.current) {
+    if (sel && sel.rangeCount > 0 && editorRef.current) {
       try {
         const range = sel.getRangeAt(0);
         if (
@@ -188,10 +191,23 @@ export const RichTextInlineEditor: React.FC<RichTextInlineEditorProps> = ({
     }
   }, []);
 
+  const restoreSelection = () => {
+    if (!editorRef.current) return null;
+    const range = savedRangeRef.current;
+    editorRef.current.focus();
+    if (range && editorRef.current.contains(range.commonAncestorContainer)) {
+      const selection = window.getSelection();
+      selection?.removeAllRanges(); selection?.addRange(range);
+      return range;
+    }
+    return null;
+  };
+
   // Populate initial DOM once on mount
   useEffect(() => {
     if (editorRef.current) {
       editorRef.current.innerHTML = initialText || "";
+      lastCommittedTextRef.current = editorRef.current.innerHTML;
       editorRef.current.focus();
 
       // Place cursor at the end initially
@@ -202,9 +218,30 @@ export const RichTextInlineEditor: React.FC<RichTextInlineEditorProps> = ({
         range.collapse(false);
         sel.removeAllRanges();
         sel.addRange(range);
+        savedRangeRef.current = range.cloneRange();
       }
     }
+    const editor = editorRef.current;
+    return () => {
+      if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+      if (editor && editor.innerHTML !== lastCommittedTextRef.current) commitRef.current(editor.innerHTML.replace(/\u200b/g, ""));
+    };
   }, []); // Run once on mount
+
+  useLayoutEffect(() => {
+    const position = () => {
+      if (!editorRef.current) return;
+      const bounds = editorRef.current.getBoundingClientRect();
+      const toolbarHeight = toolbarRef.current?.offsetHeight || 88;
+      const toolbarWidth = Math.min(840, window.innerWidth - 24);
+      setToolbarPosition({ left: Math.max(12, Math.min(bounds.left, window.innerWidth - toolbarWidth - 12)),
+        top: Math.max(12, Math.min(bounds.top >= toolbarHeight + 12 ? bounds.top - toolbarHeight - 8 : bounds.bottom + 8, window.innerHeight - toolbarHeight - 12)) });
+    };
+    position();
+    window.addEventListener("resize", position);
+    window.addEventListener("scroll", position, true);
+    return () => { window.removeEventListener("resize", position); window.removeEventListener("scroll", position, true); };
+  }, []);
 
   // Check active formatting states (bold, italic, etc.)
   const updateActiveFormats = useCallback(() => {
@@ -221,10 +258,14 @@ export const RichTextInlineEditor: React.FC<RichTextInlineEditorProps> = ({
 
       // Check current font or color at selection
       const sel = window.getSelection();
-      if (sel && sel.anchorNode) {
+      if (sel && sel.anchorNode && editorRef.current?.contains(sel.anchorNode)) {
         const parent = sel.anchorNode.parentElement;
         if (parent) {
           const computed = window.getComputedStyle(parent);
+          if (computed.color) setCurrentColor(computed.color);
+          const computedSize = parseFloat(computed.fontSize);
+          const computedLeading = parseFloat(computed.lineHeight);
+          if (computedSize > 0 && computedLeading > 0) setCurrentLineHeight(Math.round(computedLeading / computedSize * 100) / 100);
           if (computed.fontFamily) {
             const family = computed.fontFamily.split(",")[0].replace(/['"]/g, "").trim();
             setCurrentFontFamily(family);
@@ -232,7 +273,7 @@ export const RichTextInlineEditor: React.FC<RichTextInlineEditorProps> = ({
           if (computed.fontSize) {
             const px = parseFloat(computed.fontSize);
             // approximate pt (px * 0.75)
-            const pt = Math.round(px * 0.75);
+            const pt = Math.round(px * 0.75 * 100) / 100;
             if (pt > 0) setCurrentFontSize(pt);
           }
         }
@@ -243,7 +284,8 @@ export const RichTextInlineEditor: React.FC<RichTextInlineEditorProps> = ({
   // Format execution helper
   const execFormat = (cmd: string, val: string = "") => {
     if (!editorRef.current) return;
-    editorRef.current.focus();
+    restoreSelection();
+    document.execCommand("styleWithCSS", false, "true");
     document.execCommand(cmd, false, val);
     updateActiveFormats();
     handleInput();
@@ -252,49 +294,55 @@ export const RichTextInlineEditor: React.FC<RichTextInlineEditorProps> = ({
   // Wrap or Apply Style to Range
   const applyInlineStyleToSelection = (styles: Record<string, string>) => {
     if (!editorRef.current) return;
-    editorRef.current.focus();
-
-    const sel = window.getSelection();
-    let range: Range | null = null;
-    if (sel && sel.rangeCount > 0 && !sel.isCollapsed && editorRef.current) {
-      try {
-        const r = sel.getRangeAt(0);
-        if (
-          editorRef.current.contains(r.commonAncestorContainer) ||
-          editorRef.current === r.commonAncestorContainer
-        ) {
-          range = r;
-        }
-      } catch {}
+    saveCurrentSelection();
+    const range = restoreSelection();
+    if (!range) return;
+    if (range.collapsed) {
+      // A collapsed caret configures the next typed characters.
+      const span = document.createElement("span");
+      Object.entries(styles).forEach(([prop, val]) => span.style.setProperty(prop, val));
+      span.textContent = "\u200b";
+      document.execCommand("insertHTML", false, span.outerHTML);
+      saveCurrentSelection();
+      handleInput();
+      return;
     }
 
-    if (!range && savedRangeRef.current) {
-      range = savedRangeRef.current;
-      try {
-        sel?.removeAllRanges();
-        sel?.addRange(range);
-      } catch {}
-    }
-
-    if (!range || range.collapsed) return;
-
-    const selectedContent = range.extractContents();
+    const offset = getSelectionCharacterOffsetWithin(editorRef.current);
+    const selectedContent = range.cloneContents();
+    // Remove conflicting declarations only from the selected fragment. Repeated size or colour changes must win.
+    selectedContent.querySelectorAll<HTMLElement>("*").forEach(node => {
+      Object.keys(styles).forEach(prop => node.style.removeProperty(prop));
+      if (styles["font-family"]) node.removeAttribute("face");
+      if (styles["font-size"]) node.removeAttribute("size");
+      if (styles.color) node.removeAttribute("color");
+    });
     const span = document.createElement("span");
+    // cloneContents excludes the common ancestor. Retain its authored inline styles
+    // before replacing the selection, or changing the font can erase its size/bold.
+    const ancestors: HTMLElement[] = [];
+    let ancestor = range.commonAncestorContainer.nodeType === Node.ELEMENT_NODE
+      ? range.commonAncestorContainer as HTMLElement : range.commonAncestorContainer.parentElement;
+    while (ancestor && ancestor !== editorRef.current) { ancestors.unshift(ancestor); ancestor = ancestor.parentElement; }
+    ancestors.forEach(node => {
+      if (["B", "STRONG"].includes(node.tagName)) span.style.fontWeight = "bold";
+      if (["I", "EM"].includes(node.tagName)) span.style.fontStyle = "italic";
+      if (node.tagName === "U") span.style.textDecoration = "underline";
+      if (["S", "STRIKE", "DEL"].includes(node.tagName)) span.style.textDecoration = "line-through";
+      if (node.tagName === "SUP") span.style.verticalAlign = "super";
+      if (node.tagName === "SUB") span.style.verticalAlign = "sub";
+      for (const property of Array.from(node.style)) span.style.setProperty(property, node.style.getPropertyValue(property));
+    });
 
     Object.entries(styles).forEach(([prop, val]) => {
       span.style.setProperty(prop, val);
     });
 
     span.appendChild(selectedContent);
-    range.insertNode(span);
-
-    // Re-select inserted span
-    try {
-      range.selectNode(span);
-      sel?.removeAllRanges();
-      sel?.addRange(range);
-      savedRangeRef.current = range.cloneRange();
-    } catch {}
+    // Use the browser editing transaction so Cmd/Ctrl+Z also undoes selection formatting.
+    document.execCommand("insertHTML", false, span.outerHTML);
+    setSelectionCharacterOffsetWithin(editorRef.current, offset);
+    saveCurrentSelection();
 
     updateActiveFormats();
     handleInput();
@@ -303,21 +351,20 @@ export const RichTextInlineEditor: React.FC<RichTextInlineEditorProps> = ({
   const syncToStore = useCallback(
     (immediate = false) => {
       if (!editorRef.current) return;
-      const currentHtml = editorRef.current.innerHTML;
-      if (currentHtml === lastCommittedTextRef.current) return;
-
+      const currentHtml = editorRef.current.innerHTML.replace(/\u200b/g, "");
       if (debounceTimerRef.current) {
         clearTimeout(debounceTimerRef.current);
         debounceTimerRef.current = null;
       }
 
+      if (currentHtml === lastCommittedTextRef.current) return;
       if (immediate) {
         lastCommittedTextRef.current = currentHtml;
         onCommit(currentHtml);
       } else {
         debounceTimerRef.current = setTimeout(() => {
           if (!editorRef.current) return;
-          const html = editorRef.current.innerHTML;
+          const html = editorRef.current.innerHTML.replace(/\u200b/g, "");
           lastCommittedTextRef.current = html;
           onCommit(html);
         }, 250);
@@ -333,23 +380,29 @@ export const RichTextInlineEditor: React.FC<RichTextInlineEditorProps> = ({
   };
 
   const handleBlur = (e: React.FocusEvent) => {
-    // If clicking on our floating toolbar or child popovers, don't close edit mode
-    if (
-      e.relatedTarget &&
-      (e.relatedTarget as HTMLElement).closest(".rich-text-floating-toolbar")
-    ) {
-      return;
-    }
+    if (e.relatedTarget && (editorRef.current?.contains(e.relatedTarget as Node) || toolbarRef.current?.contains(e.relatedTarget as Node))) return;
     syncToStore(true);
-    onClose();
+    // Native pickers may report a null target; the outside-pointer handler handles dismissal.
+    if (e.relatedTarget) onClose();
   };
+
+  useEffect(() => {
+    const handleOutside = (event: PointerEvent) => {
+      const target = event.target as Node;
+      if (editorRef.current?.contains(target) || toolbarRef.current?.contains(target)) return;
+      syncToStore(true);
+      onClose();
+    };
+    document.addEventListener("pointerdown", handleOutside, true);
+    return () => document.removeEventListener("pointerdown", handleOutside, true);
+  }, [syncToStore, onClose]);
 
   // Transform Case on Selection
   const transformSelectionCase = (type: "upper" | "lower" | "title" | "sentence" | "capitalize") => {
     if (!editorRef.current) return;
     const sel = window.getSelection();
     let range: Range | null = null;
-    if (sel && sel.rangeCount > 0 && !sel.isCollapsed && editorRef.current) {
+    if (sel && sel.rangeCount > 0 && editorRef.current) {
       try {
         const r = sel.getRangeAt(0);
         if (
@@ -399,7 +452,7 @@ export const RichTextInlineEditor: React.FC<RichTextInlineEditorProps> = ({
   // Insert Math Symbol at Caret
   const insertMathSymbol = (symbol: string) => {
     if (!editorRef.current) return;
-    editorRef.current.focus();
+    restoreSelection();
 
     const sel = window.getSelection();
     if (sel && sel.rangeCount > 0) {
@@ -430,6 +483,11 @@ export const RichTextInlineEditor: React.FC<RichTextInlineEditorProps> = ({
     // Standard Shortcuts
     if (e.metaKey || e.ctrlKey) {
       const key = e.key.toLowerCase();
+      if (key === "z" || key === "y") {
+        e.preventDefault();
+        execFormat(key === "y" || e.shiftKey ? "redo" : "undo");
+        return;
+      }
       if (key === "b") {
         e.preventDefault();
         execFormat("bold");
@@ -500,11 +558,21 @@ export const RichTextInlineEditor: React.FC<RichTextInlineEditorProps> = ({
   };
 
   return (
-    <div className="relative w-full h-full group/rich-editor">
+    <div className="relative w-full h-full group/rich-editor" onPointerDown={e => e.stopPropagation()} onClick={e => e.stopPropagation()} onDoubleClick={e => e.stopPropagation()}>
       {/* Floating Rich-Text Formatting Toolbar */}
-      <div
-        className="rich-text-floating-toolbar absolute -top-12 left-0 z-50 flex items-center gap-1 bg-[#10141d]/95 text-white backdrop-blur-md px-2 py-1 rounded-xl shadow-2xl border border-white/20 select-none animate-in fade-in zoom-in-95 duration-100 text-xs"
-        onMouseDown={(e) => e.preventDefault()} // Keep focus inside editor
+      {toolbarPosition && createPortal(<div
+        ref={toolbarRef}
+        role="toolbar"
+        aria-label="Selected text formatting"
+        className="rich-text-floating-toolbar fixed z-[100000] flex flex-wrap items-center gap-1 bg-[#10141d] text-white px-2 py-2 rounded-xl shadow-xl border border-white/20 select-none text-xs"
+        style={{ ...toolbarPosition, width: "min(840px, calc(100vw - 24px))" }}
+        onPointerDown={(e) => { e.stopPropagation(); saveCurrentSelection(); }}
+        onClick={(e) => e.stopPropagation()}
+        onKeyDown={(e) => e.stopPropagation()}
+        onMouseDown={(e) => {
+          saveCurrentSelection();
+          if (!(e.target as HTMLElement).closest("input, select, textarea")) e.preventDefault();
+        }}
       >
         {/* Font Family Trigger */}
         <div className="relative">
@@ -549,9 +617,9 @@ export const RichTextInlineEditor: React.FC<RichTextInlineEditorProps> = ({
           >
             −
           </button>
-          <span className="font-mono text-[11px] px-1 font-bold text-indigo-300 min-w-[20px] text-center">
-            {currentFontSize}
-          </span>
+          <input type="number" aria-label="Selected text font size (pt)" min={6} max={300} step={0.5}
+            value={currentFontSize} className="w-12 bg-transparent font-mono text-[11px] text-center text-indigo-300 outline-none"
+            onChange={e => { const size = Number(e.target.value); if (size >= 6 && size <= 300) { setCurrentFontSize(size); applyInlineStyleToSelection({ "font-size": `${size}pt` }); } }} />
           <button
             type="button"
             onClick={() => adjustSelectionFontSize(1)}
@@ -652,15 +720,16 @@ export const RichTextInlineEditor: React.FC<RichTextInlineEditorProps> = ({
             <Palette className="w-3.5 h-3.5 text-rose-400" />
             <div
               className="w-2.5 h-2.5 rounded-full border border-white/30"
-              style={{ backgroundColor: element.style.color || "#0f172a" }}
+              style={{ backgroundColor: currentColor }}
             />
           </button>
 
           {activePopover === "color" && (
             <div className="absolute left-0 top-full mt-1 z-[200]">
               <ColorPickerPopover
-                color={element.style.color || "#0f172a"}
+                color={currentColor}
                 onChange={(c) => {
+                  setCurrentColor(c);
                   applyInlineStyleToSelection({ color: c });
                 }}
                 onClose={() => setActivePopover(null)}
@@ -808,6 +877,13 @@ export const RichTextInlineEditor: React.FC<RichTextInlineEditorProps> = ({
           )}
         </div>
 
+        <label className="flex items-center gap-1 px-1 text-slate-300" title="Line height for selected text">
+          Leading
+          <input type="number" aria-label="Selected text line height" min={0.8} max={4} step={0.1} value={currentLineHeight}
+            className="w-12 bg-white/10 rounded p-1 text-white outline-none"
+            onChange={e => { const height = Number(e.target.value); if (height >= 0.8 && height <= 4) { setCurrentLineHeight(height); applyInlineStyleToSelection({ "line-height": String(height) }); } }} />
+        </label>
+
         {/* Clear Selection Formatting */}
         <button
           type="button"
@@ -891,12 +967,15 @@ export const RichTextInlineEditor: React.FC<RichTextInlineEditorProps> = ({
           <Check className="w-3.5 h-3.5" />
           <span>Done</span>
         </button>
-      </div>
+      </div>, document.body)}
 
       {/* Primary Editable Surface */}
       <div
         ref={editorRef}
         contentEditable
+        role="textbox"
+        aria-label={`Edit text: ${element.displayName}`}
+        aria-multiline={multiline}
         suppressContentEditableWarning
         spellCheck={element.style.spellCheck !== false}
         lang={element.style.lang || "en"}
@@ -919,6 +998,8 @@ export const RichTextInlineEditor: React.FC<RichTextInlineEditorProps> = ({
           fontFamily: element.style.fontFamily || "inherit",
           fontSize: element.style.fontSize ? `${element.style.fontSize}pt` : "inherit",
           fontWeight: element.style.fontWeight || "inherit",
+          fontStyle: element.style.fontStyle,
+          textDecoration: element.style.textDecoration,
           lineHeight: element.style.lineHeight || "inherit",
           letterSpacing: element.style.letterSpacing ? `${element.style.letterSpacing}pt` : "inherit",
           wordSpacing: element.style.wordSpacing ? `${element.style.wordSpacing}pt` : "inherit",

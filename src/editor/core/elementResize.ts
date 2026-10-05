@@ -69,7 +69,7 @@ export function withElementTransform(element: PageElement, requested: ElementTra
 function nativeTextHeight(element: PageElement, width: number): number {
   const layout = layoutTextFlow({ ...element, transform: { ...element.transform, width, height: 100000 } }, []);
   const bottom = element.style.padding?.bottom || 0;
-  return Math.max(layout.lineHeight, ...layout.fragments.map(line => line.y + layout.lineHeight)) + bottom + (element.style.borderWidth || 0);
+  return Math.max(layout.lineHeight, ...layout.fragments.map(line => line.y + line.lineHeight)) + bottom + (element.style.borderWidth || 0);
 }
 
 /** A single offscreen clone is reused throughout fitting; live content is untouched. */

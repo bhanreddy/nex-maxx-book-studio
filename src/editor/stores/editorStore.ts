@@ -1,3 +1,5 @@
+import { defaultAutoLayout, hasGroupAutoLayout, layoutAffectedTree, reflowGroupAutoLayout } from "../core/groupAutoLayout";
+import type { AdaptiveGroupConfig } from "../../domain/element/types";
 import { readTextManuscript } from '../importing/readManuscript';
 import { composeManuscript } from '../importing/composeManuscript';
 import { commitManuscriptImport } from '../importing/commitImport';
@@ -215,6 +217,7 @@ interface EditorState {
   groupSelectedElements: (direction?: "vertical" | "horizontal" | "grid") => void;
   groupAndLockSelectedElements: () => void;
   ungroupSelectedElements: () => void;
+  setGroupAutoLayout: (id: string, config: Partial<AdaptiveGroupConfig> | null) => void;
   smartStack: (elementIds?: string[], direction?: "vertical" | "horizontal" | "grid") => void;
   setElementLayoutMode: (elementId: string, mode: "freeform" | "adaptive") => void;
   autoArrangeActivePage: (style?: "balanced" | "visual" | "reading" | "compact" | "playful") => void;
@@ -2183,14 +2186,14 @@ export const useEditorStore = create<EditorState>((set, get) => {
         Object.assign(next, resized);
       }
       if (updates.content && old.metadata?.tags?.some(tag => ['master-header','master-footer','master-folio'].includes(tag))) next.metadata = { ...next.metadata, styleOverride: true };
-      if (next.type === "body" && next.content.publicationPrimitive && !next.responsiveLayout && (updates.content || updates.style || updates.transform)) {
+      if (next.type === "body" && next.content.publicationPrimitive && !next.content.html && !next.responsiveLayout && (updates.content || updates.style || updates.transform)) {
         const height = detachedSceneForElement(next)?.height;
         if (height) next.transform = { ...next.transform, height };
       }
       if (next.smartBlockData) next.smartBlockData = { ...next.smartBlockData, transform: { ...next.transform } };
       const activeBook = get().getActiveBook();
       if (activeBook && (activeBook.autoPagination || next.smartBlockData?.presetId.startsWith("edu-")) && (updates.content || updates.smartBlockData || updates.style) &&
-          !next.smartBlockData?.curriculum && !next.smartBlockData?.styleOverrides.contentLayout?.enabled && !next.smartBlockData?.styleOverrides.resizeFrame && !next.content.publicationPrimitive && ['body','body-text','smart-block'].includes(next.type)) {
+          !next.groupId && !next.smartBlockData?.curriculum && !next.smartBlockData?.styleOverrides.contentLayout?.enabled && !next.smartBlockData?.styleOverrides.resizeFrame && !next.content.publicationPrimitive && ['body','body-text','smart-block'].includes(next.type)) {
         const previous = get();
         if (next.smartBlockData) {
           const height = buildPublicationScene({ ...next.smartBlockData, transform: { ...next.transform, height: 0 } }).height;
@@ -2210,8 +2213,10 @@ export const useEditorStore = create<EditorState>((set, get) => {
         if (!result.overflowResolved) useUiStore.getState().showToast({ type: 'warning', title: 'Block needs layout review', message: 'This block cannot fit safely. Its content is preserved; resize it or use chapter composition.' });
         return;
       }
-      const before = elementTree([id], get().elements);
-      const after = [next, ...Object.values(transformGroupChildren(old, next.transform, get().elements, "auto"))];
+      const before = layoutAffectedTree([id], get().elements);
+      const nextElements = reflowGroupAutoLayout({ ...get().elements,
+        ...transformGroupChildren(old, next.transform, get().elements, "auto"), [id]: next }, [id]);
+      const after = before.map(el => nextElements[el.id]);
       const apply = (items: PageElement[]) => {
         set(state => ({ elements: { ...state.elements, ...Object.fromEntries(items.map(el => [el.id, el])) } }));
         get().saveToStorage();
@@ -2226,7 +2231,7 @@ export const useEditorStore = create<EditorState>((set, get) => {
       const current = get().elements[id];
       if (!current || isElementLocked(id, get().elements) || current.smartBlockData?.isLockedDesign || elementTree(current.childElementIds || [], get().elements).some(el => el.locked)) return;
 
-      const beforeTree = elementTree([id], get().elements);
+      const beforeTree = layoutAffectedTree([id], get().elements);
       const updatedTransform = { ...current.transform, ...newTransform };
       if(current.smartBlockData && (newTransform.width !== undefined || newTransform.height !== undefined)) {
         updatedTransform.width = Math.max(60, updatedTransform.width);
@@ -2240,11 +2245,11 @@ export const useEditorStore = create<EditorState>((set, get) => {
 
       const updated = withBlockTransform(current, updatedTransform, resizeMode);
       set((state) => ({
-        elements: {
+        elements: reflowGroupAutoLayout({
           ...state.elements,
           ...transformGroupChildren(current, updated.transform, state.elements, resizeMode),
           [id]: updated,
-        },
+        }, [id]),
       }));
 
       if (recordHistory) get().commitTransformGesture(beforeTree);
@@ -2767,6 +2772,20 @@ export const useEditorStore = create<EditorState>((set, get) => {
       return groupElement;
     },
 
+    setGroupAutoLayout: (id, config) => {
+      const group = get().elements[id];
+      if (!group || group.type !== "group" || !group.childElementIds?.length || isElementLocked(id, get().elements)) return;
+      if (config && (group.transform.rotation !== 0 || elementTree(group.childElementIds, get().elements).some(child => child.locked))) {
+        useUiStore.getState().showToast({ type: "warning", title: "Auto layout unavailable", message: "Unlock the children and set the group rotation to 0° before enabling auto layout." });
+        return;
+      }
+      const direction = config?.direction === "horizontal" ? "horizontal" : "vertical";
+      const adaptiveGroup = config ? { ...(group.adaptiveGroup || defaultAutoLayout(direction)), ...config } : group.adaptiveGroup;
+      const childElementIds = config && !hasGroupAutoLayout(group) ? [...group.childElementIds].sort((a, b) =>
+        direction === "horizontal" ? get().elements[a].transform.x - get().elements[b].transform.x : get().elements[a].transform.y - get().elements[b].transform.y) : group.childElementIds;
+      get().updateElement(id, { layoutMode: config ? "adaptive" : "freeform", adaptiveGroup, childElementIds });
+    },
+
     groupSelectedElements: () => {
       const page = get().getActivePage();
       const ids = [...new Set(get().selectedElementIds.map(id => selectionRoot(id, get().elements)))];
@@ -2879,6 +2898,10 @@ export const useEditorStore = create<EditorState>((set, get) => {
     setElementLayoutMode: (elementId, mode) => {
       const el = get().elements[elementId];
       if (!el || isElementLocked(elementId, get().elements)) return;
+      if (el.type === "group") {
+        get().setGroupAutoLayout(elementId, mode === "adaptive" ? { direction: el.adaptiveGroup?.direction === "horizontal" ? "horizontal" : "vertical" } : null);
+        return;
+      }
 
       set((state) => ({
         elements: {

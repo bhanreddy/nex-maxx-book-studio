@@ -29,6 +29,61 @@ import { trackPointerGesture } from "../../editor/core/pointerGesture";
 import { findElementsIntersectingMarquee } from "../../editor/core/geometry";
 import { selectionRoot } from "../../editor/core/elementGroups";
 
+const PageOverflowBanner: React.FC<{
+  page: PageDefinition;
+  activePageId: string;
+  book: Book;
+  onAutoArrange: (style: "balanced") => void;
+}> = ({ page, activePageId, book, onAutoArrange }) => {
+  if (!page.overflowWarning?.hasOverflow) return null;
+  const overflowPt = Math.round(
+    page.overflowWarning.overflowAmountPt || page.overflowWarning.exceededByPt || 0
+  );
+
+  return (
+    <div
+      role="alert"
+      className="absolute bottom-5 left-6 right-6 bg-amber-500/95 backdrop-blur-md text-white px-3.5 py-2.5 rounded-xl shadow-2xl flex items-center justify-between text-[8.5pt] border border-amber-300/40 animate-in fade-in duration-150 pointer-events-auto"
+      style={{ zIndex: 1000050 }}
+    >
+      <div className="flex items-center gap-2.5">
+        <span className="text-base">⚠️</span>
+        <div>
+          <span className="font-semibold">Content exceeds page capacity</span>
+          <span className="opacity-90 ml-1.5 font-mono text-[8pt]">
+            (+{overflowPt} pt)
+          </span>
+        </div>
+      </div>
+      <div className="flex items-center gap-2">
+        <button
+          onClick={() => {
+            if (activePageId !== page.id) {
+              useEditorStore.getState().setActivePageIndex(
+                book.pages.findIndex((p) => p.id === page.id)
+              );
+            }
+            onAutoArrange("balanced");
+          }}
+          className="px-2.5 py-1 rounded bg-white/20 hover:bg-white/30 font-medium transition-colors shadow-xs cursor-pointer active:scale-95"
+          title="Auto-adjust spacing and element sizing to fit page"
+        >
+          Auto Rebalance
+        </button>
+        <button
+          onClick={() => {
+            useEditorStore.getState().flowPageOverflowToNextPage(page.id);
+          }}
+          className="px-2.5 py-1 rounded bg-black/30 hover:bg-black/45 font-medium transition-colors shadow-xs cursor-pointer active:scale-95"
+          title="Move overflowing content to next page"
+        >
+          Flow to Next Page →
+        </button>
+      </div>
+    </div>
+  );
+};
+
 interface PageCanvasProps {
   book: Book;
   activePage: PageDefinition;
@@ -891,37 +946,12 @@ export const PageCanvas: React.FC<PageCanvasProps> = ({ book, activePage }) => {
             )}
 
             {/* Smart Overflow Warning Banner (Directive 17) */}
-            {activePage.overflowWarning?.hasOverflow && (
-              <div className="absolute bottom-5 left-6 right-6 z-40 bg-amber-500/95 backdrop-blur-md text-white px-3.5 py-2.5 rounded-xl shadow-2xl flex items-center justify-between text-[8.5pt] border border-amber-300/40 animate-in fade-in duration-150">
-                <div className="flex items-center gap-2.5">
-                  <span className="text-base">⚠️</span>
-                  <div>
-                    <span className="font-semibold">Content exceeds page capacity</span>
-                    <span className="opacity-90 ml-1.5 font-mono text-[8pt]">
-                      (+{Math.round(activePage.overflowWarning.overflowAmountPt || activePage.overflowWarning.exceededByPt || 0)} pt)
-                    </span>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => autoArrangeActivePage("balanced")}
-                    className="px-2.5 py-1 rounded bg-white/20 hover:bg-white/30 font-medium transition-colors shadow-xs"
-                    title="Auto-adjust spacing and element sizing to fit page"
-                  >
-                    Auto Rebalance
-                  </button>
-                  <button
-                    onClick={() => {
-                      useEditorStore.getState().flowPageOverflowToNextPage();
-                    }}
-                    className="px-2.5 py-1 rounded bg-black/30 hover:bg-black/45 font-medium transition-colors shadow-xs"
-                    title="Move overflowing content to next page"
-                  >
-                    Flow to Next Page →
-                  </button>
-                </div>
-              </div>
-            )}
+            <PageOverflowBanner
+              page={leftPage}
+              activePageId={activePage.id}
+              book={book}
+              onAutoArrange={autoArrangeActivePage}
+            />
 
             {/* Magnetic Drop Zone Live Preview (Part 8) */}
             {hoveredDropZone && (
@@ -932,6 +962,7 @@ export const PageCanvas: React.FC<PageCanvasProps> = ({ book, activePage }) => {
                   top: `${hoveredDropZone.bounds.y}pt`,
                   width: `${hoveredDropZone.bounds.width}pt`,
                   height: `${hoveredDropZone.bounds.height}pt`,
+                  zIndex: 1000050,
                 }}
               >
                 <div className="w-full h-full border-2 border-dashed border-cyan-400 bg-cyan-400/15 rounded-xl flex flex-col items-center justify-center p-2 shadow-[0_0_24px_rgba(6,182,212,0.3)]">
@@ -947,7 +978,7 @@ export const PageCanvas: React.FC<PageCanvasProps> = ({ book, activePage }) => {
 
             {/* Layout Variation Ghost Preview (Part 10 & 31) */}
             {previewTransforms && (
-              <div className="absolute inset-0 pointer-events-none z-40">
+              <div className="absolute inset-0 pointer-events-none" style={{ zIndex: 1000050 }}>
                 {Object.entries(previewTransforms).map(([elId, tr]) => {
                   const el = elements[elId];
                   if (!el) return null;
@@ -1271,6 +1302,14 @@ export const PageCanvas: React.FC<PageCanvasProps> = ({ book, activePage }) => {
                 />
               )}
 
+              {/* Smart Overflow Warning Banner (Directive 17) */}
+              <PageOverflowBanner
+                page={rightPage}
+                activePageId={activePage.id}
+                book={book}
+                onAutoArrange={autoArrangeActivePage}
+              />
+
               <PublisherFooterView book={book} page={rightPage} elements={elements}/>
             </div>
           )}
@@ -1286,7 +1325,7 @@ export const PageCanvas: React.FC<PageCanvasProps> = ({ book, activePage }) => {
                   allPageElements={page.elementIds.map(id => elements[id]).filter(Boolean)}
                   pageDimensions={dimensions} margins={pageMarginsFor(book, page)} bleed={bleed} zoom={zoom}
                 />
-                <SmartQuickActionBar selectedElements={selectedElements.filter(el => el.pageId === page.id)} zoom={zoom}/>
+                {!editingTextElementId && <SmartQuickActionBar selectedElements={selectedElements.filter(el => el.pageId === page.id)} zoom={zoom}/>}
               </>}
             </div>
           ))}

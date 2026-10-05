@@ -217,6 +217,7 @@ export const ShapeDrawOverlay: React.FC<ShapeDrawOverlayProps> = ({
       onPointerUp={handlePointerUp}
       onPointerCancel={handlePointerUp}
       className="absolute inset-0 z-50 cursor-crosshair pointer-events-auto select-none overflow-visible"
+      style={{ zIndex: 1000050 }}
       title={`Click and drag to draw a ${activeShapeType} on the worksheet. Hold Shift for 1:1 ratio.`}
     >
       {/* Floating Instructions Banner at top of page */}

@@ -271,7 +271,7 @@ export const ElementRenderer: React.FC<ElementRendererProps> = memo(function Ele
   }, [content.text, style.fontSize, style.lineHeight, style.fontFamily, transform.width, transform.height, isTextElement]);
 
   const selectGroup = (e: React.SyntheticEvent) => {
-    if (!grouped) return;
+    if (!grouped || isEditingText) return;
     e.stopPropagation();
     useEditorStore.getState().selectElement(selectionRoot(element.id, useEditorStore.getState().elements), "shiftKey" in e && Boolean(e.shiftKey));
   };
@@ -351,7 +351,8 @@ export const ElementRenderer: React.FC<ElementRendererProps> = memo(function Ele
   // Render element content based on its semantic type
   const renderContent = () => {
     const primitive = detachedSceneForElement(element);
-    if(primitive) return <div className="w-full h-full" onDoubleClick={e=>{if(type!=="body"||element.locked)return;e.stopPropagation();setIsEditingText(true);}}>{isEditingText?<textarea autoFocus aria-label="Edit detached text" defaultValue={content.text||""} className="w-full h-full bg-white text-slate-900 outline-2 outline-indigo-500" onBlur={e=>{updateElementContent(element.id,{text:e.target.value});setIsEditingText(false);}}/>:<PublicationSceneView scene={primitive} label={element.displayName}/>}</div>;
+    if (primitive && type !== "body") return <PublicationSceneView scene={primitive} label={element.displayName}/>;
+    if (primitive && type === "body" && !content.html && !isEditingText) return <div className="w-full h-full" onDoubleClick={e => { if (locked) return; e.stopPropagation(); setIsEditingText(true); }}><PublicationSceneView scene={primitive} label={element.displayName}/></div>;
     if(content.artwork) {
       const palette=PUBLICATION_PALETTES[content.artwork.paletteId as keyof typeof PUBLICATION_PALETTES] || PUBLICATION_PALETTES.indigo;
       return <PublicationSceneView scene={{width:blockTransform.width,height:blockTransform.height,variant:content.artwork.kind,warnings:[],nodes:artworkNodes(content.artwork.kind as ArtworkKind,0,0,blockTransform.width,blockTransform.height,palette)}} label={element.displayName}/>;
@@ -398,9 +399,9 @@ export const ElementRenderer: React.FC<ElementRendererProps> = memo(function Ele
         return isEditingText ? (
           <RichTextInlineEditor
             element={element}
-            initialText={content.text || ""}
+            initialText={content.publicationPrimitive && !content.html ? String(content.text || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;") : content.text || ""}
             multiline={type === "body" || type === "body-text" || type === "quote" || type === "callout"}
-            onCommit={(text) => updateElementContent(element.id, { text })}
+            onCommit={(text) => updateElementContent(element.id, { text, html: true })}
             onClose={() => setIsEditingText(false)}
           />
         ) : (
@@ -427,6 +428,7 @@ export const ElementRenderer: React.FC<ElementRendererProps> = memo(function Ele
               }
             }}
             onDoubleClick={(e) => {
+              if (locked) return;
               e.stopPropagation();
               setIsEditingText(true);
             }}
@@ -1634,8 +1636,12 @@ export const ElementRenderer: React.FC<ElementRendererProps> = memo(function Ele
         ""
       }`}
     >
-      {grouped ? <div className="w-full h-full relative" onClickCapture={selectGroup} onDoubleClickCapture={selectGroup} onMouseDownCapture={selectGroup}>
-        <div className="w-full h-full pointer-events-none">{scaledContent}</div>
+      {grouped ? <div className="w-full h-full relative" onClickCapture={selectGroup} onDoubleClickCapture={e => {
+          if (isEditingText) return;
+          if (isTextElement && !locked) { e.stopPropagation(); setIsEditingText(true); }
+          else selectGroup(e);
+        }} onMouseDownCapture={selectGroup}>
+        <div className={`w-full h-full ${isEditingText ? "" : "pointer-events-none"}`}>{scaledContent}</div>
       </div> : <div className={`w-full h-full ${locked ? "pointer-events-none" : ""}`}>{scaledContent}</div>}
 
       {/* Review Comments Badge Indicator */}

@@ -31,12 +31,16 @@ export function FlowText({ element }: { element: PageElement }) {
     <div className="absolute inset-0 overflow-hidden" aria-label={element.displayName}>
       {layout.fragments.map((fragment, index) => <div key={index} data-flow-line="true" style={{
         position: "absolute", left: `${fragment.x}pt`, top: `${fragment.y}pt`, width: `${fragment.width}pt`,
-        height: `${layout.lineHeight}pt`, lineHeight: `${layout.lineHeight}pt`, whiteSpace: "pre",
+        height: `${fragment.lineHeight}pt`, lineHeight: `${fragment.lineHeight}pt`, whiteSpace: "pre",
         pointerEvents: element.locked ? "none" : "auto",
         textAlign: element.style.textAlign === "justify" && fragment.paragraphEnd ? "left" : element.style.textAlign,
         textAlignLast: element.style.textAlign === "justify" && !fragment.paragraphEnd ? "justify" : undefined,
       }}>{fragment.runs.map((run, i) => <span key={i} style={{
-        fontWeight: run.style.bold ? 700 : undefined, fontStyle: run.style.italic ? "italic" : undefined,
+        fontWeight: run.style.fontWeight ?? (run.style.bold === undefined ? undefined : run.style.bold ? 700 : 400), fontStyle: run.style.italic === undefined ? undefined : run.style.italic ? "italic" : "normal",
+        fontSize: run.style.fontSize ? `${run.style.fontSize}pt` : undefined, fontFamily: run.style.fontFamily,
+        backgroundColor: run.style.backgroundColor, lineHeight: run.style.lineHeight,
+        letterSpacing: run.style.letterSpacing === undefined ? undefined : `${run.style.letterSpacing}pt`,
+        ...(run.style.verticalAlign ? { fontSize: `${(run.style.fontSize || element.style.fontSize || 10.5) * .75}pt`, position: "relative", top: `${(element.style.fontSize || 10.5) * (run.style.verticalAlign === "super" ? -.3 : .2)}pt` } : {}),
         textDecoration: [run.style.underline ? "underline" : "", run.style.strike ? "line-through" : ""].filter(Boolean).join(" ") || undefined,
         color: run.style.color,
       }}>{run.text}</span>)}</div>)}

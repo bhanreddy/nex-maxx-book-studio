@@ -79,7 +79,9 @@ export const TransformOverlay: React.FC<TransformOverlayProps> = ({
     combinedBoundingBox: { x: 0, y: 0, width: 0, height: 0 },
   });
 
-  if (selectedElements.length === 0 || selectedElements.every(el => el.locked) || (selectedElements.length === 1 && (selectedElements[0].id === cropElementId || selectedElements[0].id === editingTextElementId))) return null;
+  if (selectedElements.length === 0 || selectedElements.every(el => el.locked) ||
+      (editingTextElementId && elementTree(selectedElements.map(el => el.id), useEditorStore.getState().elements).some(el => el.id === editingTextElementId)) ||
+      (selectedElements.length === 1 && selectedElements[0].id === cropElementId)) return null;
 
   const movableElements = selectedElements.filter(el => !isElementLocked(el.id, useEditorStore.getState().elements)
     && !elementTree(el.childElementIds || [], useEditorStore.getState().elements).some(child => child.locked));
@@ -453,7 +455,18 @@ export const TransformOverlay: React.FC<TransformOverlayProps> = ({
         }}
         onDoubleClick={e => {
           if (singleElement?.type === "image") { e.stopPropagation(); setCropElementId(singleElement.id); }
-          else if (singleElement && ["body", "heading", "subheading", "caption", "quote", "chapter-title", "lesson-title"].includes(singleElement.type)) { e.stopPropagation(); setEditingTextElementId(singleElement.id); }
+          else if (singleElement?.type === "group") {
+            const elements = useEditorStore.getState().elements;
+            const text = elementTree(singleElement.childElementIds || [], elements)
+              .filter(child => child.category === "text" && !child.hidden && !isElementLocked(child.id, elements))
+              .sort((a, b) => b.transform.zIndex - a.transform.zIndex)
+              .find(child => {
+                const bounds = document.getElementById(`element-${child.id}`)?.getBoundingClientRect();
+                return bounds && e.clientX >= bounds.left && e.clientX <= bounds.right && e.clientY >= bounds.top && e.clientY <= bounds.bottom;
+              });
+            if (text) { e.stopPropagation(); setEditingTextElementId(text.id); }
+          }
+          else if (singleElement && ["body", "body-text", "heading", "subheading", "caption", "quote", "chapter-title", "lesson-title", "header", "footer", "pageNumber", "page-number", "sidebar", "callout"].includes(singleElement.type)) { e.stopPropagation(); setEditingTextElementId(singleElement.id); }
           else if (singleElement?.type === "math-component" || singleElement?.type === "shape" || singleElement?.style.shapeType) {
             e.stopPropagation();
             useUiStore.getState().setRightInspectorOpen(true);

@@ -37,6 +37,12 @@ export function isElementLocked(id: string, elements: Record<string, PageElement
 
 export function transformGroupChildren(group: PageElement, next: ElementTransform, elements: Record<string, PageElement>, mode: BlockResizeMode = "scale"): Record<string, PageElement> {
   const old = group.transform;
+  // Auto-layout containers resize their frame without scaling the children's typography.
+  if (group.type === "group" && group.layoutMode === "adaptive" && group.adaptiveGroup && mode !== "scale" && next.rotation === old.rotation) {
+    return Object.fromEntries(elementTree(group.childElementIds || [], elements).map(child => [child.id,
+      { ...child, transform: { ...child.transform, x: child.transform.x + next.x - old.x,
+        y: child.transform.y + next.y - old.y, zIndex: child.transform.zIndex + next.zIndex - old.zIndex } }]));
+  }
   const sx = next.width / Math.max(1, old.width), sy = next.height / Math.max(1, old.height);
   const angle = (next.rotation - old.rotation) * Math.PI / 180;
   const cx = next.x + next.width / 2, cy = next.y + next.height / 2;

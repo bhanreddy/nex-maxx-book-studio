@@ -19,7 +19,7 @@ export function wrapsText(element: PageElement): boolean {
 }
 export function isFlowText(element: PageElement): boolean {
   return ["body", "body-text", "quote", "sidebar", "callout"].includes(element.type) &&
-    !element.content.design?.composition && !element.content.publicationPrimitive;
+    !element.content.design?.composition && (!element.content.publicationPrimitive || element.content.html);
 }
 
 type Point = { x: number; y: number };
@@ -237,9 +237,13 @@ export function availableLineSlots(x: number, width: number, y: number, height: 
   return largestSide && slots.length ? [slots.reduce((a, b) => a.width >= b.width ? a : b)] : slots;
 }
 
-export interface FlowStyle { bold?: boolean; italic?: boolean; underline?: boolean; strike?: boolean; color?: string }
+export interface FlowStyle {
+  bold?: boolean; italic?: boolean; underline?: boolean; strike?: boolean; color?: string;
+  fontSize?: number; fontFamily?: string; fontWeight?: number; lineHeight?: number;
+  backgroundColor?: string; verticalAlign?: "super" | "sub"; letterSpacing?: number;
+}
 export interface FlowRun { text: string; style: FlowStyle }
-export interface FlowFragment { x: number; y: number; width: number; runs: FlowRun[]; paragraphEnd: boolean }
+export interface FlowFragment { x: number; y: number; width: number; runs: FlowRun[]; paragraphEnd: boolean; lineHeight: number }
 export interface TextFlowLayout { fragments: FlowFragment[]; oversetChars: number; lineHeight: number }
 
 const decode = (text: string) => text.replace(/&(#x[\da-f]+|#\d+|amp|lt|gt|quot|apos|nbsp);/gi, (_, entity: string) => {
@@ -271,10 +275,35 @@ export function parseFlowText(html: string): FlowRun[] {
     if (["i", "em"].includes(tag)) style.italic = true;
     if (tag === "u") style.underline = true;
     if (["s", "strike", "del"].includes(tag)) style.strike = true;
-    const css = part.match(/style\s*=\s*["']([^"']*)["']/i)?.[1] || "";
+    const cssMatch = part.match(/style\s*=\s*(?:"([^"]*)"|'([^']*)')/i);
+    const css = cssMatch?.[1] || cssMatch?.[2] || "";
+    const declaration = (property: string) => css.match(new RegExp(`(?:^|;)\\s*${property}\\s*:\\s*([^;]+)`, "i"))?.[1].trim();
+    const points = (value?: string) => {
+      if (!value || !/^\d*\.?\d+(pt|px)?$/i.test(value)) return undefined;
+      const number = parseFloat(value) * (/px$/i.test(value) ? .75 : 1);
+      return Number.isFinite(number) && number > 0 ? number : undefined;
+    };
+    const fontSize = points(declaration("font-size"));
+    if (fontSize) style.fontSize = fontSize;
+    const family = declaration("font-family") || part.match(/\bface\s*=\s*["']([^"']*)["']/i)?.[1];
+    if (family) style.fontFamily = family;
+    const weight = declaration("font-weight");
+    if (weight) { style.fontWeight = weight === "bold" ? 700 : weight === "normal" ? 400 : Number(weight); style.bold = style.fontWeight >= 600; }
+    const italic = declaration("font-style");
+    if (italic) style.italic = italic === "italic" || italic === "oblique";
+    const leading = declaration("line-height");
+    if (leading && /^\d*\.?\d+$/.test(leading)) style.lineHeight = Number(leading);
+    else if (leading && points(leading)) style.lineHeight = points(leading)! / (style.fontSize || 10.5);
+    const background = declaration("background-color");
+    if (background && /^(#[\da-f]{3,8}|[a-z]+|rgba?\([\d\s.,%]+\))$/i.test(background)) style.backgroundColor = background;
+    const spacing = declaration("letter-spacing");
+    if (spacing) style.letterSpacing = points(spacing);
+    if (tag === "sup" || declaration("vertical-align") === "super") style.verticalAlign = "super";
+    if (tag === "sub" || declaration("vertical-align") === "sub") style.verticalAlign = "sub";
     if (/font-weight\s*:\s*(bold|[6-9]00)/i.test(css)) style.bold = true;
     if (/font-style\s*:\s*italic/i.test(css)) style.italic = true;
-    if (/text-decoration[^:]*\s*:[^;]*underline/i.test(css)) style.underline = true;
+    const decoration = declaration("text-decoration") || declaration("text-decoration-line");
+    if (decoration) { style.underline = decoration.includes("underline"); style.strike = decoration.includes("line-through"); }
     const color = css.match(/(?:^|;)\s*color\s*:\s*([^;]+)/i)?.[1].trim() || part.match(/\bcolor\s*=\s*["']([^"']*)["']/i)?.[1];
     if (color && /^(#[\da-f]{3,8}|[a-z]+|rgba?\([\d\s.,%]+\))$/i.test(color)) style.color = color;
     if (tag === "li") push("• ");
@@ -284,20 +313,24 @@ export function parseFlowText(html: string): FlowRun[] {
   return result;
 }
 
+export function flowRunFontSize(style: FlowStyle, base: ElementStyle): number {
+  return (style.fontSize || base.fontSize || 10.5) * (style.verticalAlign ? .75 : 1);
+}
+
 let measureContext: CanvasRenderingContext2D | null | undefined;
 const widthCache = new Map<string, number>();
 export function clearTextMeasureCache() { widthCache.clear(); }
 export function measureFlowText(text: string, style: FlowStyle, base: ElementStyle): number {
-  const size = base.fontSize || 10.5, weight = style.bold ? 700 : (base.fontWeight || 400);
-  const italic = style.italic || base.fontStyle === "italic", family = base.fontFamily || FLOW_FONT_FAMILY;
+  const size = flowRunFontSize(style, base), weight = style.fontWeight ?? (style.bold === undefined ? base.fontWeight || 400 : style.bold ? 700 : 400);
+  const italic = style.italic ?? (base.fontStyle === "italic"), family = style.fontFamily || base.fontFamily || FLOW_FONT_FAMILY;
   const font = `${italic ? "italic " : ""}${weight} ${size}px ${family}`;
-  const key = `${font}/${base.letterSpacing || 0}/${text}`, cached = widthCache.get(key);
+  const key = `${font}/${style.letterSpacing ?? base.letterSpacing ?? 0}/${text}`, cached = widthCache.get(key);
   if (cached !== undefined) return cached;
   if (measureContext === undefined && typeof document !== "undefined") measureContext = document.createElement("canvas").getContext("2d");
   let width: number;
   if (measureContext) { measureContext.font = font; width = measureContext.measureText(text).width; }
   else width = Array.from(text).reduce((sum, c) => sum + (" ilI.,:;!'".includes(c) ? .28 : "MW@%".includes(c) ? .86 : .56), 0) * size * (weight >= 600 ? 1.04 : 1);
-  width += Math.max(0, Array.from(text).length - 1) * (base.letterSpacing || 0);
+  width += Math.max(0, Array.from(text).length - 1) * (style.letterSpacing ?? base.letterSpacing ?? 0);
   if (widthCache.size > 12000) widthCache.clear();
   widthCache.set(key, width); return width;
 }
@@ -307,7 +340,7 @@ export function layoutTextFlow(frame: PageElement, obstacles: WrapObstacle[],
   measure: (text: string, style: FlowStyle) => number = (text, style) => measureFlowText(text, style, frame.style),
   source: FlowRun[] = parseFlowText(String(frame.content.text || ""))): TextFlowLayout {
   const tokens: FlowToken[] = [];
-  for (const run of source) for (const text of run.text.match(/\n|[^\S\n\u00a0]+|[^\s]+(?:\u00a0[^\s]+)*/gu) || []) {
+  for (const run of source) for (const text of run.text.match(/\n|[^\S\n\u00a0]+|[^\s]+(?:\u00a0[^\s]+)*|\u00a0+/gu) || []) {
     const kind = text === "\n" ? "break" : /^[^\S\n]+$/.test(text) ? "space" : "word";
     // A bold span in the middle of a word is still a single word.
     if (kind !== "break" && tokens.at(-1)?.kind === kind) tokens.at(-1)!.runs.push({ text, style: run.style });
@@ -328,7 +361,20 @@ export function layoutTextFlow(frame: PageElement, obstacles: WrapObstacle[],
   for (let col = 0; col < columns && index < tokens.length; col++) {
     let y = pad.top;
     while (y + lineHeight <= pad.top + height + .001 && index < tokens.length) {
-      const slots = availableLineSlots(pad.left + col * (colWidth + gap), colWidth, y, lineHeight, obstacles);
+      // Probe the next row before contour intersection so a larger selected word gets real vertical space.
+      let rowHeight = lineHeight, probeWidth = 0;
+      for (let probe = index; probe < tokens.length && tokens[probe].kind !== "break"; probe++) {
+        const token = tokens[probe], width = tokenWidth(token);
+        if (probeWidth > 0 && probeWidth + width > colWidth) break;
+        for (const run of token.runs) {
+          const runSize = run.style.fontSize || size;
+          rowHeight = Math.max(rowHeight, runSize * (run.style.lineHeight || (leading > 4 ? leading / size : leading)));
+        }
+        probeWidth += width;
+        if (probeWidth >= colWidth) break;
+      }
+      if (y + rowHeight > pad.top + height + .001) break;
+      const slots = availableLineSlots(pad.left + col * (colWidth + gap), colWidth, y, rowHeight, obstacles);
       let brokeParagraph = false;
       for (const slot of slots) {
         if (slot.width < size || index >= tokens.length) continue;
@@ -359,11 +405,11 @@ export function layoutTextFlow(frame: PageElement, obstacles: WrapObstacle[],
         }
         // Don't justify trailing whitespace at the image boundary.
         while (runs.length && /^\s+$/.test(runs.at(-1)!.text)) runs.pop();
-        if (runs.length) fragments.push({ x: slot.x, y, width: slot.width, runs,
+        if (runs.length) fragments.push({ x: slot.x, y, width: slot.width, runs, lineHeight: rowHeight,
           paragraphEnd: brokeParagraph || index === tokens.length || tokens[index]?.kind === "break" });
         if (brokeParagraph) break;
       }
-      y += lineHeight + (brokeParagraph ? Math.max(0, frame.style.paragraphSpacing || 0) : 0);
+      y += rowHeight + (brokeParagraph ? Math.max(0, frame.style.paragraphSpacing || 0) : 0);
     }
   }
   return { fragments, lineHeight, oversetChars: tokens.slice(index).reduce((sum, token) => sum + token.runs.reduce((n, run) => n + run.text.length, 0), 0) };
@@ -383,17 +429,22 @@ export function textFlowScene(frame: PageElement, elements: PageElement[]): Publ
       nodes.push({ kind: "line", x, y, x2, y2, stroke: borderColor, strokeWidth: borderWidth });
   }
   for (const fragment of layout.fragments) {
+    const baselineSize = Math.max(size, ...fragment.runs.map(run => run.style.fontSize || size));
     const textWidth = fragment.runs.reduce((sum, run) => sum + measureFlowText(run.text, run.style, frame.style), 0);
     let x = fragment.x + (frame.style.textAlign === "right" ? fragment.width - textWidth : frame.style.textAlign === "center" ? (fragment.width - textWidth) / 2 : 0);
     const spaces = fragment.runs.reduce((sum, run) => sum + (run.text.match(/ /g)?.length || 0), 0);
     const extraSpace = frame.style.textAlign === "justify" && !fragment.paragraphEnd && spaces ? Math.max(0, fragment.width - textWidth) / spaces : 0;
     for (const run of fragment.runs) for (const text of extraSpace ? run.text.split(/( )/) : [run.text]) {
       if (!text) continue;
-      nodes.push({ kind: "text", x, y: fragment.y + (layout.lineHeight - size) / 2 + size * .8,
-        text, size, fill: run.style.color || frame.style.color || "#0f172a", fontFamily: frame.style.fontFamily || FLOW_FONT_FAMILY,
-        bold: run.style.bold || (frame.style.fontWeight || 400) >= 600,
-        italic: run.style.italic || frame.style.fontStyle === "italic", underline: run.style.underline,
-        strike: run.style.strike, letterSpacing: frame.style.letterSpacing, textLength: measureFlowText(text, run.style, frame.style) });
+      const runSize = flowRunFontSize(run.style, frame.style);
+      const runWidth = measureFlowText(text, run.style, frame.style);
+      if (run.style.backgroundColor && run.style.backgroundColor !== "transparent") nodes.push({ kind: "rect", x, y: fragment.y, w: runWidth, h: fragment.lineHeight, fill: run.style.backgroundColor });
+      nodes.push({ kind: "text", x, y: fragment.y + (fragment.lineHeight - baselineSize) / 2 + baselineSize * .8 + (run.style.verticalAlign === "super" ? -size * .3 : run.style.verticalAlign === "sub" ? size * .2 : 0),
+        text, size: runSize, fill: run.style.color || frame.style.color || "#0f172a", fontFamily: run.style.fontFamily || frame.style.fontFamily || FLOW_FONT_FAMILY,
+        fontWeight: run.style.fontWeight ?? (run.style.bold === undefined ? frame.style.fontWeight : run.style.bold ? 700 : 400),
+        bold: run.style.bold ?? ((frame.style.fontWeight || 400) >= 600),
+        italic: run.style.italic ?? (frame.style.fontStyle === "italic"), underline: run.style.underline,
+        strike: run.style.strike, letterSpacing: run.style.letterSpacing ?? frame.style.letterSpacing, textLength: runWidth });
       x += measureFlowText(text, run.style, frame.style) + (text === " " ? extraSpace : 0);
     }
   }
